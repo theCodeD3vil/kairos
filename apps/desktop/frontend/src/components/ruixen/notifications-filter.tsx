@@ -39,7 +39,7 @@ function tick() {
 
 /* ── Types ── */
 
-interface FilterItem {
+export interface FilterItem {
   id: string;
   title: string;
   body: string;
@@ -51,6 +51,8 @@ interface NotificationsFilterProps {
   items?: FilterItem[];
   categories?: string[];
   sound?: boolean;
+  onCategoryChange?: (category: string) => void;
+  onItemSelect?: (item: FilterItem) => void;
 }
 
 /* ── Defaults ── */
@@ -126,6 +128,8 @@ export function NotificationsFilter({
   items = DEFAULT_ITEMS,
   categories = DEFAULT_CATEGORIES,
   sound = true,
+  onCategoryChange,
+  onItemSelect,
 }: NotificationsFilterProps) {
   const [active, setActive] = useState(categories[0]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -138,8 +142,9 @@ export function NotificationsFilter({
       if (cat === active) return;
       if (sound) tick();
       setActive(cat);
+      onCategoryChange?.(cat);
     },
-    [active, sound],
+    [active, onCategoryChange, sound],
   );
 
   return (
@@ -255,10 +260,11 @@ export function NotificationsFilter({
                 }}
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}
+                onClick={() => onItemSelect?.(item)}
                 style={{
                   padding: "10px 14px",
                   borderBottom: isLast ? "none" : `0.5px solid var(--nf-sep)`,
-                  cursor: "default",
+                  cursor: onItemSelect ? "pointer" : "default",
                   background: isHovered ? "var(--nf-hover)" : "transparent",
                   transition: "background 0.12s",
                 }}

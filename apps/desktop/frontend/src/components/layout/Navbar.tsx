@@ -1,9 +1,10 @@
 import { Bell, Home, LineChart, ReceiptText, Settings, CalendarDays, Gauge } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AccountMenu from '@/components/ruixen/account-menu';
+import AccountMenu, { type AccountMenuAction } from '@/components/ruixen/account-menu';
 import { NotificationsFilter } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
+import { useToast } from '@/components/toast/ToastProvider';
 import { Button } from '@/components/ui/button';
 
 const tabs: NavTab[] = [
@@ -26,6 +27,7 @@ function resolveTabFromPath(pathname: string) {
 }
 
 export function Navbar() {
+  const { info, success, error } = useToast();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(() => resolveTabFromPath(pathname));
@@ -58,6 +60,46 @@ export function Navbar() {
     }
   };
 
+  const handleNotificationsToggle = () => {
+    setNotificationsOpen((current) => {
+      const next = !current;
+      if (next) {
+        info('Notifications', 'Opened your notifications center.');
+      }
+      return next;
+    });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    info('Notification Filter', `Showing ${category} notifications.`);
+  };
+
+  const handleNotificationSelect = (title: string) => {
+    success('Notification Opened', title);
+  };
+
+  const handleAccountAction = (action: AccountMenuAction) => {
+    if (action === 'logout') {
+      error('Sign Out', 'You have been signed out.');
+      return;
+    }
+
+    const labels: Record<AccountMenuAction, string> = {
+      dashboard: 'Dashboard selected',
+      'team-space': 'Team Space selected',
+      settings: 'Settings selected',
+      'theme-light': 'Theme set to Light',
+      'theme-dark': 'Theme set to Dark',
+      'theme-system': 'Theme set to System',
+      'notification-email': 'Email alerts preference updated',
+      'notification-push': 'Push alerts preference updated',
+      'notification-sms': 'SMS alerts preference updated',
+      logout: 'Signed out',
+    };
+
+    info('Account', labels[action]);
+  };
+
   return (
     <header className="px-7 pb-4 pt-7">
       <div className="flex items-center justify-between rounded-[20px] bg-[#f4f6f5] px-5 py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)]">
@@ -86,17 +128,20 @@ export function Navbar() {
               variant="outline"
               size="icon"
               className="rounded-full border-black/10 bg-white text-[#2d3b40]"
-              onClick={() => setNotificationsOpen((current) => !current)}
+              onClick={handleNotificationsToggle}
             >
               <Bell size={16} />
             </Button>
             {notificationsOpen ? (
               <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl bg-transparent p-1">
-                <NotificationsFilter />
+                <NotificationsFilter
+                  onCategoryChange={handleCategoryChange}
+                  onItemSelect={(item) => handleNotificationSelect(item.title)}
+                />
               </div>
             ) : null}
           </div>
-          <AccountMenu />
+          <AccountMenu onAction={handleAccountAction} />
         </div>
       </div>
     </header>
