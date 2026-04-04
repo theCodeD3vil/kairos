@@ -38,6 +38,8 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
               categories={['minutes']}
               colors={chartColors}
               height={256}
+              showAnimation
+              animationDuration={1000}
               rotateLabelX={{ angle: -20, xAxisHeight: 60 }}
               showLegend={false}
               showGridLines

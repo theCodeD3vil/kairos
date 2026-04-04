@@ -40,6 +40,8 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
               index="language"
               category="share"
               colors={pieColors}
+              showAnimation
+              animationDuration={1000}
               showLabel={false}
               style={{ height: 256 }}
               valueFormatter={(value) => `${value}%`}

@@ -114,6 +114,8 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
               categories={['value']}
               colors={areaChartColors}
               height={224}
+              showAnimation
+              animationDuration={900}
               showLegend={false}
               showGridLines
               valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
