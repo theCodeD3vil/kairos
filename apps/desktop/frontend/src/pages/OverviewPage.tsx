@@ -36,6 +36,7 @@ export function OverviewPage() {
           value={activeTab}
           onValueChange={setActiveTab}
           className="items-start"
+          stickyTabList
         />
       </section>
     </div>

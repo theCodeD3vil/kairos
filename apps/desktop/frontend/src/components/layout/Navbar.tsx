@@ -2,6 +2,7 @@ import { Bell, ChevronDown, Home, LineChart, ReceiptText, Settings, CalendarDays
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
+import { Button } from '@/components/ui/button';
 
 const tabs: NavTab[] = [
   { title: 'Dashboard', url: '/overview', icon: <Home size={16} /> },
@@ -61,13 +62,13 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="grid size-10 place-items-center rounded-full bg-white text-[#2d3b40] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]">
+          <Button variant="outline" size="icon" className="rounded-full border-black/10 bg-white text-[#2d3b40]">
             <Bell size={16} />
-          </button>
-          <button className="flex items-center gap-2 rounded-full bg-white px-2 py-1 text-[#2d3b40] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]">
+          </Button>
+          <Button variant="outline" className="h-10 rounded-full border-black/10 bg-white px-2 text-[#2d3b40]">
             <span className="grid size-8 place-items-center rounded-full bg-[#2e63be] text-xs font-semibold text-white">NA</span>
             <ChevronDown size={14} />
-          </button>
+          </Button>
         </div>
       </div>
     </header>

@@ -36,6 +36,18 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { project: 'desktop-frontend', durationMinutes: 61, startAt: '13:37' },
     ],
     activeHoursSummary: '09:00 - 12:00',
+    syncHealth: {
+      status: 'Healthy',
+      lastSyncAt: 'Today 14:27',
+      blocks: [
+        { key: '1', color: '#0f4f58', tooltip: '09:00 sync ok' },
+        { key: '2', color: '#0f4f58', tooltip: '10:00 sync ok' },
+        { key: '3', color: '#0f4f58', tooltip: '11:00 sync ok' },
+        { key: '4', color: '#b9c95a', tooltip: '12:00 minor delay' },
+        { key: '5', color: '#0f4f58', tooltip: '13:00 sync ok' },
+        { key: '6', color: '#0f4f58', tooltip: '14:00 sync ok' },
+      ],
+    },
   },
   week: {
     todayMinutes: 408,
@@ -76,6 +88,19 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { project: 'internal-auth-service', durationMinutes: 65, startAt: 'Yesterday 16:42' },
     ],
     activeHoursSummary: '09:00 - 12:00',
+    syncHealth: {
+      status: 'Healthy',
+      lastSyncAt: 'Today 14:27',
+      blocks: [
+        { key: 'mon', color: '#0f4f58', tooltip: 'Mon: stable sync' },
+        { key: 'tue', color: '#0f4f58', tooltip: 'Tue: stable sync' },
+        { key: 'wed', color: '#b9c95a', tooltip: 'Wed: brief queue' },
+        { key: 'thu', color: '#0f4f58', tooltip: 'Thu: stable sync' },
+        { key: 'fri', color: '#0f4f58', tooltip: 'Fri: stable sync' },
+        { key: 'sat', color: '#b9c95a', tooltip: 'Sat: low activity' },
+        { key: 'sun', color: '#b9c95a', tooltip: 'Sun: low activity' },
+      ],
+    },
   },
   month: {
     todayMinutes: 408,
@@ -113,6 +138,16 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { project: 'internal-auth-service', durationMinutes: 65, startAt: 'Yesterday 16:42' },
     ],
     activeHoursSummary: '10:00 - 14:00',
+    syncHealth: {
+      status: 'Degraded',
+      lastSyncAt: 'Today 14:27',
+      blocks: [
+        { key: 'w1', color: '#0f4f58', tooltip: 'W1: stable sync' },
+        { key: 'w2', color: '#0f4f58', tooltip: 'W2: stable sync' },
+        { key: 'w3', color: '#b9c95a', tooltip: 'W3: periodic delay' },
+        { key: 'w4', color: '#8d9b3d', tooltip: 'W4: extension restart needed' },
+      ],
+    },
   },
 };
 

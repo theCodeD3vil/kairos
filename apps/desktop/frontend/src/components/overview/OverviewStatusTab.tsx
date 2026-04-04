@@ -1,3 +1,4 @@
+import { Tracker } from '@lobehub/charts';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
 type OverviewStatusTabProps = {
@@ -34,6 +35,20 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
             <p className="text-xs text-[#607073]">Last Active</p>
             <p className="font-numeric mt-1 text-sm font-medium text-[#1d2428]">{snapshot.lastActiveAt}</p>
           </div>
+        </div>
+      </article>
+
+      <article className="rounded-xl bg-[#f2f5f4] p-3">
+        <h3 className="text-sm font-medium text-[#566568]">VS Code Sync Health</h3>
+        <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
+          <Tracker
+            data={snapshot.syncHealth.blocks}
+            blockHeight={24}
+            blockWidth="100%"
+            blockGap={6}
+            leftLabel={snapshot.syncHealth.status}
+            rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
+          />
         </div>
       </article>
     </div>

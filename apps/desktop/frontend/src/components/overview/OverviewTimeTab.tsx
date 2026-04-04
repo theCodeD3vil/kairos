@@ -1,4 +1,4 @@
-import { AreaChart } from '@lobehub/charts';
+import { AreaChart, Tracker } from '@lobehub/charts';
 import {
   AverageSessionBarsIllustration,
   CodingOrbitIllustration,
@@ -95,6 +95,12 @@ function AvgSessionCard({ value }: { value: string }) {
 }
 
 export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
+  const trendTitleByRange: Record<OverviewSnapshot['range'], string> = {
+    today: 'Today Trend',
+    week: 'Weekly Trend',
+    month: 'Monthly Trend',
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -106,7 +112,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
 
       <div className="grid gap-3 xl:grid-cols-2">
         <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Weekly Trend</h3>
+          <h3 className="text-sm font-medium text-[#566568]">{trendTitleByRange[snapshot.range]}</h3>
           <div className="mt-2 h-56">
             <AreaChart
               data={snapshot.weeklyTrend}
@@ -134,6 +140,20 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
           </div>
         </article>
       </div>
+
+      <article className="rounded-xl bg-[#f2f5f4] p-3">
+        <h3 className="text-sm font-medium text-[#566568]">VS Code Sync Health</h3>
+        <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
+          <Tracker
+            data={snapshot.syncHealth.blocks}
+            blockHeight={22}
+            blockWidth="100%"
+            blockGap={6}
+            leftLabel={snapshot.syncHealth.status}
+            rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
+          />
+        </div>
+      </article>
     </div>
   );
 }

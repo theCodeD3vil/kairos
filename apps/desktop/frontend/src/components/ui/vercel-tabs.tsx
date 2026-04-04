@@ -15,9 +15,10 @@ interface VercelTabsProps {
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
+  stickyTabList?: boolean;
 }
 
-export function VercelTabs({ tabs, defaultTab, value, onValueChange, className }: VercelTabsProps) {
+export function VercelTabs({ tabs, defaultTab, value, onValueChange, className, stickyTabList = false }: VercelTabsProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [internalTab, setInternalTab] = useState(defaultTab || tabs[0]?.value);
   const activeTab = value ?? internalTab;
@@ -71,7 +72,8 @@ export function VercelTabs({ tabs, defaultTab, value, onValueChange, className }
 
   return (
     <div className={`flex w-full flex-col items-center ${className}`}>
-      <div className="relative flex h-auto select-none items-center gap-[6px] bg-transparent p-0">
+      <div className={`w-full ${stickyTabList ? 'sticky top-0 z-20 bg-[#ecefee] pb-2' : ''}`}>
+        <div className="relative mx-auto flex h-auto w-fit select-none items-center gap-[6px] bg-transparent p-0">
         {/* Hover Highlight */}
         <div
           className="pointer-events-none absolute top-0 left-0 flex h-8 items-center rounded-[6px] bg-[#0e0f1114] transition-all duration-300 ease-out"
@@ -108,6 +110,7 @@ export function VercelTabs({ tabs, defaultTab, value, onValueChange, className }
             </span>
           </button>
         ))}
+        </div>
       </div>
 
       {/* Content Area */}

@@ -23,6 +23,18 @@ export type RecentSession = {
   startAt: string;
 };
 
+export type SyncHealthBlock = {
+  key: string;
+  color: string;
+  tooltip: string;
+};
+
+export type SyncHealth = {
+  status: 'Healthy' | 'Degraded' | 'Offline';
+  lastSyncAt: string;
+  blocks: SyncHealthBlock[];
+};
+
 export type OverviewSnapshot = {
   range: OverviewRange;
   todayMinutes: number;
@@ -39,4 +51,5 @@ export type OverviewSnapshot = {
   topLanguages: TopLanguage[];
   recentSessions: RecentSession[];
   activeHoursSummary: string;
+  syncHealth: SyncHealth;
 };
