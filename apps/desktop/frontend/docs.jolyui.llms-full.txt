@@ -1,0 +1,7015 @@
+# Installation
+URL: /docs/installation
+
+
+
+<Callout>
+  **Prerequisites:** You need a project with [shadcn/ui](https://ui.shadcn.com/docs/installation) already configured.
+</Callout>
+
+<AdBanner />
+
+<Steps>
+  <Step>
+    ### Initialize shadcn/ui (if not already done)
+
+    Run the `init` command to set up shadcn/ui in your project:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npx shadcn@latest init
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm dlx shadcn@latest init
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn dlx shadcn@latest init
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun x shadcn@latest init
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    ### Add Joly UI Components
+
+    Use the shadcn CLI to add any Joly UI component directly from our registry:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm dlx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn dlx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun x shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+
+    The component will be added to your `components/ui` folder, ready to customize.
+  </Step>
+
+  <Step>
+    ### Use the Component
+
+    Import and use the component anywhere in your project:
+
+    ```tsx
+    import { Button } from '@/components/ui/button';
+
+    export default function Home() {
+      return (
+        <div>
+          <Button>Click me</Button>
+        </div>
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+
+# Introduction
+URL: /docs/introduction
+
+
+
+<AdBanner />
+
+## Why Joly UI?
+
+Joly UI extends shadcn/ui with **50+ additional components** that you won't find in the original library. Same copy-paste experience, same quality, more options.
+
+* **Zero dependencies to install** - Just copy the code into your project
+* **Built on battle-tested primitives** - Uses Radix UI and shadcn/ui foundations
+* **TypeScript-first** - Full type safety with strict mode support
+* **Tailwind CSS v4 ready** - Modern styling with CSS variables
+* **WCAG 2.1 AA compliant** - Accessible by default
+
+## Key Features
+
+* **Composable by design** - Build complex interfaces by combining simple, focused components
+* **Extends shadcn/ui** - Same installation process, same conventions, more components
+* **Copy-paste ready** - No npm packages, just copy the code you need
+* **Fully customizable** - Built with Tailwind CSS and designed to match your design system
+* **Advanced components** - Data tables, media players, drag-and-drop, text animations, and more
+
+## Get Started in 2 Minutes
+
+```bash
+npx shadcn@latest add "https://jolyui.dev/r/button"
+```
+
+That's it. The component is now in your project. Customize it however you want.
+
+## Credits
+
+* [Radix UI](https://radix-ui.com) - Accessible component primitives
+* [shadcn/ui](https://ui.shadcn.com) - Design system and registry distribution
+* [Fumadocs](https://fumadocs.dev) - Documentation framework
+* [Motion](https://motion.dev) - Animation library
+
+
+# MCP
+URL: /docs/mcp
+
+
+
+import { CodeTabs } from '@/components/code-tabs'; 
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContents,
+  TabsContent,
+} from '@/components/tabs';
+
+<AdBanner />
+
+For more information about the MCP server, please refer to the [shadcn/ui MCP documentation](https://ui.shadcn.com/docs/mcp).
+
+## Automatic configuration
+
+Select your MCP client and follow the instructions to configure the shadcn MCP server.
+
+<Tabs defaultValue="claude">
+  <TabsList>
+    <TabsTrigger value="claude">
+      Claude Code
+    </TabsTrigger>
+
+    <TabsTrigger value="cursor">
+      Cursor
+    </TabsTrigger>
+
+    <TabsTrigger value="vscode">
+      VS Code
+    </TabsTrigger>
+  </TabsList>
+
+  <TabsContents>
+    <TabsContent value="claude" className="h-[100px]">
+      <CodeTabs
+        lang="bash"
+        codes={{
+        pnpm: `pnpm dlx shadcn@latest mcp init --client claude`,
+        npm: `npx shadcn@latest mcp init --client claude`,
+        yarn: `yarn shadcn@latest mcp init --client claude`,
+        bun: `bunx --bun shadcn@latest mcp init --client claude`,
+      }}
+      />
+    </TabsContent>
+
+    <TabsContent value="cursor" className="h-[100px]">
+      <CodeTabs
+        lang="bash"
+        codes={{
+        pnpm: `pnpm dlx shadcn@latest mcp init --client cursor`,
+        npm: `npx shadcn@latest mcp init --client cursor`,
+        yarn: `yarn shadcn@latest mcp init --client cursor`,
+        bun: `bunx --bun shadcn@latest mcp init --client cursor`,
+      }}
+      />
+    </TabsContent>
+
+    <TabsContent value="vscode" className="h-[100px]">
+      <CodeTabs
+        lang="bash"
+        codes={{
+        pnpm: `pnpm dlx shadcn@latest mcp init --client vscode`,
+        npm: `npx shadcn@latest mcp init --client vscode`,
+        yarn: `yarn shadcn@latest mcp init --client vscode`,
+        bun: `bunx --bun shadcn@latest mcp init --client vscode`,
+      }}
+      />
+    </TabsContent>
+  </TabsContents>
+</Tabs>
+
+## Manual configuration
+
+Install the shadcn package as a dev dependency:
+
+<CodeTabs
+  lang="bash"
+  codes={{
+  pnpm: `pnpm add -D shadcn@latest`,
+  npm: `npm install -D shadcn@latest`,
+  yarn: `yarn add -D shadcn@latest`,
+  bun: `bun add -D shadcn@latest`,
+}}
+/>
+
+Use the code below to configure the shadcn MCP server in your editor.
+
+<CodeTabs
+  lang="json"
+  codes={{
+  'Claude Code': `// Copy and paste the code into .mcp.json
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  }
+}`,
+  Cursor: `// Copy and paste the code into .cursor/mcp.json
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  }
+}`,
+  'VS Code': `// Copy and paste the code into .vscode/mcp.json
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  }
+}`,
+  Windsurf: `// Copy and paste the code into .codeium/windsurf/mcp_config.json
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  }
+}`,
+}}
+/>
+
+
+# Other animated registry
+URL: /docs/other-animated-registry
+
+
+
+<AdBanner />
+
+**Joly UI is not the only registry of animated components.**
+
+Our mission is to help you build animated UIs quickly and effortlessly. That’s why we also want to highlight other complementary registries that can help you animate your interfaces with the same simplicity and flexibility.
+
+## React Registries
+
+<Cards>
+  <Card
+    className="w-full h-full flex items-center justify-center flex-col space-y-2"
+    icon={
+      <img width={40} height={40} src="/magicui.png" alt="Magic UI" />
+  }
+    href="https://magicui.design"
+    title="Magic UI"
+  />
+
+  <Card
+    className="w-full h-full flex items-center justify-center flex-col space-y-2"
+    icon={
+     <img width={40} height={40} src="/react-bits.png" alt="React Bits" />
+  }
+    href="https://reactbits.dev"
+    title="React Bits"
+  />
+
+  <Card
+    className="w-full h-full flex items-center justify-center flex-col space-y-2"
+    icon={
+    <div
+      className="relative z-10 grid size-[40px] place-content-center border-b border-neutral-950 bg-indigo-600 text-white"
+      style={{
+        clipPath:
+          'polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, calc(100% - 12px) 100%, 12px 100%, 0 100%, 0 0)',
+      }}
+    >
+      <svg className="!size-[30px]" viewBox="0 0 90 90">
+        <path
+          d="M49.5 30.5C65.7924 30.5 79 43.7076 79 60H49.5V30.5Z"
+          fill="white"
+        ></path>
+        <path
+          d="M20 60C20 43.7076 33.2076 30.5 49.5 30.5L49.5 60L20 60Z"
+          fill="white"
+        ></path>
+        <path
+          d="M79 89.5C62.7076 89.5 49.5 76.2924 49.5 60L79 60L79 89.5Z"
+          fill="white"
+        ></path>
+        <g filter="url(#filter0_d_328_2)">
+          <rect
+            x="20"
+            y="30.5"
+            width="29.5"
+            height="29.5"
+            fill="white"
+          ></rect>
+        </g>
+        <path
+          d="M20 60H49.5C49.5 76.2924 36.2924 89.5 20 89.5V60Z"
+          fill="white"
+        ></path>
+        <path
+          d="M20 15.75C20 7.60379 26.6038 1 34.75 1C42.8962 1 49.5 7.6038 49.5 15.75V30.5H20V15.75Z"
+          fill="white"
+        ></path>
+        <defs>
+          <filter
+            id="filter0_d_328_2"
+            x="0"
+            y="0.5"
+            width="89.5"
+            height="89.5"
+            filterUnits="userSpaceOnUse"
+            colorInterpolationFilters="sRGB"
+          >
+            <feFlood floodOpacity="0" result="BackgroundImageFix"></feFlood>
+            <feColorMatrix
+              in="SourceAlpha"
+              type="matrix"
+              values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+              result="hardAlpha"
+            ></feColorMatrix>
+            <feOffset dx="10"></feOffset>
+            <feGaussianBlur stdDeviation="15"></feGaussianBlur>
+            <feComposite in2="hardAlpha" operator="out"></feComposite>
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 0.879379 0 0 0 0 0.879379 0 0 0 0 0.879379 0 0 0 1 0"
+            ></feColorMatrix>
+            <feBlend
+              mode="normal"
+              in2="BackgroundImageFix"
+              result="effect1_dropShadow_328_2"
+            ></feBlend>
+            <feBlend
+              mode="normal"
+              in="SourceGraphic"
+              in2="effect1_dropShadow_328_2"
+              result="shape"
+            ></feBlend>
+          </filter>
+        </defs>
+      </svg>
+    </div>
+  }
+    href="https://www.hover.dev/"
+    title="Hover"
+  />
+
+  <Card
+    className="w-full h-full flex items-center justify-center flex-col space-y-2"
+    icon={
+    <div className="size-[40px] rounded-[7px] p-1.5 flex items-center justify-center bg-[#83e6f7]">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 454">
+        <path
+          d="M475.753 0L226.8 453.6L0 453.6L194.392 99.4116C224.526 44.5081 299.724 0 362.353 0L475.753 0Z"
+          stroke="none"
+        ></path>
+        <path
+          d="M1031.93 113.4C1031.93 50.7709 1082.7 0 1145.33 0C1207.96 0 1258.73 50.7709 1258.73 113.4C1258.73 176.029 1207.96 226.8 1145.33 226.8C1082.7 226.8 1031.93 176.029 1031.93 113.4Z"
+          stroke="none"
+        ></path>
+        <path
+          d="M518.278 0L745.078 0L496.125 453.6L269.325 453.6L518.278 0Z"
+          stroke="none"
+        ></path>
+        <path
+          d="M786.147 0L1012.95 0L818.555 354.188C788.422 409.092 713.223 453.6 650.594 453.6L537.194 453.6L786.147 0Z"
+          stroke="none"
+        ></path>
+      </svg>
+    </div>
+  }
+    title="Motion Examples"
+    href="https://examples.motion.dev/react"
+  />
+
+  <Card className="w-full h-full flex items-center justify-center flex-col space-y-2" icon={<img width={40} height={40} src="https://ui.aceternity.com/logo.png" alt="Aceternity UI" />} href="https://ui.aceternity.com" title="Aceternity UI" />
+</Cards>
+
+## Vue Registries
+
+<Cards>
+  <Card
+    icon={
+<img width={40} height={40} src="/vue-bits.png" alt="Vue Bits" />
+  }
+    href="https://vue-bits.dev"
+    title="Vue Bits"
+  />
+
+  <Card
+    icon={
+    <div className="size-[40px] rounded-full p-2 flex items-center justify-center bg-black">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="150"
+        height="150"
+        viewBox="0 0 150 150"
+        fill="none"
+      >
+        <g clipPath="url(#clip0_13_102)">
+          <path
+            d="M15.9288 21.2779C14.8902 17.4217 18.4217 13.8902 22.2779 14.9288L98.7834 35.5349C102.631 36.5712 103.917 41.382 101.099 44.1996L45.1996 100.099C42.382 102.917 37.5712 101.631 36.5349 97.7834L15.9288 21.2779Z"
+            fill="url(#paint0_radial_13_102)"
+          />
+          <path
+            d="M15.9288 21.2779C14.8902 17.4217 18.4217 13.8902 22.2779 14.9288L98.7834 35.5349C102.631 36.5712 103.917 41.382 101.099 44.1996L45.1996 100.099C42.382 102.917 37.5712 101.631 36.5349 97.7834L15.9288 21.2779Z"
+            fill="url(#paint1_radial_13_102)"
+            fillOpacity="0.5"
+          />
+          <path
+            d="M16.429 21.1432C15.4943 17.6726 18.6726 14.4943 22.1432 15.429L98.6487 36.0351C102.111 36.9677 103.269 41.2975 100.733 43.8333L44.8333 99.7328C42.2975 102.269 37.9677 101.111 37.0351 97.6487L16.429 21.1432Z"
+            fill="url(#paint2_radial_13_102)"
+            fillOpacity="0.5"
+            stroke="url(#paint3_linear_13_102)"
+            strokeWidth="1.03602"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M134.663 129.313C135.701 133.17 132.17 136.701 128.314 135.663L51.808 115.057C47.9604 114.02 46.6747 109.209 49.4923 106.392L105.392 50.4923C108.209 47.6747 113.02 48.9604 114.057 52.808L134.663 129.313Z"
+            fill="url(#paint4_radial_13_102)"
+          />
+          <path
+            d="M134.663 129.313C135.701 133.17 132.17 136.701 128.314 135.663L51.808 115.057C47.9604 114.02 46.6747 109.209 49.4923 106.392L105.392 50.4923C108.209 47.6747 113.02 48.9604 114.057 52.808L134.663 129.313Z"
+            fill="url(#paint5_radial_13_102)"
+            fillOpacity="0.5"
+          />
+          <path
+            d="M134.162 129.448C135.097 132.919 131.919 136.097 128.448 135.162L51.9427 114.556C48.4799 113.624 47.3228 109.294 49.8586 106.758L105.758 50.8586C108.294 48.3228 112.624 49.4799 113.556 52.9427L134.162 129.448Z"
+            fill="url(#paint6_radial_13_102)"
+            fillOpacity="0.5"
+            stroke="url(#paint7_linear_13_102)"
+            strokeWidth="1.03602"
+            strokeLinejoin="round"
+          />
+        </g>
+        <defs>
+          <radialGradient
+            id="paint0_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(41.752 99.2994) rotate(-77.1419) scale(69.1305 68.9235)"
+          >
+            <stop stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" stopOpacity="0.46" />
+          </radialGradient>
+          <radialGradient
+            id="paint1_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(52.0081 50.9494) rotate(-135) scale(102.566 102.259)"
+          >
+            <stop stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" />
+          </radialGradient>
+          <radialGradient
+            id="paint2_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(43.9498 42.891) rotate(45) scale(69.4133 69.2054)"
+          >
+            <stop stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" />
+          </radialGradient>
+          <linearGradient
+            id="paint3_linear_13_102"
+            x1="73.9854"
+            y1="70.7289"
+            x2="15.013"
+            y2="11.7565"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#FFF" stopOpacity="0.6" />
+            <stop offset="0.494792" stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" stopOpacity="0.38" />
+          </linearGradient>
+          <radialGradient
+            id="paint4_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(108.839 51.292) rotate(102.858) scale(69.1305 68.9235)"
+          >
+            <stop offset="0.09" stopColor="#FFF" />
+            <stop offset="1" stopColor="#FFF" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient
+            id="paint5_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(98.5833 99.642) rotate(45) scale(102.566 102.259)"
+          >
+            <stop stopColor="#FFF" stopOpacity="0" />
+            <stop offset="0.0001" stopColor="#FFF" />
+          </radialGradient>
+          <radialGradient
+            id="paint6_radial_13_102"
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(106.642 107.7) rotate(-135) scale(69.4133 69.2054)"
+          >
+            <stop stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" />
+          </radialGradient>
+          <linearGradient
+            id="paint7_linear_13_102"
+            x1="76.606"
+            y1="79.8625"
+            x2="135.578"
+            y2="138.835"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#FFF" stopOpacity="0.6" />
+            <stop offset="0.494792" stopColor="#FFF" stopOpacity="0" />
+            <stop offset="1" stopColor="#FFF" stopOpacity="0.38" />
+          </linearGradient>
+          <clipPath id="clip0_13_102">
+            <rect width="150" height="150" fill="#FFF" />
+          </clipPath>
+        </defs>
+      </svg>
+    </div>
+  }
+    href="https://inspira-ui.com/"
+    title="Inspira UI"
+  />
+</Cards>
+
+## Add your distribution
+
+If you have a distribution of animated components, please <a href="https://github.com/johuniq/jolyui/blob/main/apps/www/content/docs/other-animated-distributions.mdx">create a pull request to add it to this page.</a>
+
+
+# Troubleshooting
+URL: /docs/troubleshooting
+
+
+
+<AdBanner />
+
+## Verify your versions
+
+| Dependency       | Minimum recommended version |
+| ---------------- | --------------------------- |
+| **Motion**       | `≥ 12.23.0`                 |
+| **React**        | `≥ 19`                      |
+| **Tailwind CSS** | `≥ 4.1.0`                   |
+| **Shadcn UI**    | `latest`                    |
+
+Make sure your environment meets or exceeds these versions to ensure Joly UI remains compatible and stable.
+
+## Documentation display issues
+
+Certain browser extensions can interfere with how the documentation is rendered. Common culprits include:
+
+* **[Screen Shader | Smart Screen Tinting](https://chromewebstore.google.com/detail/screen-shader-smart-scree/fmlboobidmkelggdainpknloccojpppi?hl=fr\&utm_source=ext_sidebar)**
+
+If problems persist after disabling extensions, clear your browser cache and refresh the page.
+
+## The CLI installation does not respect aliases
+
+In some projects, components may not install in the desired location that you configured in the aliases in the `components.json` file. This is because we can't use a target path with aliases.
+
+We have filed an [issue on shadcn/ui](https://github.com/shadcn-ui/ui/issues/8169), Shadcn added it to the roadmap.
+
+For now, we recommend using the manual installation.
+
+## Flickering with the highlight component
+
+If you are experiencing flickering issues with the `Highlight` component, this is likely due to React's strict mode. Set it to false to avoid issues during development.
+
+## Other issues
+
+If you encounter any other problem, don't hesitate to [open an issue here](https://github.com/johuniq/jolyui/issues/new/choose).
+
+
+# Components List
+URL: /docs/components
+
+
+
+# Button
+URL: /docs/components/buttons/button
+
+
+
+<ComponentTabs name="button-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/button"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install @radix-ui/react-slot class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add @radix-ui/react-slot class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add @radix-ui/react-slot class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add @radix-ui/react-slot class-variance-authority
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/button.tsx`
+
+    <ComponentSource name="button" />
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `globals.css`
+
+    ```css
+    @theme inline {
+    --animate-shimmer: shimmer 2s linear infinite;
+    --animate-shimmer-slide: shimmer-slide 2s linear infinite;
+
+    @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+    }
+
+    @keyframes shimmer-slide {
+    0% {
+      transform: translateX(-200%);
+    }
+    100% {
+      transform: translateX(200%);
+    }
+    }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { Button } from "@/components/ui/button";
+
+<Button>Click me</Button>
+```
+
+## Examples
+
+### Variants
+
+The Button component supports multiple visual variants with modern animations and effects.
+
+<ComponentTabs name="button-variants-demo" />
+
+**Available variants:**
+
+* `default` - Gradient background with hover glow and radial mouse tracking
+* `destructive` - Red gradient for dangerous actions
+* `outline` - Bordered with backdrop blur
+* `secondary` - Secondary gradient style
+* `ghost` - Transparent with subtle hover
+* `link` - Text link style
+* `shimmer` - Animated shimmer effect on hover
+* `glow` - Purple gradient with glowing border effect
+
+### Sizes
+
+Choose from different sizes to match your design needs.
+
+<ComponentTabs name="button-sizes-demo" />
+
+### With Icons
+
+Combine buttons with icons for enhanced visual communication.
+
+<ComponentTabs name="button-icon-demo" />
+
+## API Reference
+
+### Button
+
+A flexible button component that can be rendered as any element using the `asChild` prop.
+
+<AutoTypeTable path="./types/docs/button.ts" name="ButtonProps" />
+
+## Notes
+
+* Use `variant="default"` for primary actions
+* Use `variant="destructive"` for dangerous actions like delete
+* Use `variant="outline"` for secondary actions
+* Use `variant="ghost"` for tertiary actions
+* Use `variant="link"` for navigation
+* The `asChild` prop allows polymorphic rendering with Radix UI's Slot component
+
+
+# Liquid Metal Button
+URL: /docs/components/buttons/liquid-metal-button
+
+
+
+## Basic Usage
+
+<ComponentTabs name="liquid-metal-button-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/liquid-metal-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/liquid-metal-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/liquid-metal-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/liquid-metal-button"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react @paper-design/shaders
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react @paper-design/shaders
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react @paper-design/shaders
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react @paper-design/shaders
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/liquid-metal-button.tsx`
+
+    <ComponentSource name="liquid-metal-button" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
+
+function MyComponent() {
+  return (
+    <LiquidMetalButton label="Click Me" />
+  );
+}
+```
+
+## API Reference
+
+### LiquidMetalButton
+
+<AutoTypeTable path="./types/docs/liquid-metal-button.ts" name="LiquidMetalButtonProps" />
+
+## Credits
+
+Inspired by [Abilshr](https://www.abilshr.com).
+
+
+# Rainbow Button
+URL: /docs/components/buttons/rainbow-button
+
+
+
+## Rainbow Button
+
+<ComponentTabs name="rainbow-button-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/rainbow-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/rainbow-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/rainbow-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/rainbow-button"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/rainbow-button.tsx`
+
+    <ComponentSource name="rainbow-button" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { RainbowButton } from "@/components/ui/rainbow-button";
+
+function MyComponent() {
+  return (
+    <RainbowButton>
+      Get Started
+    </RainbowButton>
+  );
+}
+```
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/rainbow-button.ts" name="RainbowButtonProps" />
+
+## Notes
+
+* The button features a rotating rainbow gradient border.
+* You can customize the colors, duration, and border width.
+* The button includes smooth hover and active state animations.
+* Fully accessible and supports all standard button attributes.
+
+
+# Animated Beam
+URL: /docs/components/creative/animated-beam
+
+
+
+## AI Agent Workflow
+
+A demonstration of a complex AI agent workflow with multiple steps and feedback loops.
+
+<ComponentTabs name="animated-beam-demo" />
+
+<AdBanner />
+
+## Secure Cloud Sync
+
+Demonstrating a secure data transfer from a local device to cloud storage through an encryption layer.
+
+<ComponentTabs name="animated-beam-curved-demo" />
+
+## Microservices Architecture
+
+A complex architecture showing how an API gateway routes requests to various microservices and a shared database.
+
+<ComponentTabs name="animated-beam-multiple-demo" />
+
+## Real-time Collaboration
+
+Showing bidirectional communication between multiple users through a central relay server.
+
+<ComponentTabs name="animated-beam-bidirectional-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/animated-beam"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/animated-beam"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/animated-beam"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/animated-beam"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+Copy and paste the following code into your project. `globals.css`
+
+```css
+@layer utilities {
+@keyframes beam-dash {
+from {
+  stroke-dashoffset: 1000;
+}
+to {
+  stroke-dashoffset: -1000;
+}
+}
+
+@keyframes beam-flow {
+from {
+  transform: translateX(0%);
+}
+to {
+  transform: translateX(300%);
+}
+}
+
+.animated-beam-path {
+will-change: stroke-dashoffset;
+}
+}
+```
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/animated-beam.tsx`
+
+    <ComponentSource name="animated-beam" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { AnimatedBeam, BeamContainer, BeamNode } from "@/components/ui/animated-beam";
+
+function MyComponent() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fromRef = useRef<HTMLDivElement>(null);
+  const toRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <BeamContainer ref={containerRef}>
+      <BeamNode ref={fromRef}>Start</BeamNode>
+      <BeamNode ref={toRef}>End</BeamNode>
+      <AnimatedBeam
+        containerRef={containerRef}
+        fromRef={fromRef}
+        toRef={toRef}
+      />
+    </BeamContainer>
+  );
+}
+```
+
+## API Reference
+
+### AnimatedBeam
+
+<AutoTypeTable path="./types/docs/animated-beam.ts" name="AnimatedBeamProps" />
+
+### BeamContainer
+
+<AutoTypeTable path="./types/docs/animated-beam.ts" name="BeamContainerProps" />
+
+### BeamNode
+
+<AutoTypeTable path="./types/docs/animated-beam.ts" name="BeamNodeProps" />
+
+## Notes
+
+* The `containerRef` must be attached to the parent container that holds both the start and end elements
+* Use `BeamContainer` as the wrapper for proper positioning
+* Use `BeamNode` for the elements you want to connect
+* Curvature values range from -1 to 1, where 0 is straight
+* The animation uses SVG paths and CSS animations for smooth performance
+
+
+# Expanded Map
+URL: /docs/components/creative/expanded-map
+
+
+
+## Basic Usage
+
+Click the card to expand and reveal the map.
+
+<ComponentTabs name="expanded-map-demo" />
+
+<AdBanner />
+
+## Different Locations
+
+Display any location by providing latitude and longitude coordinates.
+
+<ComponentTabs name="expanded-map-locations-demo" />
+
+## Dark Map Style
+
+Use the dark Carto tile provider for a sleek dark map appearance.
+
+<ComponentTabs name="expanded-map-dark-demo" />
+
+## Zoom Levels
+
+Control the map detail with different zoom levels (1-18).
+
+<ComponentTabs name="expanded-map-zoom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/expanded-map"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/expanded-map"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/expanded-map"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/expanded-map"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/expanded-map.tsx`
+
+    <ComponentSource name="expanded-map" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { LocationMap } from "@/components/ui/expanded-map"
+
+export default function MyComponent() {
+  return (
+    <LocationMap
+      location="New York, NY"
+      latitude={40.7128}
+      longitude={-74.006}
+    />
+  )
+}
+```
+
+## API Reference
+
+### LocationMap
+
+<AutoTypeTable path="./types/docs/expanded-map.ts" name="LocationMapProps" />
+
+## Notes
+
+* Uses **real map tiles** from OpenStreetMap or Carto tile providers
+* **3D tilt effect** follows cursor movement with spring physics
+* **Click to expand** reveals the full map with animated marker
+* Coordinates are **automatically formatted** with N/S/E/W directions
+* Map tiles are **preloaded** for smooth transitions
+* Supports **three tile providers**: OpenStreetMap, Carto Light, and Carto Dark
+* **Zoom levels 1-18** control map detail (higher = more zoomed in)
+* Uses **Web Mercator projection** for accurate coordinate conversion
+
+
+# GitHub Contributors
+URL: /docs/components/creative/github-contributors
+
+
+
+<ComponentTabs name="github-contributors-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/github-contributors"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/github-contributors"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/github-contributors"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/github-contributors"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install @radix-ui/react-tooltip lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add @radix-ui/react-tooltip lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add @radix-ui/react-tooltip lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add @radix-ui/react-tooltip lucide-react motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="github-contributors" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { GitHubContributors } from "@/components/ui/github-contributors";
+
+<GitHubContributors repo="vercel/next.js" limit={12} />
+```
+
+## API Reference
+
+### GitHubContributors
+
+The main component that fetches and displays GitHub contributors.
+
+<AutoTypeTable path="./types/docs/github-contributors.ts" name="GitHubContributorsProps" />
+
+## Notes
+
+* The component uses GitHub's public API which has rate limits
+* Without authentication: 60 requests per hour per IP
+* With token: 5,000 requests per hour
+* Contributors are sorted by contribution count
+* The top contributor gets a special star badge
+* Tooltips show detailed contribution statistics
+
+
+# GitHub Star Button
+URL: /docs/components/creative/github-star
+
+
+
+## Basic Usage
+
+The GitHub Star Button provides a sleek way to showcase your repository's popularity. It fetches real-time data from the GitHub API and features smooth animations.
+
+<ComponentTabs name="github-star-demo" />
+
+<AdBanner />
+
+## Features
+
+* **Real-time Data**: Fetches stargazers count directly from GitHub API.
+* **Rolling Number Animation**: Premium vertical rolling animation for digits.
+* **Particle Effects**: Interactive star particles on click.
+* **Interactive Hover**: Smooth scaling, rotation, and shimmer effects.
+* **Responsive**: Works great on all screen sizes.
+* **Theme Aware**: Automatically adjusts for light and dark modes.
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/github-star"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/github-star"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/github-star"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/github-star"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/github-star.tsx`
+
+    <ComponentSource name="github-star" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/github-star.ts" name="GitHubStarButtonProps" />
+
+## Customization
+
+You can easily customize the button by passing a `className` prop to adjust its size, colors, or spacing. The component uses Tailwind CSS for all its styling.
+
+### Colors
+
+The component uses a custom `star` and `star-glow` color. You can add these to your `globals.css` or Tailwind theme:
+
+```css
+@theme {
+  --color-star: #eab308;
+  --color-star-glow: #facc15;
+}
+```
+
+
+# Hover Preview
+URL: /docs/components/creative/hover-preview
+
+
+
+## Basic Usage
+
+<ComponentTabs name="hover-preview-demo" />
+
+<AdBanner />
+
+## Portfolio Links
+
+Perfect for showcasing projects in a portfolio or case studies.
+
+<ComponentTabs name="hover-preview-portfolio-demo" />
+
+## Product List
+
+Display product previews in e-commerce or catalog pages.
+
+<ComponentTabs name="hover-preview-product-demo" />
+
+## Custom Styling
+
+Customize card appearance, cursor offset, and link styles.
+
+<ComponentTabs name="hover-preview-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/hover-preview"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/hover-preview"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/hover-preview"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/hover-preview"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project. `component/ui/hover-preview.tsx`
+
+    <ComponentSource name="hover-preview" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import {
+  HoverPreviewProvider,
+  HoverPreviewLink,
+} from "@/components/ui/hover-preview"
+
+const previewData = {
+  project1: {
+    image: "https://example.com/image.jpg",
+    title: "Project Title",
+    subtitle: "Project description",
+  },
+  // Add more items...
+}
+
+export default function MyComponent() {
+  return (
+    <HoverPreviewProvider data={previewData}>
+      <p>
+        Check out my <HoverPreviewLink previewKey="project1">awesome project</HoverPreviewLink>.
+      </p>
+    </HoverPreviewProvider>
+  )
+}
+```
+
+## API Reference
+
+### HoverPreviewProvider
+
+<AutoTypeTable path="./types/docs/hover-preview.ts" name="HoverPreviewProviderProps" />
+
+### HoverPreviewLink
+
+<AutoTypeTable path="./types/docs/hover-preview.ts" name="HoverPreviewLinkProps" />
+
+### PreviewData
+
+<AutoTypeTable path="./types/docs/hover-preview.ts" name="PreviewData" />
+
+### HoverPreviewCardProps
+
+<AutoTypeTable path="./types/docs/hover-preview.ts" name="HoverPreviewCardProps" />
+
+## Notes
+
+* Uses **React Context** to share hover state between provider and links
+* Preview card **follows cursor** with smart boundary detection
+* Cards automatically **reposition** to stay within viewport
+* Images are **preloaded** by default for instant display
+* Supports **custom styling** for both links and preview cards
+* Works with any number of **hoverable links** within a provider
+* **Accessible** - links maintain proper focus states and semantics
+
+
+# Image Comparison
+URL: /docs/components/creative/image-comparison
+
+
+
+## Drag Slider
+
+<ComponentTabs name="image-comparison-demo" />
+
+<AdBanner />
+
+## Hover Reveal
+
+<ComponentTabs name="image-comparison-hover-demo" />
+
+## Fade Toggle
+
+<ComponentTabs name="image-comparison-fade-demo" />
+
+## Split View
+
+<ComponentTabs name="image-comparison-split-demo" />
+
+## Lens Effect
+
+<ComponentTabs name="image-comparison-lens-demo" />
+
+## Vertical Slider
+
+<ComponentTabs name="image-comparison-vertical-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/image-comparison"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/image-comparison"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/image-comparison"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/image-comparison"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/image-comparison.tsx`
+
+    <ComponentSource name="image-comparison" />
+  </Step>
+</Steps>
+
+## API Reference
+
+### ImageComparison
+
+<AutoTypeTable path="./types/docs/image-comparison.ts" name="ImageComparisonProps" />
+
+### ImageComparisonHover
+
+<AutoTypeTable path="./types/docs/image-comparison.ts" name="ImageComparisonHoverProps" />
+
+### ImageComparisonFade
+
+<AutoTypeTable path="./types/docs/image-comparison.ts" name="ImageComparisonFadeProps" />
+
+### ImageComparisonSplit
+
+<AutoTypeTable path="./types/docs/image-comparison.ts" name="ImageComparisonSplitProps" />
+
+### ImageComparisonLens
+
+<AutoTypeTable path="./types/docs/image-comparison.ts" name="ImageComparisonLensProps" />
+
+## Notes
+
+* All image comparison components support both horizontal and vertical orientations
+* The drag slider uses Framer Motion's drag constraints for smooth interaction
+* Hover effects use mouse tracking for responsive reveals
+* Lens effects create circular reveal masks using CSS clip-path
+* Split view components can be customized with gap spacing
+* All components are fully accessible and support keyboard navigation
+
+
+# Image Sphere
+URL: /docs/components/creative/image-sphere
+
+
+
+## Basic Usage
+
+<ComponentTabs name="image-sphere-demo" />
+
+<AdBanner />
+
+## Auto Rotate
+
+Enable automatic rotation for a dynamic, hands-free display.
+
+<ComponentTabs name="image-sphere-autorotate-demo" />
+
+## Large Gallery
+
+Display more images with adjusted sizing for better visibility.
+
+<ComponentTabs name="image-sphere-large-demo" />
+
+## Custom Configuration
+
+Customize drag sensitivity, momentum, and visual properties.
+
+<ComponentTabs name="image-sphere-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/image-sphere"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/image-sphere"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/image-sphere"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/image-sphere"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/image-sphere.tsx`
+
+    <ComponentSource name="image-sphere" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import SphereImageGrid from "@/components/ui/image-sphere";
+
+const images = [
+  {
+    id: "1",
+    src: "https://example.com/image1.jpg",
+    alt: "Image 1",
+    title: "Title",
+    description: "Description",
+  },
+  // Add more images...
+];
+
+export default function MyComponent() {
+  return (
+    <SphereImageGrid
+      images={images}
+      containerSize={400}
+      sphereRadius={180}
+      autoRotate={true}
+    />
+  );
+}
+```
+
+## API Reference
+
+### SphereImageGrid
+
+<AutoTypeTable path="./types/docs/image-sphere.ts" name="SphereImageGridProps" />
+
+### ImageData
+
+<AutoTypeTable path="./types/docs/image-sphere.ts" name="ImageData" />
+
+### Position3D
+
+<AutoTypeTable path="./types/docs/image-sphere.ts" name="Position3D" />
+
+### SphericalPosition
+
+<AutoTypeTable path="./types/docs/image-sphere.ts" name="SphericalPosition" />
+
+## Notes
+
+* The sphere uses **Fibonacci distribution** for even image placement across the surface
+* Supports both **mouse and touch interactions** for drag-based rotation
+* Images smoothly **fade out** when rotating to the back of the sphere
+* Click on any image to open a **spotlight modal** with title and description
+* Built-in **momentum physics** provides natural deceleration after dragging
+* **Collision detection** prevents image overlap during rotation
+* Auto-rotate can be interrupted by user interaction and resumes automatically
+* Responsive container sizing with configurable perspective for 3D depth
+
+
+# Magnetic
+URL: /docs/components/creative/magnetic
+
+
+
+<ComponentTabs name="magnetic-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/magnetic"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/magnetic"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/magnetic"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/magnetic"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="magnetic" />
+  </Step>
+</Steps>
+
+## Layout
+
+```tsx
+import { Magnetic } from "@/components/ui/magnetic";
+
+<Magnetic>
+  <button>Hover Me</button>
+</Magnetic>
+```
+
+## Examples
+
+### Intensity
+
+Control the strength of the magnetic effect with the `intensity` prop. Higher values create stronger attraction.
+
+<ComponentTabs name="magnetic-intensity-demo" />
+
+### Range
+
+Adjust the activation distance with the `range` prop. This defines how far from the element the effect begins.
+
+<ComponentTabs name="magnetic-range-demo" />
+
+### Action Area
+
+Define where the magnetic effect should be triggered using the `actionArea` prop.
+
+<ComponentTabs name="magnetic-action-area-demo" />
+
+### Cards Example
+
+A practical example showing the magnetic effect applied to card components.
+
+<ComponentTabs name="magnetic-cards-demo" />
+
+## API Reference
+
+### Magnetic
+
+The main magnetic wrapper component that applies smooth cursor-following animations to its children.
+
+<AutoTypeTable path="./types/docs/magnetic.ts" name="MagneticProps" />
+
+
+# Morphing Cursor
+URL: /docs/components/creative/morphing-cursor
+
+
+
+<ComponentTabs name="morphing-cursor-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/morphing-cursor"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/morphing-cursor"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/morphing-cursor"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/morphing-cursor"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="morphing-cursor" />
+  </Step>
+</Steps>
+
+## Layout
+
+```tsx
+import { MagneticText } from "@/components/ui/morphing-cursor";
+
+<MagneticText text="CREATIVE" hoverText="EXPLORE" />
+```
+
+## Examples
+
+### Custom Text
+
+Use different text combinations to create unique interactive experiences.
+
+<ComponentTabs name="morphing-cursor-custom-demo" />
+
+### With Container Styling
+
+Add custom styling to the container using the `className` prop.
+
+<ComponentTabs name="morphing-cursor-styled-demo" />
+
+## API Reference
+
+### MagneticText
+
+The main component that creates a magnetic cursor effect revealing alternate text on hover.
+
+<AutoTypeTable path="./types/docs/morphing-cursor.ts" name="MagneticTextProps" />
+
+
+# Video Player
+URL: /docs/components/creative/video-player
+
+
+
+<ComponentTabs name="video-player-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/video-player"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/video-player"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/video-player"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/video-player"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="video-player" />
+  </Step>
+</Steps>
+
+## Layout
+
+```tsx
+import { VideoPlayer } from "@/components/ui/video-player";
+
+<VideoPlayer
+  src="https://example.com/video.mp4"
+  poster="https://example.com/poster.jpg"
+  title="Video Title"
+  description="Video description"
+/>
+```
+
+## Features
+
+The Video Player component includes:
+
+* **Advanced Controls**: Play/pause, volume, progress bar, fullscreen, picture-in-picture
+* **Keyboard Shortcuts**: Space (play/pause), M (mute), F (fullscreen), J/L (skip), P (PiP), C (captions)
+* **Quality & Speed Control**: Adjustable playback quality and speed settings
+* **Theater Mode**: Immersive viewing experience
+* **Playlist Support**: Navigate between multiple videos
+* **Custom Callbacks**: Track playback progress and events
+* **Smooth Animations**: Powered by Framer Motion
+* **Responsive Design**: Works on all screen sizes
+
+## Examples
+
+### Compact Mode
+
+Use the `compact` prop for a minimal player with essential controls only.
+
+<ComponentTabs name="video-player-compact-demo" />
+
+### Playlist
+
+Create a playlist by managing video state and using navigation callbacks.
+
+<ComponentTabs name="video-player-playlist-demo" />
+
+### With Callbacks
+
+Track playback progress and implement custom behaviors using the `onTimeUpdate` callback.
+
+<ComponentTabs name="video-player-callbacks-demo" />
+
+### Timestamp Control
+
+Control playback position programmatically using the `seek` method exposed via ref. This example also demonstrates the built-in hover preview feature.
+
+<ComponentTabs name="video-player-timestamp-demo" />
+
+## Keyboard Shortcuts
+
+| Key     | Action                    |
+| ------- | ------------------------- |
+| `Space` | Play/Pause                |
+| `M`     | Mute/Unmute               |
+| `F`     | Toggle Fullscreen         |
+| `J`     | Skip backward 10 seconds  |
+| `L`     | Skip forward 10 seconds   |
+| `P`     | Toggle Picture-in-Picture |
+| `C`     | Toggle Captions           |
+
+## API Reference
+
+### VideoPlayer
+
+A comprehensive video player with advanced features and controls.
+
+<AutoTypeTable path="./types/docs/video-player.ts" name="VideoPlayerProps" />
+
+
+# Animated Toast
+URL: /docs/components/feedback/animated-toast
+
+
+
+## Basic Toast
+
+<ComponentTabs name="animated-toast-demo" />
+
+<AdBanner />
+
+## Minimal Toast
+
+<ComponentTabs name="animated-toast-minimal-demo" />
+
+## Undo Toast
+
+<ComponentTabs name="animated-toast-undo-demo" />
+
+## Notification Toast
+
+<ComponentTabs name="animated-toast-notification-demo" />
+
+## Stacked Notifications
+
+<ComponentTabs name="animated-toast-stacked-demo" />
+
+## Promise Toast
+
+<ComponentTabs name="animated-toast-promise-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/animated-toast"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/animated-toast"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/animated-toast"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/animated-toast"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        lucide-react
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/animated-toast.tsx`
+
+    <ComponentSource name="animated-toast" />
+  </Step>
+</Steps>
+
+## API Reference
+
+### AnimatedToastProvider
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="AnimatedToastProviderProps" />
+
+### Toast Types
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="Toast" />
+
+### MinimalToast
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="MinimalToastProps" />
+
+### UndoToast
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="UndoToastProps" />
+
+### NotificationToast
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="NotificationToastProps" />
+
+### StackedNotifications
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="StackedNotificationsProps" />
+
+### PromiseToast
+
+<AutoTypeTable path="./types/docs/animated-toast.ts" name="PromiseToastProps" />
+
+## Notes
+
+* All toast components support different types: success, error, warning, info, and default
+* Toast positions can be customized (top-right, top-left, bottom-right, etc.)
+* Toasts automatically dismiss after a configurable duration
+* The provider manages toast state and stacking
+* Promise toasts provide automatic loading/success/error feedback
+* Stacked notifications show multiple toasts with a maximum visible limit
+* All animations use Framer Motion for smooth transitions
+
+
+# Animated Tooltip
+URL: /docs/components/feedback/animated-tooltip
+
+
+
+## Placement Options
+
+<ComponentTabs name="animated-tooltip-demo" />
+
+<AdBanner />
+
+## Animation Types
+
+<ComponentTabs name="animated-tooltip-animation-demo" />
+
+## Icon Tooltips with Shortcuts
+
+<ComponentTabs name="animated-tooltip-icon-demo" />
+
+## Status Tooltips
+
+<ComponentTabs name="animated-tooltip-status-demo" />
+
+## Rich Tooltip with Image
+
+<ComponentTabs name="animated-tooltip-rich-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/animated-tooltip"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/animated-tooltip"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/animated-tooltip"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/animated-tooltip"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/animated-tooltip.tsx`
+
+    <ComponentSource name="animated-tooltip" />
+  </Step>
+</Steps>
+
+## API Reference
+
+### AnimatedTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="AnimatedTooltipProps" />
+
+### RichTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="RichTooltipProps" />
+
+### IconTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="IconTooltipProps" />
+
+### HoverCardTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="HoverCardTooltipProps" />
+
+### ConfirmTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="ConfirmTooltipProps" />
+
+### TooltipGroup
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="TooltipGroupProps" />
+
+### FloatingLabel
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="FloatingLabelProps" />
+
+### StatusTooltip
+
+<AutoTypeTable path="./types/docs/animated-tooltip.ts" name="StatusTooltipProps" />
+
+## Notes
+
+* Tooltips automatically position themselves to stay within viewport bounds
+* All tooltips support keyboard navigation and accessibility features
+* Animation types include fade, scale, slide, and spring transitions
+* Rich tooltips support images, titles, and descriptions
+* Icon tooltips can display keyboard shortcuts
+* Status tooltips show online/offline/away/busy indicators
+* Tooltip groups are perfect for toolbar-style interfaces
+
+
+# AI Prompt Box
+URL: /docs/components/inputs/ai-prompt-box
+
+
+
+<ComponentTabs name="ai-prompt-box-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/ai-prompt-box"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/ai-prompt-box"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/ai-prompt-box"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/ai-prompt-box"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install    motion @radix-ui/react-dialog @radix-ui/react-tooltip lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion @radix-ui/react-dialog @radix-ui/react-tooltip lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion @radix-ui/react-dialog @radix-ui/react-tooltip lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion @radix-ui/react-dialog @radix-ui/react-tooltip lucide-react
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="ai-prompt-box" />
+  </Step>
+</Steps>
+
+## Features
+
+The AI Prompt Box component includes several features:
+
+* **Text Input**: Auto-resizing textarea with keyboard shortcuts (Enter to send, Shift+Enter for new line)
+* **File Upload**: Drag & drop or click to upload images with preview
+* **Voice Recording**: Built-in voice recording with visualizer
+* **Search Mode**: Toggle to search the web
+* **Think Mode**: Toggle for deep thinking prompts
+* **Canvas Mode**: Toggle for creative canvas interactions
+* **Clipboard Paste**: Paste images directly from clipboard
+
+## Loading State
+
+Use the `isLoading` prop to show a loading state when processing messages.
+
+<ComponentTabs name="ai-prompt-box-loading-demo" />
+
+## API Reference
+
+### PromptInputBox
+
+The main component that wraps all functionality.
+
+<AutoTypeTable path="./types/docs/ai-prompt-box.ts" name="PromptInputBoxProps" />
+
+### PromptInput
+
+The container component for custom implementations.
+
+<AutoTypeTable path="./types/docs/ai-prompt-box.ts" name="PromptInputProps" />
+
+### PromptInputTextarea
+
+The textarea component with auto-resize functionality.
+
+<AutoTypeTable path="./types/docs/ai-prompt-box.ts" name="PromptInputTextareaProps" />
+
+### PromptInputAction
+
+Wrapper for action buttons with tooltips.
+
+<AutoTypeTable path="./types/docs/ai-prompt-box.ts" name="PromptInputActionProps" />
+
+
+# Animated Theme Toggle
+URL: /docs/components/inputs/animated-theme-toggle
+
+
+
+## Basic Usage
+
+<ComponentTabs name="animated-theme-toggle-demo" />
+
+<AdBanner />
+
+## Different Sizes
+
+<ComponentTabs name="animated-theme-toggle-sizes-demo" />
+
+## In Navbar
+
+<ComponentTabs name="animated-theme-toggle-navbar-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/animated-theme-toggle"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/animated-theme-toggle"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/animated-theme-toggle"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/animated-theme-toggle"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion next-themes
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion next-themes
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion next-themes
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion next-themes
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/animated-theme-toggle.tsx`
+
+    <ComponentSource name="animated-theme-toggle" />
+  </Step>
+
+  <Step>
+    Make sure you have the `ThemeProvider` set up in your app. In your root layout:
+
+    ```tsx
+    import { ThemeProvider } from "next-themes"
+
+    export default function RootLayout({ children }) {
+      return (
+        <html lang="en" suppressHydrationWarning>
+          <body>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              {children}
+            </ThemeProvider>
+          </body>
+        </html>
+      )
+    }
+    ```
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle"
+
+export default function MyComponent() {
+  return <AnimatedThemeToggle />
+}
+```
+
+## API Reference
+
+### AnimatedThemeToggle
+
+<AutoTypeTable path="./types/docs/animated-theme-toggle.ts" name="AnimatedThemeToggleProps" />
+
+## Notes
+
+* Uses **Framer Motion** for smooth SVG path animations
+* **Sun-to-moon** transition with synchronized path length animations
+* Built on top of the **Button** component for consistent styling
+* Includes **hover and focus states** out of the box
+* The toggle uses **internal state** by default - integrate with your theme provider for actual theme switching
+* SVG paths animate with **coordinated timing** for a polished effect
+
+
+# Calendar
+URL: /docs/components/inputs/calendar
+
+
+
+## Basic Calendar
+
+<ComponentTabs name="calendar-basic-demo" />
+
+<AdBanner />
+
+## Date Range Selection
+
+<ComponentTabs name="calendar-range-demo" />
+
+## Multiple Date Selection
+
+<ComponentTabs name="calendar-multiple-demo" />
+
+## Date & Time Selection
+
+<ComponentTabs name="calendar-time-demo" />
+
+## Calendar with Presets
+
+<ComponentTabs name="calendar-presets-demo" />
+
+## Calendar with Constraints
+
+<ComponentTabs name="calendar-constraints-demo" />
+
+## Full Featured Examples
+
+<ComponentTabs name="calendar-full-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/calender"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/calender"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/calender"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/calender"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="calender" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { useState } from "react"
+import { AnimatedCalendar } from "@/components/ui/calender"
+
+export default function MyComponent() {
+  const [date, setDate] = useState<Date>()
+
+  return (
+    <AnimatedCalendar
+      mode="single"
+      value={date}
+      onChange={setDate}
+      placeholder="Select a date"
+    />
+  )
+}
+```
+
+## API Reference
+
+### AnimatedCalendar
+
+<AutoTypeTable path="./types/docs/calendar.ts" name="AnimatedCalendarProps" />
+
+
+# Command Palette
+URL: /docs/components/inputs/command-palette
+
+
+
+## Basic Usage
+
+The Command Palette is a versatile component that allows users to quickly access commands, search through content, and perform actions using their keyboard.
+
+<ComponentTabs name="command-palette-demo" />
+
+<AdBanner />
+
+## Features
+
+* **Fuzzy Search**: Intelligent searching that matches characters even if they aren't consecutive.
+* **Keyboard Navigation**: Full support for arrow keys, Enter to select, and Escape to close.
+* **Shortcuts**: Support for global shortcuts (default ⌘K) and individual command shortcuts.
+* **Groups**: Organize commands into logical sections with headings.
+* **Descriptions**: Optional sub-text for commands to provide more context.
+* **Icons**: Support for Lucide icons for better visual recognition.
+
+## Customization
+
+You can customize the placeholder, empty message, and the global shortcut used to toggle the palette.
+
+<ComponentTabs name="command-palette-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/command-palette"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/command-palette"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/command-palette"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/command-palette"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/command-palette.tsx`
+
+    <ComponentSource name="command-palette" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/command-palette.ts" name="CommandPaletteProps" />
+
+### CommandGroup
+
+<AutoTypeTable path="./types/docs/command-palette.ts" name="CommandGroup" />
+
+### CommandItem
+
+<AutoTypeTable path="./types/docs/command-palette.ts" name="CommandItem" />
+
+
+# Date Wheel Picker
+URL: /docs/components/inputs/date-wheel-picker
+
+
+
+<ComponentTabs name="date-wheel-picker-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/date-wheel-picker"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/date-wheel-picker"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/date-wheel-picker"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/date-wheel-picker"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install    motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="date-wheel-picker" />
+  </Step>
+</Steps>
+
+## Features
+
+* **3D Wheel Effect**: Smooth perspective-based rotation for a realistic wheel appearance
+* **Drag Gestures**: Drag to scroll through options with momentum
+* **Scroll Support**: Mouse wheel scrolling for quick navigation
+* **Keyboard Navigation**: Full keyboard support (Arrow keys, Home, End, Page Up/Down)
+* **Locale Support**: Automatic month name localization
+* **Multiple Sizes**: Small, medium, and large size variants
+* **Accessible**: Proper ARIA attributes and keyboard handling
+
+## Sizes
+
+The picker supports three sizes: `sm`, `md` (default), and `lg`.
+
+<ComponentTabs name="date-wheel-picker-sizes-demo" />
+
+## Locale Support
+
+Pass a locale string to display month names in different languages.
+
+<ComponentTabs name="date-wheel-picker-locale-demo" />
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/date-wheel-picker.ts" name="DateWheelPickerProps" />
+
+
+# Feedback Widget
+URL: /docs/components/inputs/feedback-widget
+
+
+
+<ComponentTabs name="feedback-widget-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/feedback-widget"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/feedback-widget"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/feedback-widget"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/feedback-widget"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install    motion react-markdown @radix-ui/react-toggle-group
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion react-markdown @radix-ui/react-toggle-group
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion react-markdown @radix-ui/react-toggle-group
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion react-markdown @radix-ui/react-toggle-group
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="feedback-widget" />
+  </Step>
+</Steps>
+
+## Custom Label
+
+<ComponentTabs name="feedback-widget-custom-label-demo" />
+
+## API Reference
+
+The main file tree component that renders a hierarchical structure of files and folders.
+
+<AutoTypeTable path="./types/docs/feedback-widget.ts" name="FeedbackWidgetProps" />
+
+
+# Segmented Button
+URL: /docs/components/inputs/segmented-button
+
+
+
+<ComponentTabs name="segmented-button-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Basic Navigation
+
+<ComponentTabs name="segmented-button-demo" />
+
+### Theme Selector
+
+<ComponentTabs name="segmented-button-theme-demo" />
+
+### With Logo Integration
+
+<ComponentTabs name="segmented-button-logo-demo" />
+
+### Controlled State
+
+<ComponentTabs name="segmented-button-controlled-demo" />
+
+### Custom Styling
+
+<ComponentTabs name="segmented-button-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/segmented-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/segmented-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/segmented-button"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/segmented-button"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project. `component/ui/segmented-button.tsx`
+
+    <ComponentSource name="segmented-button" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/segmented-button.ts" name="SegmentedButtonProps" />
+
+## Usage
+
+```tsx
+import SegmentedButton from "@/components/ui/segmented-button";
+
+const tabs = [
+  { id: "home", label: "Home" },
+  { id: "about", label: "About" },
+  { id: "contact", label: "Contact" },
+];
+
+export default function MyComponent() {
+  return (
+    <SegmentedButton
+      buttons={tabs}
+      defaultActive="home"
+      onChange={(activeId) => console.log("Active:", activeId)}
+    />
+  );
+}
+```
+
+## Features
+
+* **Smooth Animations**: Powered by Motion.js for fluid transitions
+* **Logo Support**: Built-in support for logo buttons with custom SVG
+* **Controlled State**: Full control over active state with callbacks
+* **Customizable**: Accepts custom className for styling
+* **Responsive**: Works seamlessly on mobile and desktop
+* **TypeScript**: Fully typed with comprehensive interfaces
+
+## Notes
+
+* The component uses Motion.js for smooth animations
+* Logo buttons use a predefined SVG that matches the design system
+* The active indicator smoothly animates between button positions
+* Hover effects provide visual feedback for better UX
+
+
+# Dock
+URL: /docs/components/navigation/dock
+
+
+
+## Basic Usage
+
+<ComponentTabs name="dock-demo" />
+
+<AdBanner />
+
+## macOS Style
+
+<ComponentTabs name="dock-macos-demo" />
+
+## Social Media
+
+<ComponentTabs name="dock-social-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/dock"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/dock"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/dock"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/dock"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion lucide-react
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion lucide-react
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/dock.tsx`
+
+    <ComponentSource name="dock" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { Dock, DockIcon, DockItem, DockLabel } from "@/components/ui/dock";
+
+function MyDock() {
+  return (
+    <Dock>
+      <DockItem>
+        <DockIcon>
+          <HomeIcon />
+        </DockIcon>
+        <DockLabel>Home</DockLabel>
+      </DockItem>
+      {/* More items... */}
+    </Dock>
+  );
+}
+```
+
+## API Reference
+
+### Dock
+
+<AutoTypeTable path="./types/docs/dock.ts" name="DockProps" />
+
+### DockItem
+
+<AutoTypeTable path="./types/docs/dock.ts" name="DockItemProps" />
+
+### DockIcon
+
+<AutoTypeTable path="./types/docs/dock.ts" name="DockIconProps" />
+
+### DockLabel
+
+<AutoTypeTable path="./types/docs/dock.ts" name="DockLabelProps" />
+
+### DockSeparator
+
+<AutoTypeTable path="./types/docs/dock.ts" name="DockSeparatorProps" />
+
+## Notes
+
+* The dock automatically applies magnification effects when hovering near items
+* Use `DockSeparator` to group related items
+* Icons are automatically sized and centered within `DockIcon`
+* Labels appear as tooltips on hover
+* The component uses Framer Motion for smooth animations
+
+
+# File Tree
+URL: /docs/components/navigation/file-tree
+
+
+
+## Basic
+
+<ComponentTabs name="file-tree-basic-demo" />
+
+<AdBanner />
+
+## Expandable
+
+<ComponentTabs name="file-tree-expandable-demo" />
+
+## Fully Expanded
+
+<ComponentTabs name="file-tree-full-expanded-demo" />
+
+## Selectable
+
+<ComponentTabs name="file-tree-selectable-demo" />
+
+## Custom Icons
+
+<ComponentTabs name="file-tree-custom-icons-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/file-tree"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/file-tree"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/file-tree"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/file-tree"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="file-tree" />
+  </Step>
+</Steps>
+
+## API Reference
+
+### FileTree
+
+The main file tree component that renders a hierarchical structure of files and folders.
+
+<AutoTypeTable path="./types/docs/file-tree.ts" name="FileTreeProps" />
+
+### TreeNode
+
+The data structure for individual nodes in the file tree.
+
+<AutoTypeTable path="./types/docs/file-tree.ts" name="TreeNode" />
+
+
+# Vercel Tabs
+URL: /docs/components/navigation/vercel-tabs
+
+
+
+<ComponentTabs name="vercel-tabs-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/vercel-tabs"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project `component/ui/vercel-tabs.tsx`
+
+    <ComponentSource name="vercel-tabs" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { VercelTabs } from "@/components/ui/vercel-tabs";
+
+const tabsData = [
+  { label: "Overview", value: "Overview", content: <div>Overview Content</div> },
+  { label: "Integrations", value: "Integrations", content: <div>Integrations Content</div> },
+];
+
+<VercelTabs tabs={tabsData} defaultTab="Overview" />
+```
+
+## Examples
+
+### Basic
+
+<ComponentTabs name="vercel-tabs-demo" />
+
+## API Reference
+
+### VercelTabs Props
+
+<AutoTypeTable path="./types/docs/vercel-tabs.ts" name="VercelTabsProps" />
+
+### TabData Type
+
+<AutoTypeTable path="./types/docs/vercel-tabs.ts" name="TabData" />
+
+## Notes
+
+* Animated hover and active indicators
+* Fully customizable tab data and content
+* Uses Tailwind CSS for styling
+
+
+# Animated Table
+URL: /docs/components/surfaces/animated-table
+
+
+
+## Basic Table
+
+<ComponentTabs name="animated-table-basic-demo" />
+
+<AdBanner />
+
+## Sorting
+
+<ComponentTabs name="animated-table-sort-demo" />
+
+## Search
+
+<ComponentTabs name="animated-table-search-demo" />
+
+## Selection
+
+<ComponentTabs name="animated-table-select-demo" />
+
+## Expandable Rows
+
+<ComponentTabs name="animated-table-expand-demo" />
+
+## Column Visibility
+
+<ComponentTabs name="animated-table-column-demo" />
+
+## Pagination
+
+<ComponentTabs name="animated-table-pagination-demo" />
+
+## Full Featured
+
+<ComponentTabs name="animated-table-full-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/animated-table"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/animated-table"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/animated-table"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/animated-table"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="animated-table" />
+  </Step>
+</Steps>
+
+## API Reference
+
+### AnimatedTable
+
+The main animated table component with comprehensive features.
+
+<AutoTypeTable path="./types/docs/animated-table.ts" name="AnimatedTableProps" />
+
+### ColumnDef
+
+Configuration for table columns.
+
+<AutoTypeTable path="./types/docs/animated-table.ts" name="ColumnDef" />
+
+### PaginationConfig
+
+Configuration for pagination functionality.
+
+<AutoTypeTable path="./types/docs/animated-table.ts" name="PaginationConfig" />
+
+
+# Bento Grid
+URL: /docs/components/surfaces/bento-grid
+
+
+
+## AI Analytics Dashboard
+
+A modern, data-driven dashboard layout showcasing AI metrics, system health, and real-time traffic.
+
+<ComponentTabs name="bento-grid-custom-demo" />
+
+<AdBanner />
+
+## Feature Showcase
+
+A premium "Bento Box" style feature grid perfect for SaaS landing pages and product showcases.
+
+<ComponentTabs name="bento-grid-portfolio-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/bento-grid"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/bento-grid"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/bento-grid"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/bento-grid"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project. `component/ui/bento-grid.tsx`
+
+    <ComponentSource name="bento-grid" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/bento-grid.ts" name="BentoGridProps" />
+
+## Notes
+
+* Responsive grid that adapts from 1 column on mobile to 3 columns on large screens
+* Uses CSS Grid with auto-rows for consistent item heights
+* Perfect for dashboard layouts, portfolio displays, and content grids
+* Items can span multiple columns and rows using standard CSS Grid classes
+* Supports all standard div props and custom className for styling
+
+
+# Code Block
+URL: /docs/components/surfaces/code-block
+
+
+
+<ComponentTabs name="code-block-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/code-block"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/code-block"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/code-block"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/code-block"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install lucide-react motion prism-react-renderer
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add lucide-react motion prism-react-renderer
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add lucide-react motion prism-react-renderer
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add lucide-react motion prism-react-renderer
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="code-block" />
+  </Step>
+</Steps>
+
+## Features
+
+* **Syntax Highlighting**: Supports over 30 languages using `prism-react-renderer`.
+* **Multiple Variants**: Default, Terminal, Minimal, Gradient, and Glass styles.
+* **Animations**: Fade in, Slide in, Typewriter, and Highlight effects.
+* **Interactive**: Copy to clipboard, download code, collapse/expand.
+* **Line Handling**: Line numbers, line highlighting, added/removed lines (diff).
+* **Special Components**: Includes `CodeCompare`, `CodeTabs`, and `TerminalBlock`.
+
+## Examples
+
+### Terminal
+
+Terminal variant with fade in animation.
+
+<ComponentTabs name="code-block-terminal-demo" />
+
+### Glass + Dracula Theme
+
+Glass variant with dracula theme and highlight animation.
+
+<ComponentTabs name="code-block-glass-demo" />
+
+### Code Comparison
+
+Display side-by-side code comparisons with diff highlighting.
+
+<ComponentTabs name="code-block-compare-demo" />
+
+### Code Tabs
+
+Organize multiple code snippets into tabs.
+
+<ComponentTabs name="code-block-tabs-demo" />
+
+## API Reference
+
+### CodeBlock
+
+The main component for displaying code.
+
+<AutoTypeTable path="./types/docs/code-block.ts" name="CodeBlockProps" />
+
+### CodeCompare
+
+A component for comparing two blocks of code.
+
+<AutoTypeTable path="./types/docs/code-block.ts" name="CodeCompareProps" />
+
+### CodeTabs
+
+A component for displaying multiple code blocks in tabs.
+
+<AutoTypeTable path="./types/docs/code-block.ts" name="CodeTabsProps" />
+
+### TerminalBlock
+
+A component for displaying terminal commands and outputs.
+
+<AutoTypeTable path="./types/docs/code-block.ts" name="TerminalBlockProps" />
+
+
+# Phone Card
+URL: /docs/components/surfaces/phone-card
+
+
+
+<ComponentTabs name="phone-card-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/phone-card"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/phone-card"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/phone-card"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/phone-card"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project `component/ui/lazy-video.tsx`
+
+    <ComponentSource name="lazy-video" />
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project `component/ui/phone-card.tsx`
+
+    <ComponentSource name="phone-card" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { PhoneCard } from "@/components/ui/phone-card";
+
+export default function App() {
+  return (
+    <PhoneCard
+      title="8°"
+      sub="Clear night. Great for render farm runs."
+      tone="calm"
+      gradient="from-[#0f172a] via-[#14532d] to-[#052e16]"
+      videoSrc="https://example.com/video.mp4"
+      mediaType="video"
+    />
+  );
+}
+```
+
+## Examples
+
+### Image Mode
+
+Use static images instead of video for better performance or when video isn't needed.
+
+<ComponentTabs name="phone-card-image-demo" />
+
+## API Reference
+
+### PhoneCard
+
+The main component that displays a phone mockup with media content.
+
+<AutoTypeTable path="./types/docs/phone-card.ts" name="PhoneCardProps" />
+
+## Advanced
+
+The component uses the `LazyVideo` component internally, which provides:
+
+* Intersection Observer for lazy loading
+* Automatic pause/play based on visibility
+* Support for prefers-reduced-motion
+* Data saver mode detection
+* Tab visibility handling
+
+You can also use `LazyVideo` standalone:
+
+```tsx
+import { LazyVideo } from "@/components/ui/lazy-video";
+
+<LazyVideo
+  src="video.mp4"
+  autoPlay={true}
+  loop={true}
+  muted={true}
+  className="w-full h-full object-cover"
+/>
+```
+
+
+# Character Morph
+URL: /docs/components/text-animations/character-morph
+
+
+
+<ComponentTabs name="character-morph-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Variants
+
+<ComponentTabs name="character-morph-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/character-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/character-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/character-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/character-morph"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/character-morph.tsx`
+
+    <ComponentSource name="character-morph" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/character-morph.ts" name="CharacterMorphProps" />
+
+## Notes
+
+* Uses motion/react for smooth character-by-character animations
+* Each character animates with opacity, vertical movement, blur, and 3D rotation
+* Staggered animation delays create a wave-like morphing effect
+* Automatically cycles through texts at specified intervals
+* Supports custom CSS classes for styling
+* Maintains consistent width by using the longest text as reference
+* Perfect for dynamic headlines, loading states, or eye-catching text effects
+
+
+# Falling Text
+URL: /docs/components/text-animations/falling-text
+
+
+
+<ComponentTabs name="falling-text-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/falling-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/falling-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/falling-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/falling-text"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the required dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add matter-js
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install -D @types/matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add -D @types/matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add --dev @types/matter-js
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add --dev @types/matter-js
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="falling-text" />
+  </Step>
+</Steps>
+
+## Layout
+
+```tsx
+import FallingText from "@/components/ui/falling-text";
+
+<FallingText
+  text="Your text here"
+  highlightWords={["highlight", "these"]}
+  trigger="auto"
+/>
+```
+
+## Examples
+
+### Scroll Triggered
+
+The animation can be triggered when the component scrolls into view.
+
+<ComponentTabs name="falling-text-scroll-demo" />
+
+### Click Triggered
+
+Trigger the falling animation on click for interactive experiences.
+
+<ComponentTabs name="falling-text-click-demo" />
+
+### Custom Physics
+
+Customize the physics simulation with different gravity, bounce, and friction settings.
+
+<ComponentTabs name="falling-text-custom-physics-demo" />
+
+## API Reference
+
+### FallingText
+
+The main component that creates a physics-based falling text animation.
+
+<AutoTypeTable path="./types/docs/falling-text.ts" name="FallingTextProps" />
+
+## Physics Options
+
+The `physicsOptions` prop allows you to customize the physics behavior:
+
+| Property      | Type     | Default | Description               |
+| ------------- | -------- | ------- | ------------------------- |
+| `restitution` | `number` | `0.8`   | Bounciness of words (0-1) |
+| `frictionAir` | `number` | `0.01`  | Air resistance            |
+| `friction`    | `number` | `0.2`   | Surface friction          |
+| `density`     | `number` | `0.001` | Mass density of words     |
+
+## Initial Velocity
+
+Control the initial velocity when words start falling:
+
+| Property  | Type     | Default | Description               |
+| --------- | -------- | ------- | ------------------------- |
+| `x`       | `number` | `5`     | Horizontal velocity range |
+| `y`       | `number` | `0`     | Vertical velocity range   |
+| `angular` | `number` | `0.05`  | Angular velocity range    |
+
+
+# Glitch Text
+URL: /docs/components/text-animations/glitch-text
+
+
+
+<ComponentTabs name="glitch-text-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Custom Timing
+
+<ComponentTabs name="glitch-text-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/glitch-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/glitch-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/glitch-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/glitch-text"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/glitch-text.tsx`
+
+    <ComponentSource name="glitch-text" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/glitch-text.ts" name="GlitchTextProps" />
+
+## Notes
+
+* Uses character scrambling with random glitch characters during transitions
+* Creates authentic digital distortion effects
+* Customizable glitch duration and word change intervals
+* Supports custom CSS classes for styling
+* Perfect for cyberpunk themes, tech demos, or gaming interfaces
+
+
+# Gooey Text Morphing
+URL: /docs/components/text-animations/gooey-text-morphing
+
+
+
+## Gooey Text Morphing
+
+<ComponentTabs name="gooey-text-morphing-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/gooey-text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/gooey-text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/gooey-text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/gooey-text-morphing"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Copy and paste the following code into your project. `component/ui/gooey-text-morphing.tsx`
+
+    <ComponentSource name="gooey-text-morphing" />
+  </Step>
+</Steps>
+
+## Usage
+
+```tsx
+import { GooeyText } from "@/components/ui/gooey-text-morphing";
+
+function MyComponent() {
+  const texts = ["Hello", "World", "Gooey", "Morph"];
+  
+  return (
+    <GooeyText 
+      texts={texts} 
+      morphTime={1} 
+      cooldownTime={0.5} 
+    />
+  );
+}
+```
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/gooey-text-morphing.ts" name="GooeyTextProps" />
+
+## Notes
+
+* The component uses SVG filters to achieve the "gooey" effect.
+* The `texts` array can contain any number of strings.
+* `morphTime` controls the duration of the transition between words.
+* `cooldownTime` controls how long each word stays visible before morphing again.
+* Ensure the container has enough height to accommodate the text size.
+
+## Credits
+
+Inspired by [Victor Welander](https://x.com/victorwelander_).
+
+
+# Highlight Text
+URL: /docs/components/text-animations/highlight-text
+
+
+
+<ComponentTabs name="highlight-text-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/highlight-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/highlight-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/highlight-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/highlight-text"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add class-variance-authority
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add class-variance-authority
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="highlight-text" />
+  </Step>
+</Steps>
+
+## Features
+
+* **Multiple Variants**: Choose from underline, box, circle, and marker styles.
+* **Animated**: Smooth SVG drawing animations when the component comes into view.
+* **Customizable**: Adjust colors, stroke width, animation duration, and delay.
+* **Responsive**: Automatically adjusts to the size of the text content.
+
+## Examples
+
+### Variants
+
+Different styles of highlighting.
+
+<ComponentTabs name="highlight-text-variants-demo" />
+
+### Colors
+
+Different color themes for the highlights.
+
+<ComponentTabs name="highlight-text-colors-demo" />
+
+## API Reference
+
+### HighlightText
+
+<AutoTypeTable path="./types/docs/highlight-text.ts" name="HighlightTextProps" />
+
+
+# Number Counter
+URL: /docs/components/text-animations/number-counter
+
+
+
+<ComponentTabs name="number-counter-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/number-counter"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/number-counter"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/number-counter"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/number-counter"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="number-counter" />
+  </Step>
+</Steps>
+
+## Features
+
+* **Multiple Styles**: Includes standard counter, rolling digits, circular progress, and stat cards.
+* **Customizable**: Adjust duration, easing, formatting, prefixes, and suffixes.
+* **Performance**: Optimized animations using Framer Motion and requestAnimationFrame.
+* **Accessible**: Uses tabular-nums for consistent width and proper ARIA support.
+
+## Examples
+
+### Rolling Counter
+
+A classic odometer-style rolling counter effect.
+
+<ComponentTabs name="rolling-counter-demo" />
+
+### Circular Counter
+
+A circular progress indicator with an animated percentage counter.
+
+<ComponentTabs name="circular-counter-demo" />
+
+### Stat Counter
+
+A pre-styled component perfect for displaying statistics and metrics.
+
+<ComponentTabs name="stat-counter-demo" />
+
+## API Reference
+
+### NumberCounter
+
+The core counter component with easing support.
+
+<AutoTypeTable path="./types/docs/number-counter.ts" name="NumberCounterProps" />
+
+### RollingCounter
+
+Odometer-style rolling digit counter.
+
+<AutoTypeTable path="./types/docs/number-counter.ts" name="RollingCounterProps" />
+
+### CircularCounter
+
+Circular progress counter.
+
+<AutoTypeTable path="./types/docs/number-counter.ts" name="CircularCounterProps" />
+
+### StatCounter
+
+Statistical display component.
+
+<AutoTypeTable path="./types/docs/number-counter.ts" name="StatCounterProps" />
+
+
+# Rotate Text
+URL: /docs/components/text-animations/rotate-text
+
+
+
+<ComponentTabs name="rotate-text-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Variants
+
+<ComponentTabs name="rotate-text-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/rotate-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/rotate-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/rotate-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/rotate-text"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/rotate-text.tsx`
+
+    <ComponentSource name="rotate-text" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/rotate-text.ts" name="RotatingTextProps" />
+
+## Notes
+
+* Uses motion/react for smooth spring animations
+* Automatically cycles through words at specified intervals
+* Supports custom CSS classes for styling
+* Animation includes vertical sliding and opacity transitions
+* Perfect for hero sections, testimonials, or dynamic content
+
+
+# Scroll Text
+URL: /docs/components/text-animations/scroll-text
+
+
+
+### Fade Up
+
+<ComponentTabs name="scroll-text-fade-up-demo" />
+
+<AdBanner />
+
+### Blur
+
+<ComponentTabs name="scroll-text-blur-demo" />
+
+### Scale
+
+<ComponentTabs name="scroll-text-scale-demo" />
+
+### Rotate
+
+<ComponentTabs name="scroll-text-rotate-demo" />
+
+### Slide Left
+
+<ComponentTabs name="scroll-text-slide-left-demo" />
+
+### Horizontal Scroll
+
+Create marquee-like horizontal scrolling text that moves with the page scroll.
+
+<ComponentTabs name="horizontal-scroll-text-demo" />
+
+### Scroll Reveal
+
+Reveal content as it enters the viewport with customizable direction and delay.
+
+<ComponentTabs name="scroll-reveal-demo" />
+
+### Scroll Progress
+
+Highlight text character-by-character based on scroll progress.
+
+<ComponentTabs name="scroll-progress-text-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/scroll-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/scroll-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/scroll-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/scroll-text"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="scroll-text" />
+  </Step>
+</Steps>
+
+## Features
+
+* **Multiple Effects**: Fade, Scale, Rotate, Blur, Slide, and more.
+* **Scroll Triggers**: Animations are driven by scroll position.
+* **Spring Physics**: Smooth, natural motion using spring animations.
+* **Specialized Components**: Includes `ScrollReveal`, `HorizontalScrollText`, `ScrollProgressText`, and `StickyScrollText`.
+
+## API Reference
+
+### ScrollText
+
+The main component for scroll-triggered animations.
+
+<AutoTypeTable path="./types/docs/scroll-text.ts" name="ScrollTextProps" />
+
+### ScrollReveal
+
+A component for revealing content as it enters the viewport.
+
+<AutoTypeTable path="./types/docs/scroll-text.ts" name="ScrollRevealProps" />
+
+### HorizontalScrollText
+
+A component for horizontally scrolling text.
+
+<AutoTypeTable path="./types/docs/scroll-text.ts" name="HorizontalScrollTextProps" />
+
+### ScrollProgressText
+
+A component for highlighting text based on scroll progress.
+
+<AutoTypeTable path="./types/docs/scroll-text.ts" name="ScrollProgressTextProps" />
+
+### StickyScrollText
+
+A component for sticky scroll effects.
+
+<AutoTypeTable path="./types/docs/scroll-text.ts" name="StickyScrollTextProps" />
+
+
+# Shutter Text
+URL: /docs/components/text-animations/shutter-text
+
+
+
+<ComponentTabs name="shutter-text-demo" />
+
+<AdBanner />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/shutter-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/shutter-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/shutter-text"
+
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/shutter-text"
+
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the required dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project.
+
+    <ComponentSource name="shutter-text" />
+  </Step>
+</Steps>
+
+## Layout
+
+```tsx
+import ShutterText from "@/components/ui/shutter-text";
+
+<ShutterText text="IMMERSE" trigger="auto" className="text-7xl" />
+```
+
+## Examples
+
+### Scroll Triggered
+
+The animation triggers when the component scrolls into view.
+
+<ComponentTabs name="shutter-text-scroll-demo" />
+
+### Click Triggered
+
+Trigger the shutter animation on click for interactive experiences.
+
+<ComponentTabs name="shutter-text-click-demo" />
+
+### Hover Triggered
+
+Trigger the shutter animation on hover for subtle interactivity.
+
+<ComponentTabs name="shutter-text-hover-demo" />
+
+## API Reference
+
+### ShutterText
+
+The main component that creates a layered shutter text reveal animation.
+
+<AutoTypeTable path="./types/docs/shutter-text.ts" name="ShutterTextProps" />
+
+## Notes
+
+* Font size is controlled via `className` (e.g. `text-7xl`), making the component fully composable.
+* Each character is animated independently with staggered timing for a cinematic reveal.
+* Three colored slice layers (top, middle, bottom) sweep across each character during the reveal.
+* The component extends standard `div` props — you can pass any HTML div attribute.
+* Works with both light and dark themes out of the box.
+
+
+# Text Morphing
+URL: /docs/components/text-animations/text-morphing
+
+
+
+<ComponentTabs name="text-morphing-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Variants
+
+<ComponentTabs name="text-morphing-variants-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/text-morphing"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/text-morphing"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/text-morphing.tsx`
+
+    <ComponentSource name="text-morphing" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/text-morphing.ts" name="MorphingTextProps" />
+
+## Notes
+
+* Uses motion/react for smooth blur and slide animations
+* Automatically cycles through words at specified intervals
+* Supports custom CSS classes for styling
+* Animation includes opacity, vertical movement, and blur effects
+* Perfect for hero sections, testimonials, or dynamic content
+
+  path="./types/docs/text-morphing.ts"
+
+
+# Typewriter Text
+URL: /docs/components/text-animations/typewritter-text
+
+
+
+<ComponentTabs name="typewritter-text-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Variants
+
+<ComponentTabs name="typewritter-text-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/typewritter-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/typewritter-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/typewritter-text"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/typewritter-text"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/typewritter-text.tsx`
+
+    <ComponentSource name="typewritter-text" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/typewritter-text.ts" name="TypewriterTextProps" />
+
+## Notes
+
+* Uses motion/react for smooth blinking cursor animation
+* Automatically cycles through words with typing and deleting effects
+* Supports custom CSS classes for styling text and cursor
+* Configurable typing speed, deleting speed, and pause duration
+* Perfect for hero sections, loading states, or dynamic content
+
+
+# Velocity Morph
+URL: /docs/components/text-animations/velocity-morph
+
+
+
+<ComponentTabs name="velocity-morph-demo" />
+
+<AdBanner />
+
+## Examples
+
+### Variants
+
+<ComponentTabs name="velocity-morph-custom-demo" />
+
+## Installation
+
+### CLI
+
+<CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">
+      npm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="pnpm">
+      pnpm
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="yarn">
+      yarn
+    </CodeBlockTabsTrigger>
+
+    <CodeBlockTabsTrigger value="bun">
+      bun
+    </CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
+    ```bash
+    npx shadcn@latest add "https://jolyui.dev/r/velocity-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="pnpm">
+    ```bash
+    pnpm dlx shadcn@latest add "https://jolyui.dev/r/velocity-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+    ```bash
+    yarn dlx shadcn@latest add "https://jolyui.dev/r/velocity-morph"
+    ```
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+    ```bash
+    bun x shadcn@latest add "https://jolyui.dev/r/velocity-morph"
+    ```
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+### Manual
+
+<Steps>
+  <Step>
+    Install the following dependencies:
+
+    <CodeBlockTabs defaultValue="npm" groupId="package-manager" persist>
+      <CodeBlockTabsList>
+        <CodeBlockTabsTrigger value="npm">
+          npm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="pnpm">
+          pnpm
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="yarn">
+          yarn
+        </CodeBlockTabsTrigger>
+
+        <CodeBlockTabsTrigger value="bun">
+          bun
+        </CodeBlockTabsTrigger>
+      </CodeBlockTabsList>
+
+      <CodeBlockTab value="npm">
+        ```bash
+        npm install motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="pnpm">
+        ```bash
+        pnpm add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="yarn">
+        ```bash
+        yarn add motion
+        ```
+      </CodeBlockTab>
+
+      <CodeBlockTab value="bun">
+        ```bash
+        bun add motion
+        ```
+      </CodeBlockTab>
+    </CodeBlockTabs>
+  </Step>
+
+  <Step>
+    Copy and paste the following code into your project. `component/ui/velocity-morph.tsx`
+
+    <ComponentSource name="velocity-morph" />
+  </Step>
+</Steps>
+
+## API Reference
+
+<AutoTypeTable path="./types/docs/velocity-morph.ts" name="VelocityMorphProps" />
+
+## Notes
+
+* Uses motion/react for high-velocity animations with blur and scale effects
+* Automatically cycles through texts at specified intervals
+* Supports custom CSS classes for styling
+* Animation includes vertical movement, opacity, blur, and scale transitions
+* Perfect for hero sections, testimonials, or dynamic content with dramatic effects
