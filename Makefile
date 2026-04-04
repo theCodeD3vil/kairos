@@ -1,6 +1,6 @@
 .PHONY: help doctor install typecheck build lint format clean \
 	shared-build frontend-build extension-build desktop-build \
-	desktop-frontend desktop-dev dev dev-down
+	desktop-frontend desktop-dev dev dev-down setup
 
 DEV_DIR := .dev
 FRONTEND_PID := $(DEV_DIR)/frontend.pid
@@ -11,6 +11,13 @@ help: ## Show available commands
 	@echo "Kairos developer automation"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+setup: ## Run repo bootstrap (use OS-specific scripts on fresh machines)
+	@echo "For fresh machine provisioning, prefer:"
+	@echo "  macOS:  ./scripts/setup-macos.sh"
+	@echo "  Ubuntu: ./scripts/setup-ubuntu.sh"
+	@echo ""
+	./scripts/bootstrap.sh
 
 doctor: ## Check required tools and print versions
 	@missing=0; \

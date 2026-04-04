@@ -27,6 +27,25 @@ No tracking, ingestion, storage, or analytics features are implemented yet.
 pnpm install
 ```
 
+## New Machine Setup
+
+Use one command based on your machine:
+
+- macOS: `./scripts/setup-macos.sh`
+- Ubuntu: `./scripts/setup-ubuntu.sh`
+- If Go + Node are already installed: `./scripts/bootstrap.sh` (or `make setup`)
+
+What these scripts do:
+
+- `setup-macos.sh` / `setup-ubuntu.sh`: machine provisioning (install/verify Go, Node, pnpm path, Wails), then run repo bootstrap.
+- `bootstrap.sh`: repo bootstrap only (checks Go + Node, enables pnpm via Corepack when available, installs Wails if missing, then runs `pnpm install`).
+
+Notes:
+
+- `bootstrap.sh` does not install Go or Node by itself.
+- Wails install command used: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
+- pnpm may be enabled via Corepack (`corepack enable pnpm`), which is an official pnpm path.
+
 ## Scaffold Commands
 
 Run desktop frontend placeholder:
