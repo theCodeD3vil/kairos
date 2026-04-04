@@ -1,6 +1,8 @@
-import { Bell, ChevronDown, Home, LineChart, ReceiptText, Settings, CalendarDays, Gauge } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Bell, Home, LineChart, ReceiptText, Settings, CalendarDays, Gauge } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AccountMenu from '@/components/ruixen/account-menu';
+import { NotificationsFilter } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
 import { Button } from '@/components/ui/button';
 
@@ -27,10 +29,27 @@ export function Navbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(() => resolveTabFromPath(pathname));
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveTab(resolveTabFromPath(pathname));
   }, [pathname]);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!notificationsRef.current) return;
+      const target = event.target as Node;
+      if (!notificationsRef.current.contains(target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', onPointerDown);
+    return () => {
+      window.removeEventListener('mousedown', onPointerDown);
+    };
+  }, []);
 
   const handleTabChange = (url: string) => {
     setActiveTab(url);
@@ -62,13 +81,22 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="rounded-full border-black/10 bg-white text-[#2d3b40]">
-            <Bell size={16} />
-          </Button>
-          <Button variant="outline" className="h-10 rounded-full border-black/10 bg-white px-2 text-[#2d3b40]">
-            <span className="grid size-8 place-items-center rounded-full bg-[#2e63be] text-xs font-semibold text-white">NA</span>
-            <ChevronDown size={14} />
-          </Button>
+          <div className="relative" ref={notificationsRef}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full border-black/10 bg-white text-[#2d3b40]"
+              onClick={() => setNotificationsOpen((current) => !current)}
+            >
+              <Bell size={16} />
+            </Button>
+            {notificationsOpen ? (
+              <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl bg-transparent p-1">
+                <NotificationsFilter />
+              </div>
+            ) : null}
+          </div>
+          <AccountMenu />
         </div>
       </div>
     </header>
