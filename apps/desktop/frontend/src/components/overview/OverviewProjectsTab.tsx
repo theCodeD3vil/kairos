@@ -1,11 +1,11 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { BarChart } from '@lobehub/charts';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
 type OverviewProjectsTabProps = {
   snapshot: OverviewSnapshot;
 };
 
-const barColors = ['#0f4f58', '#365db8', '#58a073', '#95b665', '#c4d56b'];
+const chartColors = ['#b9c95a', '#aaba4f', '#9baa45', '#8d9b3d', '#7f8b35'];
 
 export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
   if (snapshot.topProjects.length === 0) {
@@ -32,18 +32,18 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         <article className="rounded-xl bg-[#f2f5f4] p-3 lg:col-span-2">
           <h3 className="text-sm font-medium text-[#566568]">Time Spent per Project</h3>
           <div className="mt-2 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={snapshot.topProjects}>
-                <XAxis dataKey="project" tick={{ fill: '#4a5d60', fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                <YAxis tick={{ fill: '#4a5d60', fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="minutes" radius={[8, 8, 0, 0]}>
-                  {snapshot.topProjects.map((project, index) => (
-                    <Cell key={project.project} fill={barColors[index % barColors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <BarChart
+              data={snapshot.topProjects}
+              index="project"
+              categories={['minutes']}
+              colors={chartColors}
+              height={256}
+              rotateLabelX={{ angle: -20, xAxisHeight: 60 }}
+              showLegend={false}
+              showGridLines
+              valueFormatter={(value) => formatMinutes(Number(value))}
+              yAxisWidth={44}
+            />
           </div>
         </article>
 

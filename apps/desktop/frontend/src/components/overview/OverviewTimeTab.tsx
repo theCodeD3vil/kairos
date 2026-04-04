@@ -1,6 +1,8 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { AreaChart } from '@lobehub/charts';
 import {
+  AverageSessionBarsIllustration,
   CodingOrbitIllustration,
+  SessionsTimelineIllustration,
   WeeklyMomentumIllustration,
 } from '@/components/illustrations/KairosStatIllustrations';
 import type { OverviewSnapshot } from '@/components/overview/types';
@@ -8,6 +10,8 @@ import type { OverviewSnapshot } from '@/components/overview/types';
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
 };
+
+const areaChartColors = ['#b9c95a'];
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -58,29 +62,63 @@ function CodingTimeWeekCard({ value }: { value: string }) {
   );
 }
 
+function SessionsCard({ value }: { value: string }) {
+  return (
+    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center gap-3">
+        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+          <SessionsTimelineIllustration />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-[#566568]">Sessions</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function AvgSessionCard({ value }: { value: string }) {
+  return (
+    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center gap-3">
+        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+          <AverageSessionBarsIllustration />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-[#566568]">Avg Session</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <CodingTimeTodayCard value={formatMinutes(snapshot.todayMinutes)} />
         <CodingTimeWeekCard value={formatMinutes(snapshot.weekMinutes)} />
-        <Metric title="Sessions" value={String(snapshot.sessionCount)} />
-        <Metric title="Avg Session" value={formatMinutes(snapshot.averageSessionMinutes)} />
+        <SessionsCard value={String(snapshot.sessionCount)} />
+        <AvgSessionCard value={formatMinutes(snapshot.averageSessionMinutes)} />
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
         <article className="rounded-xl bg-[#f2f5f4] p-3">
           <h3 className="text-sm font-medium text-[#566568]">Weekly Trend</h3>
           <div className="mt-2 h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={snapshot.weeklyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#d3dbd8" />
-                <XAxis dataKey="label" tick={{ fill: '#4a5d60', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#4a5d60', fontSize: 12 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#0f4f58" strokeWidth={3} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <AreaChart
+              data={snapshot.weeklyTrend}
+              index="label"
+              categories={['value']}
+              colors={areaChartColors}
+              height={224}
+              showLegend={false}
+              showGridLines
+              valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
+              yAxisWidth={44}
+            />
           </div>
         </article>
 

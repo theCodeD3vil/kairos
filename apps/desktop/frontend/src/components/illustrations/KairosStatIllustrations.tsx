@@ -2,10 +2,10 @@ export function CodingOrbitIllustration() {
   return (
     <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Coding time orbit illustration">
       <circle cx="100" cy="100" r="52" fill="none" stroke="#0F4E57" strokeWidth="8" opacity="0.25" />
-      <path d="M100 48 A52 52 0 0 1 142 70" fill="none" stroke="#EDF56F" strokeWidth="8" strokeLinecap="round" />
+      <path d="M100 48 A52 52 0 0 1 142 70" fill="none" stroke="hsl(var(--secondary))" strokeWidth="8" strokeLinecap="round" />
       <line x1="100" y1="100" x2="142" y2="70" stroke="#0F4E57" strokeWidth="6" strokeLinecap="round" />
       <circle cx="100" cy="100" r="7" fill="#0F4E57" />
-      <circle cx="142" cy="70" r="7" fill="#EDF56F" />
+      <circle cx="142" cy="70" r="7" fill="hsl(var(--secondary))" />
       <line x1="100" y1="30" x2="100" y2="40" stroke="#0F4E57" strokeWidth="4" strokeLinecap="round" />
       <line x1="148" y1="52" x2="142" y2="60" stroke="#0F4E57" strokeWidth="4" strokeLinecap="round" />
       <line x1="170" y1="100" x2="160" y2="100" stroke="#0F4E57" strokeWidth="4" strokeLinecap="round" />
@@ -40,7 +40,7 @@ export function WeeklyMomentumIllustration() {
         return (
           <g key={`${bar.x}-${index}`}>
             <rect x={bar.x} y={y} width="14" height={bar.h} rx="7" fill="none" stroke="#0F4E57" strokeWidth="3" />
-            <rect x={bar.x + 2.5} y={activeY + 2.5} width="9" height={Math.max(6, activeH - 5)} rx="4.5" fill="#EDF56F" />
+            <rect x={bar.x + 2.5} y={activeY + 2.5} width="9" height={Math.max(6, activeH - 5)} rx="4.5" fill="hsl(var(--secondary))" />
           </g>
         );
       })}
@@ -67,8 +67,8 @@ export function FocusTunnelIllustration() {
         strokeLinejoin="round"
       />
       <circle cx="100" cy="100" r="23" fill="#0F4E57" />
-      <circle cx="100" cy="100" r="11" fill="#EDF56F" />
-      <circle cx="108" cy="92" r="4" fill="#f8ffb4" />
+      <circle cx="100" cy="100" r="11" fill="hsl(var(--secondary))" />
+      <circle cx="108" cy="92" r="4" fill="hsl(var(--secondary) / 0.65)" />
     </svg>
   );
 }
@@ -86,14 +86,43 @@ export function ContextSwitchIllustration() {
       <path d="M118 100 L174 100" stroke="#0F4E57" strokeWidth="4.5" strokeLinecap="round" />
       <path d="M118 134 L174 134" stroke="#0F4E57" strokeWidth="4.5" strokeLinecap="round" />
 
-      <circle cx="72" cy="100" r="8" fill="#EDF56F" />
-      <circle cx="118" cy="66" r="6.5" fill="#EDF56F" />
-      <circle cx="118" cy="100" r="6.5" fill="#EDF56F" />
-      <circle cx="118" cy="134" r="6.5" fill="#EDF56F" />
+      <circle cx="72" cy="100" r="8" fill="hsl(var(--secondary))" />
+      <circle cx="118" cy="66" r="6.5" fill="hsl(var(--secondary))" />
+      <circle cx="118" cy="100" r="6.5" fill="hsl(var(--secondary))" />
+      <circle cx="118" cy="134" r="6.5" fill="hsl(var(--secondary))" />
 
       <path d="M162 57 L174 66 L162 75" fill="none" stroke="#0F4E57" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M162 91 L174 100 L162 109" fill="none" stroke="#0F4E57" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M162 125 L174 134 L162 143" fill="none" stroke="#0F4E57" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function SessionsTimelineIllustration() {
+  return (
+    <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Sessions timeline illustration">
+      <line x1="24" y1="136" x2="176" y2="136" stroke="#0F4E57" strokeWidth="6" strokeLinecap="round" />
+      <rect x="32" y="100" width="20" height="36" rx="8" fill="#0F4E57" opacity="0.25" />
+      <rect x="58" y="88" width="20" height="48" rx="8" fill="#0F4E57" opacity="0.35" />
+      <rect x="84" y="74" width="20" height="62" rx="8" fill="hsl(var(--secondary))" />
+      <rect x="110" y="92" width="20" height="44" rx="8" fill="#0F4E57" opacity="0.35" />
+      <rect x="136" y="80" width="20" height="56" rx="8" fill="hsl(var(--secondary) / 0.85)" />
+      <circle cx="94" cy="68" r="4" fill="#0F4E57" />
+      <circle cx="146" cy="74" r="4" fill="#0F4E57" />
+    </svg>
+  );
+}
+
+export function AverageSessionBarsIllustration() {
+  return (
+    <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Average session illustration">
+      <line x1="28" y1="142" x2="172" y2="142" stroke="#0F4E57" strokeWidth="5" strokeLinecap="round" />
+      <rect x="36" y="112" width="18" height="30" rx="6" fill="#0F4E57" opacity="0.35" />
+      <rect x="62" y="98" width="18" height="44" rx="6" fill="#0F4E57" opacity="0.45" />
+      <rect x="88" y="82" width="22" height="60" rx="7" fill="hsl(var(--secondary))" />
+      <rect x="118" y="100" width="18" height="42" rx="6" fill="#0F4E57" opacity="0.45" />
+      <rect x="144" y="108" width="18" height="34" rx="6" fill="#0F4E57" opacity="0.35" />
+      <line x1="24" y1="82" x2="176" y2="82" stroke="#0F4E57" strokeWidth="3" strokeDasharray="6 6" opacity="0.6" />
     </svg>
   );
 }

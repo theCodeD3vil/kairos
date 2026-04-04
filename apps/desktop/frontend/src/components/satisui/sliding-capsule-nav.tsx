@@ -40,7 +40,7 @@ export function SlidingCapsuleNav({
               <motion.div
                 layoutId={`${layoutId}-active`}
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                className="absolute inset-0 z-0 rounded-full bg-[#192128]"
+                className="absolute inset-0 z-0 rounded-full bg-primary"
               />
             )}
 
