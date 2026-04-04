@@ -1,0 +1,27 @@
+# Node / pnpm
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# VS Code extension package
+*.vsix
+
+# Go artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Wails
+apps/desktop/build/
+apps/desktop/frontend/dist/
+
+# OS
+.DS_Store
