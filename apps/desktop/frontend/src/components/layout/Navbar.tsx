@@ -132,7 +132,7 @@ export function Navbar() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full border-black/10 bg-white hover:bg-[var(--surface-subtle)] hover:border-[var(--surface-subtle)] text-[var(--ink-primary)]"
+              className="rounded-full! border-black/10 bg-white hover:bg-[var(--surface-subtle)] hover:border-[var(--surface-subtle)] text-[var(--ink-primary)]"
               onClick={handleNotificationsToggle}
             >
               <Bell size={16} />
