@@ -1,4 +1,4 @@
-import { Bell, Home, LineChart, Settings, CalendarDays, Briefcase, Palette, CalendarRange } from 'lucide-react';
+import { Bell, Home, LineChart, Settings, CalendarDays, Palette, CalendarRange } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AccountMenu, { type AccountMenuAction } from '@/components/ruixen/account-menu';
@@ -13,7 +13,6 @@ const tabs: NavTab[] = (
   [
     { title: 'Dashboard', url: '/overview', icon: <Home size={16} /> },
     { title: 'Analytics', url: '/analytics', icon: <LineChart size={16} /> },
-    { title: 'Projects', url: '/projects', icon: <Briefcase size={16} /> },
     { title: 'Sessions', url: '/sessions', icon: <CalendarDays size={16} /> },
     { title: 'Calendar', url: '/calendar', icon: <CalendarRange size={16} /> },
     { title: 'Settings', url: '/settings', icon: <Settings size={16} /> },

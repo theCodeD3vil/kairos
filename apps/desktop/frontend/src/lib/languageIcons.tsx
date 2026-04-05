@@ -22,8 +22,11 @@ export function languageToFileIconName(language?: string | null) {
     json: 'json',
     css: 'css',
   };
-  const ext = extByLang[normalized] ?? 'txt';
-  return `language.${ext}`;
+  // Prefer explicit mapping for common/ambiguous labels; otherwise rely on react-files-icons'
+  // broad language pack (covers 200+ languages/frameworks) by passing through the normalized name.
+  const ext = extByLang[normalized];
+  if (ext) return `language.${ext}`;
+  return `language.${normalized || 'file'}`;
 }
 
 export function LanguageIcon({ language, size = 16 }: { language?: string | null; size?: number }) {
