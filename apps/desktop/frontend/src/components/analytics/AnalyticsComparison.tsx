@@ -1,5 +1,6 @@
 import { AnalyticsKpiCard, formatMinutes } from '@/components/analytics/AnalyticsCards';
 import type { AnalyticsSnapshot } from '@/data/mockAnalytics';
+import { LanguageIcon } from '@/lib/languageIcons';
 
 type AnalyticsComparisonProps = {
   snapshot: AnalyticsSnapshot;
@@ -46,7 +47,15 @@ export function AnalyticsComparison({ snapshot }: AnalyticsComparisonProps) {
         <div className="rounded-lg bg-[var(--surface-subtle)] p-3">
           <p className="text-xs text-[var(--ink-tertiary)]">Top language change</p>
           <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">
-            {comparison.topLanguageChange.current ?? '—'} vs {comparison.topLanguageChange.previous ?? '—'}
+            <span className="inline-flex items-center gap-2">
+              {comparison.topLanguageChange.current ? <LanguageIcon language={comparison.topLanguageChange.current} size={14} /> : null}
+              {comparison.topLanguageChange.current ?? '—'}
+            </span>
+            <span className="mx-1 text-[var(--ink-tertiary)]">vs</span>
+            <span className="inline-flex items-center gap-2">
+              {comparison.topLanguageChange.previous ? <LanguageIcon language={comparison.topLanguageChange.previous} size={14} /> : null}
+              {comparison.topLanguageChange.previous ?? '—'}
+            </span>
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import type { SessionRecord } from '@/data/mockAnalytics';
 import { formatMinutes } from '@/components/analytics/AnalyticsCards';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
+import { LanguageIcon } from '@/lib/languageIcons';
 
 type AnalyticsSessionsProps = {
   sessions: Array<SessionRecord & { dayLabel: string }>;
@@ -10,7 +11,19 @@ export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
   const columns: ColumnDef<SessionRecord & { dayLabel: string }>[] = [
     { id: 'day', header: 'Day', cell: (row) => row.dayLabel, width: '100px' },
     { id: 'project', header: 'Project', cell: (row) => row.project },
-    { id: 'language', header: 'Language', cell: (row) => row.language },
+    {
+      id: 'language',
+      header: 'Language',
+      cell: (row) =>
+        row.language ? (
+          <span className="inline-flex items-center gap-1.5">
+            <LanguageIcon language={row.language} size={16} />
+            {row.language}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
     { id: 'machine', header: 'Machine', cell: (row) => row.machine },
     {
       id: 'start',

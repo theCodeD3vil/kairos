@@ -140,7 +140,12 @@ export function AnalyticsPage() {
           </article>
           <AnalyticsDonut title="Language share" items={snapshot.languages.items} />
         </div>
-        <AnalyticsBreakdownList title="Top languages" items={snapshot.languages.items} emptyMessage="No language time yet." />
+        <AnalyticsBreakdownList
+          title="Top languages"
+          items={snapshot.languages.items}
+          emptyMessage="No language time yet."
+          showLanguageIcons
+        />
       </section>
 
       <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">

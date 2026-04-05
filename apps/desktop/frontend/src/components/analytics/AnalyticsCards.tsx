@@ -2,6 +2,7 @@ import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
 import { cn } from '@/lib/utils';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
+import { LanguageIcon } from '@/lib/languageIcons';
 
 export function formatMinutes(totalMinutes: number) {
   const h = Math.floor(totalMinutes / 60);
@@ -38,13 +39,14 @@ type BreakdownListProps = {
   title: string;
   items: BreakdownItem[];
   emptyMessage?: string;
+  showLanguageIcons?: boolean;
 };
 
-export function AnalyticsBreakdownList({ title, items, emptyMessage }: BreakdownListProps) {
+export function AnalyticsBreakdownList({ title, items, emptyMessage, showLanguageIcons = false }: BreakdownListProps) {
   return (
     <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
       <h3 className="text-sm font-semibold text-[var(--ink-strong)]">{title}</h3>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 gap-3 grid !grid-cols-3">
         {items.length === 0 ? (
           <p className="text-sm text-[var(--ink-tertiary)]">{emptyMessage ?? 'No data for this filter.'}</p>
         ) : (
@@ -57,7 +59,10 @@ export function AnalyticsBreakdownList({ title, items, emptyMessage }: Breakdown
                 {index + 1}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--ink-strong)]">{item.name}</p>
+                <p className="truncate text-sm font-medium text-[var(--ink-strong)] inline-flex items-center gap-2">
+                  {showLanguageIcons ? <LanguageIcon language={item.name} size={16} /> : null}
+                  <span className="truncate">{item.name}</span>
+                </p>
                 <p className="text-xs text-[var(--ink-tertiary)]">
                   {formatMinutes(item.minutes)} · {item.share}% · {item.activeDays} active days
                 </p>
