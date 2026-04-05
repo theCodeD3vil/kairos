@@ -40,6 +40,21 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        'table-border': 'hsl(var(--table-border))',
+        'table-header': 'hsl(var(--table-header))',
+        'table-row-hover': 'hsl(var(--table-row-hover))',
+        'table-row-selected': 'hsl(var(--table-row-selected))',
+        'table-row-stripe': 'hsl(var(--table-row-stripe))',
+        'table-sort-active': 'hsl(var(--table-sort-active))',
+      },
+      keyframes: {
+        'sort-bounce': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-1px)' },
+        },
+      },
+      animation: {
+        'sort-bounce': 'sort-bounce 0.35s ease-in-out',
       },
       borderRadius: {
         lg: 'var(--radius)',

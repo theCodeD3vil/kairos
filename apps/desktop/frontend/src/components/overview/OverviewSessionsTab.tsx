@@ -65,13 +65,13 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
 
         <article className="rounded-xl bg-[#f2f5f4] p-3">
           <h3 className="text-sm font-medium text-[#566568]">Session Durations Over Time</h3>
-          <div className="mt-2 h-56">
+          <div className="mt-2 h-52">
             <AreaChart
               data={sessionDurationTrend}
               index="label"
               categories={['value']}
               colors={[overviewChartPalette[2]]}
-              height={224}
+              height={208}
               showAnimation
               animationDuration={900}
               showLegend={false}

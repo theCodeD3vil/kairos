@@ -11,6 +11,7 @@ export type TopProject = {
   project: string;
   minutes: number;
   recentActivityAt: string;
+  color: string;
 };
 
 export type TopLanguage = {

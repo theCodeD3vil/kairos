@@ -26,6 +26,12 @@
     --border: 180 8% 84%;
     --input: 180 8% 88%;
     --ring: 188 71% 20%;
+    --table-border: 180 8% 84%;
+    --table-header: 180 11% 91%;
+    --table-row-hover: 180 12% 95%;
+    --table-row-selected: 188 45% 92%;
+    --table-row-stripe: 180 9% 96%;
+    --table-sort-active: 188 71% 20%;
     --radius: 0.9rem;
     color-scheme: light;
   }

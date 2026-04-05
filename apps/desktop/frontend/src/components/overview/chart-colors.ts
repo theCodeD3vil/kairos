@@ -7,3 +7,10 @@ export const overviewChartSemanticColors = {
   danger: overviewChartPalette[3],
   warning: overviewChartPalette[4],
 } as const;
+
+export const syncUptimeColors = {
+  high: '#22C55E',
+  medium: '#84CC16',
+  low: '#F59E0B',
+  critical: '#EF4444',
+} as const;

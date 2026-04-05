@@ -101,9 +101,9 @@ export function Navbar() {
   };
 
   return (
-    <header className="px-7 pb-4 pt-7">
-      <div className="flex items-center justify-between rounded-[20px] bg-[#f4f6f5] px-5 py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-4">
+    <header className="px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6 lg:px-7 lg:pt-7">
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between rounded-[20px] bg-[#f4f6f5] px-3 py-2.5 sm:px-5 sm:py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.03)]">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <div className="grid size-10 place-items-center rounded-xl bg-[#cde367] text-[#1e3f44]">
             <div className="grid grid-cols-2 gap-1">
               <span className="size-1.5 rounded-full bg-current" />
@@ -112,7 +112,7 @@ export function Navbar() {
               <span className="size-1.5 rounded-full bg-current" />
             </div>
           </div>
-          <div className="flex flex-col items-center gap-4 rounded-full bg-[#e7ebea] p-1.5">
+          <div className="min-w-0 max-w-full overflow-x-auto rounded-full bg-[#e7ebea] p-1.5">
             <SlidingCapsuleNav
               tabs={tabs}
               currentTab={activeTab}
@@ -122,7 +122,7 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-2 flex shrink-0 items-center gap-2">
           <div className="relative" ref={notificationsRef}>
             <Button
               variant="outline"

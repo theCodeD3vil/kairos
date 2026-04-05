@@ -35,7 +35,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
       <div className="grid gap-3 xl:grid-cols-2">
         <article className="rounded-xl bg-[#f2f5f4] p-3">
           <h3 className="text-sm font-medium text-[#566568]">Language Distribution</h3>
-          <div className="mt-2 h-64">
+          <div className="mt-2 h-56">
             <DonutChart
               data={languages}
               index="language"
@@ -44,7 +44,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
               showAnimation
               animationDuration={1000}
               showLabel={false}
-              style={{ height: 256 }}
+              style={{ height: 224 }}
               valueFormatter={(value) => `${value}%`}
             />
           </div>

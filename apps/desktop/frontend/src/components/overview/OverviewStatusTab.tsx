@@ -1,19 +1,19 @@
 import { Tracker } from '@lobehub/charts';
 import type { OverviewSnapshot } from '@/components/overview/types';
+import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 
 type OverviewStatusTabProps = {
   snapshot: OverviewSnapshot;
 };
 
-function BoolPill({ value }: { value: boolean }) {
-  return (
-    <span className={`rounded-full px-2 py-1 text-xs font-medium ${value ? 'bg-[#d7ebdd] text-[#2f6d45]' : 'bg-[#f1dbdf] text-[#8d4f64]'}`}>
-      {value ? 'enabled' : 'disabled'}
-    </span>
-  );
-}
-
 export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
+  const syncStatus: StatusBadgeStatus =
+    snapshot.syncHealth.status === 'Healthy'
+      ? 'healthy'
+      : snapshot.syncHealth.status === 'Degraded'
+        ? 'degraded'
+        : 'offline';
+
   return (
     <div className="space-y-4">
       <article className="rounded-xl bg-[#f2f5f4] p-3">
@@ -29,11 +29,15 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
           </div>
           <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
             <p className="text-xs text-[#607073]">Local Only</p>
-            <div className="mt-1"><BoolPill value={snapshot.localOnlyMode} /></div>
+            <div className="mt-1">
+              <StatusBadge status={snapshot.localOnlyMode ? 'enabled' : 'disabled'} />
+            </div>
           </div>
           <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
             <p className="text-xs text-[#607073]">Tracking Status</p>
-            <div className="mt-1"><BoolPill value={snapshot.trackingEnabled} /></div>
+            <div className="mt-1">
+              <StatusBadge status={snapshot.trackingEnabled ? 'enabled' : 'disabled'} />
+            </div>
           </div>
           <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
             <p className="text-xs text-[#607073]">Last Updated</p>
@@ -55,10 +59,10 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
         <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
           <Tracker
             data={snapshot.syncHealth.blocks}
-            blockHeight={24}
-            blockWidth="100%"
-            blockGap={6}
-            leftLabel={snapshot.syncHealth.status}
+            blockHeight={30}
+            blockWidth={8}
+            blockGap={4}
+            leftLabel={<StatusBadge status={syncStatus} />}
             rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
           />
         </div>

@@ -1,6 +1,7 @@
-import { BarChart, DonutChart } from '@lobehub/charts';
+import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
+import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 
 type OverviewProjectsTabProps = {
   snapshot: OverviewSnapshot;
@@ -8,6 +9,14 @@ type OverviewProjectsTabProps = {
 
 const chartColors = [...overviewChartPalette];
 const machinePieColors = [...overviewChartPalette];
+
+type ProjectTableRow = {
+  id: string;
+  project: string;
+  minutes: number;
+  share: string;
+  recentActivityAt: string;
+};
 
 export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
   if (snapshot.topProjects.length === 0) {
@@ -20,6 +29,28 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
 
   const totalMinutes = snapshot.topProjects.reduce((sum, project) => sum + project.minutes, 0);
   const topProject = snapshot.topProjects[0];
+  const trendProjects = snapshot.topProjects.slice(0, 5);
+  const trendCategories = trendProjects.map((project) => project.project);
+  const trendColors = trendProjects.map((project) => project.color);
+  const projectTrendData = snapshot.weeklyTrend.map((point, index) => {
+    const projectedTotalsInHours = point.value;
+    const row: Record<string, number | string> = { label: point.label };
+
+    trendProjects.forEach((project, projectIndex) => {
+      const share = project.minutes / totalMinutes;
+      const wave = 0.9 + (((index + projectIndex) % 3) * 0.08);
+      row[project.project] = Number((projectedTotalsInHours * share * wave).toFixed(2));
+    });
+
+    return row;
+  });
+  const projectRows: ProjectTableRow[] = snapshot.topProjects.map((project) => ({
+    id: project.project,
+    project: project.project,
+    minutes: project.minutes,
+    share: `${Math.round((project.minutes / totalMinutes) * 100)}%`,
+    recentActivityAt: project.recentActivityAt,
+  }));
 
   function formatMinutes(minutes: number) {
     const h = Math.floor(minutes / 60);
@@ -28,18 +59,44 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
     return `${h}h ${m}m`;
   }
 
+  const projectColumns: ColumnDef<ProjectTableRow>[] = [
+    {
+      id: 'project',
+      header: 'Project',
+      accessorKey: 'project',
+    },
+    {
+      id: 'minutes',
+      header: 'Time Spent per Project',
+      cell: (row) => <span className="font-numeric">{formatMinutes(row.minutes)}</span>,
+      align: 'right',
+    },
+    {
+      id: 'share',
+      header: 'Share',
+      accessorKey: 'share',
+      align: 'right',
+    },
+    {
+      id: 'recentActivityAt',
+      header: 'Recent Project Activity',
+      accessorKey: 'recentActivityAt',
+      align: 'right',
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-3">
         <article className="rounded-xl bg-[#f2f5f4] p-3 lg:col-span-2">
           <h3 className="text-sm font-medium text-[#566568]">Time Spent per Project</h3>
-          <div className="mt-2 h-64">
+          <div className="mt-2 h-56">
             <BarChart
               data={snapshot.topProjects}
               index="project"
               categories={['minutes']}
               colors={chartColors}
-              height={256}
+              height={224}
               showAnimation
               animationDuration={1000}
               rotateLabelX={{ angle: -20, xAxisHeight: 60 }}
@@ -53,7 +110,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
 
         <article className="rounded-xl bg-[#f2f5f4] p-3">
           <h3 className="text-sm font-medium text-[#566568]">Machine Time Distribution</h3>
-          <div className="mt-2 h-48">
+          <div className="mt-2 h-44">
             <DonutChart
               data={snapshot.machineDistribution}
               index="machineName"
@@ -62,7 +119,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
               showAnimation
               animationDuration={900}
               showLabel={false}
-              style={{ height: 192 }}
+              style={{ height: 176 }}
               valueFormatter={(value) => `${value}%`}
             />
           </div>
@@ -86,28 +143,36 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
       </article>
 
       <article className="rounded-xl bg-[#f2f5f4] p-3">
+        <h3 className="text-sm font-medium text-[#566568]">Project Activity Over Time</h3>
+        <div className="mt-2 h-52">
+          <AreaChart
+            data={projectTrendData}
+            index="label"
+            categories={trendCategories}
+            colors={trendColors}
+            stack={false}
+            showGradient={false}
+            height={208}
+            showAnimation
+            animationDuration={1000}
+            showLegend
+            showGridLines
+            valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
+            yAxisWidth={44}
+          />
+        </div>
+      </article>
+
+      <article className="rounded-xl bg-[#f2f5f4] p-3">
         <h3 className="text-sm font-medium text-[#566568]">Top Active Projects</h3>
-        <div className="mt-2 overflow-hidden rounded-lg border border-[#d3dbd8]">
-          <table className="w-full text-sm">
-            <thead className="bg-[#e8edeb] text-left text-[#4b5d60]">
-              <tr>
-                <th className="px-3 py-2">Project</th>
-                <th className="px-3 py-2">Time Spent per Project</th>
-                <th className="px-3 py-2">Share</th>
-                <th className="px-3 py-2">Recent Project Activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.topProjects.map((project) => (
-                <tr key={project.project} className="border-t border-[#d7dfdc] text-[#1d2428]">
-                  <td className="px-3 py-2">{project.project}</td>
-                  <td className="font-numeric px-3 py-2">{formatMinutes(project.minutes)}</td>
-                  <td className="font-numeric px-3 py-2">{Math.round((project.minutes / totalMinutes) * 100)}%</td>
-                  <td className="font-numeric px-3 py-2">{project.recentActivityAt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-2">
+          <AnimatedTable
+            data={projectRows}
+            columns={projectColumns}
+            striped
+            stickyHeader
+            className="bg-[#f8faf9]"
+          />
         </div>
       </article>
     </div>

@@ -1,6 +1,39 @@
-import { overviewChartSemanticColors } from '@/components/overview/chart-colors';
+import { syncUptimeColors } from '@/components/overview/chart-colors';
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
 import { systemInfoSnapshot } from '@/mocks/system-info';
+
+const syncColorByLevel = {
+  4: syncUptimeColors.high,
+  3: syncUptimeColors.medium,
+  2: syncUptimeColors.low,
+  1: syncUptimeColors.critical,
+} as const;
+
+function buildSyncBlocks(
+  keyPrefix: string,
+  levels: Array<1 | 2 | 3 | 4>,
+  issueLabel?: string,
+  totalBars = 40,
+) {
+  return Array.from({ length: totalBars }, (_, index) => {
+    const level = levels[index % levels.length];
+    const color = syncColorByLevel[level];
+    const slot = index + 1;
+    const tooltip =
+      level === 4
+        ? `Sync slot ${slot}: healthy`
+        : level === 3
+          ? `Sync slot ${slot}: minor delay`
+          : level === 2
+            ? `Sync slot ${slot}: degraded`
+            : `Sync slot ${slot}: ${issueLabel ?? 'retry required'}`;
+    return {
+      key: `${keyPrefix}-${slot}`,
+      color,
+      tooltip,
+    };
+  });
+}
 
 const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
   today: {
@@ -25,10 +58,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { label: 'Fri', value: 6.8 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 175, recentActivityAt: '10m ago' },
-      { project: 'kairos-backend-core', minutes: 126, recentActivityAt: '1h ago' },
-      { project: 'internal-auth-service', minutes: 72, recentActivityAt: '3h ago' },
-      { project: 'kairos-vscode', minutes: 35, recentActivityAt: '6h ago' },
+      { project: 'desktop-frontend', minutes: 175, recentActivityAt: '10m ago', color: '#22C55E' },
+      { project: 'kairos-backend-core', minutes: 126, recentActivityAt: '1h ago', color: '#3B82F6' },
+      { project: 'internal-auth-service', minutes: 72, recentActivityAt: '3h ago', color: '#6366F1' },
+      { project: 'kairos-vscode', minutes: 35, recentActivityAt: '6h ago', color: '#EF4444' },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 220, share: 54 },
@@ -67,14 +100,7 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     syncHealth: {
       status: 'Healthy',
       lastSyncAt: 'Today 14:27',
-      blocks: [
-        { key: '1', color: overviewChartSemanticColors.success, tooltip: '09:00 sync ok' },
-        { key: '2', color: overviewChartSemanticColors.info, tooltip: '10:00 sync ok' },
-        { key: '3', color: overviewChartSemanticColors.accent, tooltip: '11:00 sync ok' },
-        { key: '4', color: overviewChartSemanticColors.warning, tooltip: '12:00 minor delay' },
-        { key: '5', color: overviewChartSemanticColors.success, tooltip: '13:00 sync ok' },
-        { key: '6', color: overviewChartSemanticColors.info, tooltip: '14:00 sync ok' },
-      ],
+      blocks: buildSyncBlocks('today', [4, 4, 3, 4, 2]),
     },
   },
   week: {
@@ -101,11 +127,11 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { label: 'Sun', value: 1.4 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 724, recentActivityAt: '10m ago' },
-      { project: 'kairos-backend-core', minutes: 525, recentActivityAt: '1h ago' },
-      { project: 'internal-auth-service', minutes: 391, recentActivityAt: '3h ago' },
-      { project: 'kairos-vscode', minutes: 238, recentActivityAt: '6h ago' },
-      { project: 'docs-site', minutes: 143, recentActivityAt: '1d ago' },
+      { project: 'desktop-frontend', minutes: 724, recentActivityAt: '10m ago', color: '#22C55E' },
+      { project: 'kairos-backend-core', minutes: 525, recentActivityAt: '1h ago', color: '#3B82F6' },
+      { project: 'internal-auth-service', minutes: 391, recentActivityAt: '3h ago', color: '#6366F1' },
+      { project: 'kairos-vscode', minutes: 238, recentActivityAt: '6h ago', color: '#EF4444' },
+      { project: 'docs-site', minutes: 143, recentActivityAt: '1d ago', color: '#F59E0B' },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 909, share: 45 },
@@ -145,15 +171,7 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     syncHealth: {
       status: 'Healthy',
       lastSyncAt: 'Today 14:27',
-      blocks: [
-        { key: 'mon', color: overviewChartSemanticColors.success, tooltip: 'Mon: stable sync' },
-        { key: 'tue', color: overviewChartSemanticColors.info, tooltip: 'Tue: stable sync' },
-        { key: 'wed', color: overviewChartSemanticColors.warning, tooltip: 'Wed: brief queue' },
-        { key: 'thu', color: overviewChartSemanticColors.accent, tooltip: 'Thu: stable sync' },
-        { key: 'fri', color: overviewChartSemanticColors.success, tooltip: 'Fri: stable sync' },
-        { key: 'sat', color: overviewChartSemanticColors.warning, tooltip: 'Sat: low activity' },
-        { key: 'sun', color: overviewChartSemanticColors.info, tooltip: 'Sun: low activity' },
-      ],
+      blocks: buildSyncBlocks('week', [4, 3, 4, 2, 3, 4]),
     },
   },
   month: {
@@ -177,11 +195,11 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { label: 'W4', value: 33.6 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 2972, recentActivityAt: '10m ago' },
-      { project: 'kairos-backend-core', minutes: 2043, recentActivityAt: '1h ago' },
-      { project: 'internal-auth-service', minutes: 1529, recentActivityAt: '3h ago' },
-      { project: 'kairos-vscode', minutes: 921, recentActivityAt: '6h ago' },
-      { project: 'ops-automation', minutes: 645, recentActivityAt: '2d ago' },
+      { project: 'desktop-frontend', minutes: 2972, recentActivityAt: '10m ago', color: '#22C55E' },
+      { project: 'kairos-backend-core', minutes: 2043, recentActivityAt: '1h ago', color: '#3B82F6' },
+      { project: 'internal-auth-service', minutes: 1529, recentActivityAt: '3h ago', color: '#6366F1' },
+      { project: 'kairos-vscode', minutes: 921, recentActivityAt: '6h ago', color: '#EF4444' },
+      { project: 'ops-automation', minutes: 645, recentActivityAt: '2d ago', color: '#F59E0B' },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 3492, share: 43 },
@@ -221,12 +239,7 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     syncHealth: {
       status: 'Degraded',
       lastSyncAt: 'Today 14:27',
-      blocks: [
-        { key: 'w1', color: overviewChartSemanticColors.info, tooltip: 'W1: stable sync' },
-        { key: 'w2', color: overviewChartSemanticColors.accent, tooltip: 'W2: stable sync' },
-        { key: 'w3', color: overviewChartSemanticColors.warning, tooltip: 'W3: periodic delay' },
-        { key: 'w4', color: overviewChartSemanticColors.danger, tooltip: 'W4: extension restart needed' },
-      ],
+      blocks: buildSyncBlocks('month', [3, 3, 2, 3, 2, 1], 'extension restart needed'),
     },
   },
 };
