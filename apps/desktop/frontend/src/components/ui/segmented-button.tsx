@@ -5,29 +5,36 @@ import { useEffect, useRef, useState } from "react";
 
 interface SegmentedButtonItem {
   id: string;
-  label?: string | null;
+  label?: React.ReactNode;
   title?: string;
 }
 
 interface SegmentedButtonProps {
-  buttons: SegmentedButtonItem[];
+  buttons?: SegmentedButtonItem[];
+  options?: Array<{ label: React.ReactNode; value: string; title?: string }>;
   defaultActive?: string;
   value?: string;
   onChange?: (activeId: string) => void;
   className?: string;
   size?: 'sm' | 'md';
+  tone?: 'neutral' | 'primary';
 }
 
-export default function SegmentedButton({
+function SegmentedButton({
   buttons,
+  options,
   defaultActive,
   value,
   onChange,
   className = "",
   size = 'md',
+  tone = 'neutral',
 }: SegmentedButtonProps) {
+  const normalizedButtons =
+    options?.map((option) => ({ id: option.value, label: option.label, title: option.title })) ?? buttons ?? [];
+
   const [activeButton, setActiveButton] = useState(
-    value || defaultActive || buttons[0]?.id || "",
+    value || defaultActive || normalizedButtons[0]?.id || "",
   );
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -41,7 +48,7 @@ export default function SegmentedButton({
   }, [defaultActive, value]);
 
   useEffect(() => {
-    const activeIndex = buttons.findIndex((btn) => btn.id === activeButton);
+    const activeIndex = normalizedButtons.findIndex((btn) => btn.id === activeButton);
     const activeElement = buttonRefs.current[activeIndex];
     if (!activeElement) return;
 
@@ -49,7 +56,7 @@ export default function SegmentedButton({
       left: activeElement.offsetLeft,
       width: activeElement.offsetWidth,
     });
-  }, [activeButton, buttons]);
+  }, [activeButton, normalizedButtons]);
 
   const handleButtonClick = (buttonId: string) => {
     setActiveButton(buttonId);
@@ -58,11 +65,11 @@ export default function SegmentedButton({
 
   return (
     <div
-      className={`relative inline-flex items-center rounded-full bg-[var(--surface-chip)] ${size === 'sm' ? 'p-0.5' : 'p-1'} ${className}`}
+      className={`relative inline-flex items-center rounded-full ${tone === 'primary' ? 'bg-primary/15' : 'bg-[var(--surface-chip)]'} ${size === 'sm' ? 'p-0.5' : 'p-1'} ${className}`}
       role="group"
     >
       <motion.div
-        className="absolute top-1 bottom-1 z-0 rounded-full bg-secondary"
+        className={`absolute top-1 bottom-1 z-0 rounded-full ${tone === 'primary' ? 'bg-primary' : 'bg-secondary'}`}
         animate={{
           left: indicatorStyle.left,
           width: indicatorStyle.width,
@@ -74,7 +81,7 @@ export default function SegmentedButton({
         }}
       />
 
-      {buttons.map((button, index) => {
+      {normalizedButtons.map((button, index) => {
         const active = activeButton === button.id;
 
         return (
@@ -85,17 +92,23 @@ export default function SegmentedButton({
             }}
             type="button"
             onClick={() => handleButtonClick(button.id)}
-            title={button.title ?? button.label ?? undefined}
+            title={button.title ?? (typeof button.label === 'string' ? button.label : undefined)}
             className={`relative z-10 rounded-full transition-colors ${
               size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
             }`}
           >
             <span
               className={`inline-block max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap ${
-                active ? 'text-secondary-foreground' : 'text-[var(--ink-accent)]'
+                active
+                  ? tone === 'primary'
+                    ? 'text-primary-foreground'
+                    : 'text-secondary-foreground'
+                  : tone === 'primary'
+                    ? 'text-primary'
+                    : 'text-[var(--ink-accent)]'
               }`}
             >
-              {button.label}
+              {typeof button.label === 'string' ? button.label : <span className="inline-flex items-center gap-1.5">{button.label}</span>}
             </span>
           </button>
         );
@@ -103,3 +116,6 @@ export default function SegmentedButton({
     </div>
   );
 }
+
+export { SegmentedButton };
+export default SegmentedButton;
