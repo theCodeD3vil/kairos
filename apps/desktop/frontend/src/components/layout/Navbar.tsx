@@ -12,7 +12,7 @@ const showTheme = import.meta.env.DEV;
 const tabs: NavTab[] = (
   [
     { title: 'Dashboard', url: '/overview', icon: <Home size={16} /> },
-    { title: 'Analytics', url: '/activity', icon: <LineChart size={16} /> },
+    { title: 'Analytics', url: '/analytics', icon: <LineChart size={16} /> },
     { title: 'Reports', url: '/projects', icon: <ReceiptText size={16} /> },
     { title: 'Calendar', url: '/sessions', icon: <CalendarDays size={16} /> },
     { title: 'Languages', url: '/languages', icon: <Gauge size={16} /> },

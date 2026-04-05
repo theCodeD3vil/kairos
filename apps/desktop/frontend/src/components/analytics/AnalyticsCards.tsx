@@ -1,0 +1,186 @@
+import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
+import { cn } from '@/lib/utils';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
+import type { BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
+
+export function formatMinutes(totalMinutes: number) {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+type KpiProps = {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: 'neutral' | 'positive' | 'negative';
+};
+
+export function AnalyticsKpiCard({ label, value, hint, tone = 'neutral' }: KpiProps) {
+  const toneClass =
+    tone === 'positive'
+      ? 'text-[var(--ink-positive)]'
+      : tone === 'negative'
+        ? 'text-[var(--ink-negative)]'
+        : 'text-[var(--ink-strong)]';
+
+  return (
+    <article className="rounded-xl bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+      <p className="text-xs font-medium text-[var(--ink-secondary)]">{label}</p>
+      <p className={cn('font-numeric mt-1 text-2xl font-semibold', toneClass)}>{value}</p>
+      {hint ? <p className="text-xs text-[var(--ink-tertiary)]">{hint}</p> : null}
+    </article>
+  );
+}
+
+type BreakdownListProps = {
+  title: string;
+  items: BreakdownItem[];
+  emptyMessage?: string;
+};
+
+export function AnalyticsBreakdownList({ title, items, emptyMessage }: BreakdownListProps) {
+  return (
+    <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+      <h3 className="text-sm font-semibold text-[var(--ink-strong)]">{title}</h3>
+      <div className="mt-3 space-y-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-[var(--ink-tertiary)]">{emptyMessage ?? 'No data for this filter.'}</p>
+        ) : (
+          items.map((item, index) => (
+            <div
+              key={item.name}
+              className="flex items-center gap-3 rounded-lg bg-[var(--surface-subtle)] px-3 py-2"
+            >
+              <div className="grid size-8 place-items-center rounded-lg bg-[var(--surface-pill)] text-xs font-semibold text-[var(--ink-accent)]">
+                {index + 1}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-[var(--ink-strong)]">{item.name}</p>
+                <p className="text-xs text-[var(--ink-tertiary)]">
+                  {formatMinutes(item.minutes)} · {item.share}% · {item.activeDays} active days
+                </p>
+              </div>
+              <p className="text-xs text-[var(--ink-secondary)]">{item.recent}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </article>
+  );
+}
+
+type TimeListProps = { daily: DailyStat[]; weekly: Array<{ label: string; minutes: number }> };
+
+export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
+  const dailyData = daily.map((day) => ({ label: day.label, minutes: day.minutes }));
+
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+        <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Daily totals</h3>
+        <div className="mt-2 h-60">
+          {daily.length === 0 ? (
+            <p className="text-sm text-[var(--ink-tertiary)]">No sessions in range.</p>
+          ) : (
+            <BarChart
+              data={dailyData}
+              index="label"
+              categories={['minutes']}
+              colors={[overviewChartPalette[0]]}
+              showAnimation
+              animationDuration={900}
+              showGridLines
+              valueFormatter={(value) => formatMinutes(Number(value))}
+              yAxisWidth={44}
+              rotateLabelX={{ angle: -25, xAxisHeight: 60 }}
+              height={224}
+            />
+          )}
+        </div>
+      </article>
+      <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+        <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Weekly trend</h3>
+        <div className="mt-2 h-60">
+          {weekly.length === 0 ? (
+            <p className="text-sm text-[var(--ink-tertiary)]">No sessions in range.</p>
+          ) : (
+            <AreaChart
+              data={weekly}
+              index="label"
+              categories={['minutes']}
+              colors={[overviewChartPalette[1]]}
+              height={224}
+              showAnimation
+              animationDuration={900}
+              showLegend={false}
+              showGridLines
+              valueFormatter={(value) => formatMinutes(Number(value))}
+              yAxisWidth={44}
+            />
+          )}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+type MachineListProps = { items: MachineBreakdown[] };
+
+export function AnalyticsMachineList({ items }: MachineListProps) {
+  return (
+    <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+      <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Machines</h3>
+      <div className="mt-3">
+        {items.length === 0 ? (
+          <p className="text-sm text-[var(--ink-tertiary)]">No machine activity in this range.</p>
+        ) : (
+          <BarChart
+            data={items.map((item) => ({ label: item.name, minutes: item.minutes }))}
+            index="label"
+            categories={['minutes']}
+            colors={[overviewChartPalette[2]]}
+            showAnimation
+            animationDuration={900}
+            showGridLines
+            valueFormatter={(value) => formatMinutes(Number(value))}
+            yAxisWidth={44}
+            height={240}
+          />
+        )}
+      </div>
+    </article>
+  );
+}
+
+export function AnalyticsDonut({
+  title,
+  items,
+}: {
+  title: string;
+  items: BreakdownItem[];
+}) {
+  return (
+    <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
+      <h3 className="text-sm font-semibold text-[var(--ink-strong)]">{title}</h3>
+      <div className="mt-2 h-56">
+        {items.length === 0 ? (
+          <p className="text-sm text-[var(--ink-tertiary)]">No data for this filter.</p>
+        ) : (
+          <DonutChart
+            data={items}
+            index="name"
+            category="share"
+            colors={items.map((_, idx) => overviewChartPalette[idx % overviewChartPalette.length])}
+            showAnimation
+            animationDuration={900}
+            showLabel={false}
+            valueFormatter={(value) => `${value}%`}
+            style={{ height: 200 }}
+          />
+        )}
+      </div>
+    </article>
+  );
+}
