@@ -21,7 +21,7 @@ type ProjectTableRow = {
 export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
   if (snapshot.topProjects.length === 0) {
     return (
-      <div className="rounded-xl bg-[#f2f5f4] p-3 text-sm text-[#5c6d70]">
+      <div className="rounded-xl bg-[var(--surface-muted)] p-3 text-sm text-[var(--ink-tertiary)]">
         No project activity in this range.
       </div>
     );
@@ -88,8 +88,8 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-3">
-        <article className="rounded-xl bg-[#f2f5f4] p-3 lg:col-span-2">
-          <h3 className="text-sm font-medium text-[#566568]">Time Spent per Project</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3 lg:col-span-2">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Time Spent per Project</h3>
           <div className="mt-2 h-56">
             <BarChart
               data={snapshot.topProjects}
@@ -108,8 +108,8 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
           </div>
         </article>
 
-        <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Machine Time Distribution</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Machine Time Distribution</h3>
           <div className="mt-2 h-44">
             <DonutChart
               data={snapshot.machineDistribution}
@@ -125,25 +125,25 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
           </div>
           <div className="mt-2 space-y-2">
             {snapshot.machineDistribution.map((machine) => (
-              <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[#e8edeb] px-2 py-1.5">
-                <span className="text-xs font-medium text-[#1d2428]">{machine.machineName}</span>
-                <span className="font-numeric text-xs text-[#4a5d60]">{formatMinutes(machine.minutes)}</span>
+              <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-2 py-1.5">
+                <span className="text-xs font-medium text-[var(--ink-strong)]">{machine.machineName}</span>
+                <span className="font-numeric text-xs text-[var(--ink-label)]">{formatMinutes(machine.minutes)}</span>
               </div>
             ))}
           </div>
         </article>
       </div>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">Most Active Project</h3>
-        <p className="mt-2 text-lg font-semibold text-[#1d2428]">{topProject.project}</p>
-        <p className="font-numeric mt-1 text-sm text-[#566568]">{formatMinutes(topProject.minutes)} in selected range</p>
-        <p className="mt-3 text-sm text-[#566568]">Recent Project Activity</p>
-        <p className="font-numeric mt-1 font-medium text-[#1d2428]">{topProject.recentActivityAt}</p>
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Most Active Project</h3>
+        <p className="mt-2 text-lg font-semibold text-[var(--ink-strong)]">{topProject.project}</p>
+        <p className="font-numeric mt-1 text-sm text-[var(--ink-secondary)]">{formatMinutes(topProject.minutes)} in selected range</p>
+        <p className="mt-3 text-sm text-[var(--ink-secondary)]">Recent Project Activity</p>
+        <p className="font-numeric mt-1 font-medium text-[var(--ink-strong)]">{topProject.recentActivityAt}</p>
       </article>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">Project Activity Over Time</h3>
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Project Activity Over Time</h3>
         <div className="mt-2 h-52">
           <AreaChart
             data={projectTrendData}
@@ -163,15 +163,15 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         </div>
       </article>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">Top Active Projects</h3>
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Top Active Projects</h3>
         <div className="mt-2">
           <AnimatedTable
             data={projectRows}
             columns={projectColumns}
             striped
             stickyHeader
-            className="bg-[#f8faf9]"
+            className="bg-[var(--surface-quiet)]"
           />
         </div>
       </article>

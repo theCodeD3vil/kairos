@@ -72,11 +72,11 @@ export function VercelTabs({ tabs, defaultTab, value, onValueChange, className, 
 
   return (
     <div className={`flex w-full flex-col items-center ${className}`}>
-      <div className={`w-full ${stickyTabList ? 'sticky top-0 z-20 bg-[#ecefee] pb-2' : ''}`}>
+      <div className={`w-full ${stickyTabList ? 'sticky top-0 z-20 bg-[var(--surface)] pb-2' : ''}`}>
         <div className="relative mx-auto flex h-auto w-fit select-none items-center gap-[6px] bg-transparent p-0">
         {/* Hover Highlight */}
         <div
-          className="pointer-events-none absolute top-0 left-0 flex h-8 items-center rounded-[6px] bg-[#0e0f1114] transition-all duration-300 ease-out"
+          className="pointer-events-none absolute top-0 left-0 flex h-8 items-center rounded-[6px] bg-[var(--ink-void)14] transition-all duration-300 ease-out"
           style={{
             ...hoverStyle,
             opacity: hoveredIndex !== null ? 1 : 0,
@@ -85,7 +85,7 @@ export function VercelTabs({ tabs, defaultTab, value, onValueChange, className, 
 
         {/* Active Indicator */}
         <div
-          className="pointer-events-none absolute bottom-[-6px] h-[2px] bg-[#0e0f11] transition-all duration-300 ease-out"
+          className="pointer-events-none absolute bottom-[-6px] h-[2px] bg-[var(--ink-void)] transition-all duration-300 ease-out"
           style={activeStyle}
         />
 
@@ -98,8 +98,8 @@ export function VercelTabs({ tabs, defaultTab, value, onValueChange, className, 
             type="button"
             className={`z-10 flex h-8 items-center justify-center cursor-pointer rounded-md border-0 bg-transparent px-3 py-0 outline-none transition-colors duration-300 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none ${
               activeTab === tab.value
-                ? "text-[#0e0e10]"
-                : "text-[#0e0f1199]"
+                ? "text-[var(--ink-void)]"
+                : "text-[var(--ink-void)99]"
             }`}
             onClick={() => setActiveTab(tab.value)}
             onMouseEnter={() => setHoveredIndex(index)}

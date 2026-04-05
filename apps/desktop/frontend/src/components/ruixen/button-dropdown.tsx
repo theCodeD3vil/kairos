@@ -48,7 +48,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
         onClick={() => setOpen((v) => !v)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(255,255,255,0.62))] px-3 py-1.5 text-xs font-medium text-[#1e2428] shadow-[0_0_1px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-[20px]"
+        className="inline-flex items-center gap-2 rounded-[10px] border border-black/8 bg-[var(--glass-light)] px-3 py-1.5 text-xs font-medium text-[var(--ink-strong-alt)] shadow-[var(--shadow-glass)] backdrop-blur-[20px]"
       >
         <span>{label}</span>
         <motion.svg
@@ -75,7 +75,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] rounded-xl border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85))] p-1 shadow-[0_8px_32px_rgba(0,0,0,0.12),0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-[20px]"
+            className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] rounded-xl border border-black/8 bg-[var(--glass-light-strong)] p-1 shadow-[var(--shadow-layered)] backdrop-blur-[20px]"
           >
             {items.map((item) => (
               <motion.button
@@ -90,7 +90,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className={cn(
                   'flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-black/5',
-                  item.destructive ? 'text-red-500' : 'text-[#1e2428]',
+                  item.destructive ? 'text-red-500' : 'text-[var(--ink-strong-alt)]',
                 )}
               >
                 {item.label}

@@ -16,47 +16,47 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
 
   return (
     <div className="space-y-4">
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">System Status</h3>
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">System Status</h3>
         <div className="mt-2 grid gap-2 md:grid-cols-2">
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Current Machine</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.machineName}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Current Machine</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Operating System</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.os}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.os}</p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Local Only</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Local Only</p>
             <div className="mt-1">
               <StatusBadge status={snapshot.localOnlyMode ? 'enabled' : 'disabled'} />
             </div>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Tracking Status</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Tracking Status</p>
             <div className="mt-1">
               <StatusBadge status={snapshot.trackingEnabled ? 'enabled' : 'disabled'} />
             </div>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Last Updated</p>
-            <p className="font-numeric mt-1 text-sm font-medium text-[#1d2428]">{snapshot.lastUpdatedAt}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Last Updated</p>
+            <p className="font-numeric mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastUpdatedAt}</p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Last Active</p>
-            <p className="font-numeric mt-1 text-sm font-medium text-[#1d2428]">{snapshot.lastActiveAt}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Last Active</p>
+            <p className="font-numeric mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastActiveAt}</p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Last Active Machine</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.lastActiveMachine}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Last Active Machine</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastActiveMachine}</p>
           </div>
         </div>
       </article>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">VS Code Sync Health</h3>
-        <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
+        <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
           <Tracker
             data={snapshot.syncHealth.blocks}
             blockHeight={30}

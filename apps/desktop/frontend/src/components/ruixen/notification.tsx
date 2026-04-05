@@ -104,7 +104,7 @@ const DEFAULT_ITEMS: NotificationItem[] = [
 
 /* ── Scoped CSS ── */
 
-const STYLE = `.nt{--nt-glass:rgba(255,255,255,.72);--nt-border:rgba(0,0,0,.06);--nt-shadow:0 0 0 .5px rgba(0,0,0,.04),0 2px 4px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);--nt-ink:0,0,0;--nt-ok:#34C759;--nt-err:#FF3B30}.dark .nt,[data-theme="dark"] .nt{--nt-glass:rgba(30,30,32,.82);--nt-border:rgba(255,255,255,.06);--nt-shadow:0 0 0 .5px rgba(255,255,255,.04),0 2px 4px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.3);--nt-ink:255,255,255;--nt-ok:#30D158;--nt-err:#FF453A}.nt-grab{cursor:grab}.nt-grab:active{cursor:grabbing}`;
+const STYLE = `.nt{--nt-glass:rgba(255,255,255,.72);--nt-border:rgba(0,0,0,.06);--nt-shadow:0 0 0 .5px rgba(0,0,0,.04),0 2px 4px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);--nt-ink:0,0,0;--nt-ok:var(--status-ok);--nt-err:var(--status-err)}.dark .nt,[data-theme="dark"] .nt{--nt-glass:rgba(30,30,32,.82);--nt-border:rgba(255,255,255,.06);--nt-shadow:0 0 0 .5px rgba(255,255,255,.04),0 2px 4px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.3);--nt-ink:255,255,255;--nt-ok:var(--status-ok-alt);--nt-err:var(--status-err-alt)}.nt-grab{cursor:grab}.nt-grab:active{cursor:grabbing}`;
 
 /* ── Springs ── */
 

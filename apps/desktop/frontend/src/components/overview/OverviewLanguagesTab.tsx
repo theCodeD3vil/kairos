@@ -33,8 +33,8 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 xl:grid-cols-2">
-        <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Language Distribution</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Language Distribution</h3>
           <div className="mt-2 h-56">
             <DonutChart
               data={languages}
@@ -50,19 +50,19 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
           </div>
         </article>
 
-        <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Top Languages</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Top Languages</h3>
           <div className="mt-2 space-y-2">
             {languages.map((language) => (
-              <div key={language.language} className="rounded-lg bg-[#e8edeb] px-3 py-2">
+              <div key={language.language} className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium text-[#1d2428]">
+                  <span className="flex items-center gap-2 font-medium text-[var(--ink-strong)]">
                     <FileIcon name={toLanguageFileName(language.language)} width={18} height={18} />
                     {language.language}
                   </span>
-                  <span className="font-numeric text-sm text-[#4a5d60]">{Math.round(language.minutes / 60)}h</span>
+                  <span className="font-numeric text-sm text-[var(--ink-label)]">{Math.round(language.minutes / 60)}h</span>
                 </div>
-                <p className="font-numeric mt-1 text-xs text-[#5c6d70]">{language.share}% of coding time</p>
+                <p className="font-numeric mt-1 text-xs text-[var(--ink-tertiary)]">{language.share}% of coding time</p>
               </div>
             ))}
           </div>

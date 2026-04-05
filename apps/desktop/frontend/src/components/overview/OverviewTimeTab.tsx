@@ -24,24 +24,24 @@ function formatMinutes(minutes: number) {
 
 function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
-    <article className="rounded-xl bg-[#e6e6e6] p-3 ">
-      <h3 className="text-sm font-medium text-[#566568]">{title}</h3>
-      <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-[#6d7a7d]">{hint}</p> : null}
+    <article className="rounded-xl bg-[var(--surface-soft)] p-3 ">
+      <h3 className="text-sm font-medium text-[var(--ink-secondary)]">{title}</h3>
+      <p className="font-numeric mt-1 text-2xl font-semibold text-[var(--ink-strong)]">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-[var(--ink-soft)]">{hint}</p> : null}
     </article>
   );
 }
 
 function CodingTimeTodayCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
+    <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
           <CodingOrbitIllustration />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-[#566568]">Today</h3>
-          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Today</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[var(--ink-strong)]">{value}</p>
         </div>
       </div>
     </article>
@@ -50,14 +50,14 @@ function CodingTimeTodayCard({ value }: { value: string }) {
 
 function CodingTimeWeekCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
+    <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
           <WeeklyMomentumIllustration />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-[#566568]">This Week</h3>
-          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">This Week</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[var(--ink-strong)]">{value}</p>
         </div>
       </div>
     </article>
@@ -66,14 +66,14 @@ function CodingTimeWeekCard({ value }: { value: string }) {
 
 function SessionsCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
+    <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
           <SessionsTimelineIllustration />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-[#566568]">Sessions</h3>
-          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Sessions</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[var(--ink-strong)]">{value}</p>
         </div>
       </div>
     </article>
@@ -82,14 +82,14 @@ function SessionsCard({ value }: { value: string }) {
 
 function AvgSessionCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
+    <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
           <AverageSessionBarsIllustration />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-[#566568]">Avg Session</h3>
-          <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Avg Session</h3>
+          <p className="font-numeric mt-1 text-2xl font-semibold text-[var(--ink-strong)]">{value}</p>
         </div>
       </div>
     </article>
@@ -121,8 +121,8 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
-        <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">{trendTitleByRange[snapshot.range]}</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">{trendTitleByRange[snapshot.range]}</h3>
           <div className="mt-2 h-52">
             <AreaChart
               data={snapshot.weeklyTrend}
@@ -140,8 +140,8 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
           </div>
         </article>
 
-        <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Work Pattern</h3>
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Work Pattern</h3>
           <div className="mt-2 grid gap-3 md:grid-cols-2">
             <Metric title="Coding Days" value={String(snapshot.codingDaysThisWeek)} />
             <Metric title="Most Active Hours" value={snapshot.activeHoursSummary} />
@@ -151,47 +151,47 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
         </article>
       </div>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">Current Machine</h3>
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Current Machine</h3>
         <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Machine Name</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.machineName}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Machine Name</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Operating System</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">
               {snapshot.currentMachine.os} {snapshot.currentMachine.osVersion}
             </p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Editor</p>
-            <p className="mt-1 text-sm font-medium text-[#1d2428]">
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Editor</p>
+            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">
               {snapshot.currentMachine.editorName} {snapshot.currentMachine.editorVersion}
             </p>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Local Only</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Local Only</p>
             <div className="mt-1">
               <StatusBadge status={snapshot.localOnlyMode ? 'enabled' : 'disabled'} />
             </div>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Tracking Status</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Tracking Status</p>
             <div className="mt-1">
               <StatusBadge status={snapshot.trackingEnabled ? 'enabled' : 'disabled'} />
             </div>
           </div>
-          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
-            <p className="text-xs text-[#607073]">Last Seen</p>
-            <p className="font-numeric mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.lastSeenAt}</p>
+          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+            <p className="text-xs text-[var(--ink-muted)]">Last Seen</p>
+            <p className="font-numeric mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.lastSeenAt}</p>
           </div>
         </div>
       </article>
 
-      <article className="rounded-xl bg-[#f2f5f4] p-3">
-        <h3 className="text-sm font-medium text-[#566568]">VS Code Sync Health</h3>
-        <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
+      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
+        <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
           <Tracker
             data={snapshot.syncHealth.blocks}
             blockHeight={30}

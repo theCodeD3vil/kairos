@@ -36,8 +36,8 @@ export function OverviewPage() {
 
   return (
     <div className="space-y-4">
-      <section className="flex items-center justify-between rounded-[18px] bg-[#e5e8e4] p-4">
-        <h1 className="text-2xl font-semibold text-[#1d2428]">Overview</h1>
+      <section className="flex items-center justify-between rounded-[18px] bg-[var(--surface-strong)] p-4">
+        <h1 className="text-2xl font-semibold text-[var(--ink-strong)]">Overview</h1>
         <div className="flex items-center gap-3">
           <MachineScopePlaceholder
             machines={snapshot.knownMachines}
@@ -55,7 +55,7 @@ export function OverviewPage() {
         </div>
       </section>
 
-      <section className="rounded-[18px] bg-[#ecefee] p-4">
+      <section className="rounded-[18px] bg-[var(--surface)] p-4">
         <VercelTabs
           tabs={tabs}
           defaultTab="time"

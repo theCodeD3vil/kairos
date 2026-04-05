@@ -50,7 +50,7 @@ export function DateRangePicker({
           'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
           active
             ? 'border-transparent bg-secondary text-secondary-foreground'
-            : 'border-black/10 bg-[#dfe4e2] text-[#2e3f43] hover:bg-[#d5dbd8]',
+            : 'border-black/10 bg-[var(--surface-chip)] text-[var(--ink-accent)] hover:bg-[var(--surface-chip-hover)]',
         )}
       >
         {displayLabel}
@@ -70,7 +70,7 @@ export function DateRangePicker({
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 rounded-xl border border-black/10 bg-white/90 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 rounded-xl border border-black/10 bg-white/90 p-3 shadow-[var(--shadow-elevated)] backdrop-blur">
           <RangeCalendar
             value={value}
             sound={false}

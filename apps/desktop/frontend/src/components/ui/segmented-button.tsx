@@ -58,7 +58,7 @@ export default function SegmentedButton({
 
   return (
     <div
-      className={`relative inline-flex items-center rounded-full bg-[#dfe4e2] ${size === 'sm' ? 'p-0.5' : 'p-1'} ${className}`}
+      className={`relative inline-flex items-center rounded-full bg-[var(--surface-chip)] ${size === 'sm' ? 'p-0.5' : 'p-1'} ${className}`}
       role="group"
     >
       <motion.div
@@ -92,7 +92,7 @@ export default function SegmentedButton({
           >
             <span
               className={`inline-block max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap ${
-                active ? 'text-secondary-foreground' : 'text-[#2e3f43]'
+                active ? 'text-secondary-foreground' : 'text-[var(--ink-accent)]'
               }`}
             >
               {button.label}

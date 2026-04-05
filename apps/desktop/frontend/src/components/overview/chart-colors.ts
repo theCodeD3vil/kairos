@@ -1,4 +1,4 @@
-export const overviewChartPalette = ['#22C55E', '#3B82F6', '#6366F1', '#EF4444', '#F59E0B'] as const;
+export const overviewChartPalette = ['var(--chart-green)', 'var(--chart-blue)', 'var(--chart-indigo)', 'var(--chart-red)', 'var(--chart-amber)'] as const;
 
 export const overviewChartSemanticColors = {
   success: overviewChartPalette[0],
@@ -9,8 +9,8 @@ export const overviewChartSemanticColors = {
 } as const;
 
 export const syncUptimeColors = {
-  high: '#22C55E',
-  medium: '#84CC16',
-  low: '#F59E0B',
-  critical: '#EF4444',
+  high: 'var(--chart-green)',
+  medium: 'var(--chart-lime)',
+  low: 'var(--chart-amber)',
+  critical: 'var(--chart-red)',
 } as const;

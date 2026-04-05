@@ -22,7 +22,7 @@ export function SlidingCapsuleNav({
   layoutId = 'capsule-nav',
   className,
 }: SlidingCapsuleNavProps) {
-  const navClassName = `inline-flex items-center rounded-full bg-[#e7ebea] p-1 ${className ?? ''}`.trim();
+  const navClassName = `inline-flex items-center rounded-full bg-[var(--surface-pill)] p-1 ${className ?? ''}`.trim();
 
   return (
     <nav className={navClassName}>
@@ -52,7 +52,7 @@ export function SlidingCapsuleNav({
               />
             )}
 
-            <span className={`relative z-20 flex items-center gap-2 ${active ? 'text-white' : 'text-[#1e3f44]'}`}>
+            <span className={`relative z-20 flex items-center gap-2 ${active ? 'text-white' : 'text-[var(--ink-accent-strong)]'}`}>
               {tab.icon}
               <span>{tab.title}</span>
             </span>
