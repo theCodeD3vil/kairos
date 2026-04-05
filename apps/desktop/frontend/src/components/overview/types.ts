@@ -1,3 +1,5 @@
+import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+
 export type OverviewRange = 'today' | 'week' | 'month';
 
 export type WeeklyTrendPoint = {
@@ -17,10 +19,18 @@ export type TopLanguage = {
   share: number;
 };
 
+export type MachineTimeShare = {
+  machineName: string;
+  minutes: number;
+  share: number;
+};
+
 export type RecentSession = {
   project: string;
   durationMinutes: number;
   startAt: string;
+  machineName: string;
+  osLabel: string;
 };
 
 export type SyncHealthBlock = {
@@ -46,9 +56,14 @@ export type OverviewSnapshot = {
   trackingEnabled: boolean;
   localOnlyMode: boolean;
   lastUpdatedAt: string;
+  currentMachine: MachineInfo;
+  knownMachines: MachineInfo[];
+  appStatus: AppStatus;
+  lastActiveMachine: string;
   weeklyTrend: WeeklyTrendPoint[];
   topProjects: TopProject[];
   topLanguages: TopLanguage[];
+  machineDistribution: MachineTimeShare[];
   recentSessions: RecentSession[];
   activeHoursSummary: string;
   syncHealth: SyncHealth;

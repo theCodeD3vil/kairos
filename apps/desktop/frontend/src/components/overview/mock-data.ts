@@ -1,4 +1,5 @@
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
+import { systemInfoSnapshot } from '@/mocks/system-info';
 
 const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
   today: {
@@ -11,6 +12,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     trackingEnabled: true,
     localOnlyMode: true,
     lastUpdatedAt: 'Today 14:28',
+    currentMachine: systemInfoSnapshot.currentMachine,
+    knownMachines: systemInfoSnapshot.knownMachines,
+    appStatus: systemInfoSnapshot.appStatus,
+    lastActiveMachine: 'Kairos-MacBook-Pro',
     weeklyTrend: [
       { label: 'Mon', value: 5.4 },
       { label: 'Tue', value: 6.1 },
@@ -31,9 +36,27 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'Markdown', minutes: 33, share: 8 },
     ],
     recentSessions: [
-      { project: 'desktop-frontend', durationMinutes: 72, startAt: '09:12' },
-      { project: 'kairos-backend-core', durationMinutes: 54, startAt: '11:04' },
-      { project: 'desktop-frontend', durationMinutes: 61, startAt: '13:37' },
+      {
+        project: 'desktop-frontend',
+        durationMinutes: 72,
+        startAt: '09:12',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'kairos-backend-core',
+        durationMinutes: 54,
+        startAt: '11:04',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'desktop-frontend',
+        durationMinutes: 61,
+        startAt: '13:37',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
     ],
     activeHoursSummary: '09:00 - 12:00',
     syncHealth: {
@@ -59,6 +82,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     trackingEnabled: true,
     localOnlyMode: true,
     lastUpdatedAt: 'Today 14:28',
+    currentMachine: systemInfoSnapshot.currentMachine,
+    knownMachines: systemInfoSnapshot.knownMachines,
+    appStatus: systemInfoSnapshot.appStatus,
+    lastActiveMachine: 'Kairos-MacBook-Pro',
     weeklyTrend: [
       { label: 'Mon', value: 5.2 },
       { label: 'Tue', value: 6.0 },
@@ -83,9 +110,27 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'YAML', minutes: 133, share: 6 },
     ],
     recentSessions: [
-      { project: 'desktop-frontend', durationMinutes: 82, startAt: 'Today 09:12' },
-      { project: 'kairos-backend-core', durationMinutes: 53, startAt: 'Today 11:10' },
-      { project: 'internal-auth-service', durationMinutes: 65, startAt: 'Yesterday 16:42' },
+      {
+        project: 'desktop-frontend',
+        durationMinutes: 82,
+        startAt: 'Today 09:12',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'kairos-backend-core',
+        durationMinutes: 53,
+        startAt: 'Today 11:10',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'internal-auth-service',
+        durationMinutes: 65,
+        startAt: 'Yesterday 16:42',
+        machineName: 'Kairos-ThinkPad',
+        osLabel: 'Ubuntu',
+      },
     ],
     activeHoursSummary: '09:00 - 12:00',
     syncHealth: {
@@ -112,6 +157,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
     trackingEnabled: true,
     localOnlyMode: true,
     lastUpdatedAt: 'Today 14:28',
+    currentMachine: systemInfoSnapshot.currentMachine,
+    knownMachines: systemInfoSnapshot.knownMachines,
+    appStatus: systemInfoSnapshot.appStatus,
+    lastActiveMachine: 'Kairos-MacBook-Pro',
     weeklyTrend: [
       { label: 'W1', value: 37.8 },
       { label: 'W2', value: 35.4 },
@@ -133,9 +182,27 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'YAML', minutes: 566, share: 7 },
     ],
     recentSessions: [
-      { project: 'desktop-frontend', durationMinutes: 82, startAt: 'Today 09:12' },
-      { project: 'kairos-backend-core', durationMinutes: 53, startAt: 'Today 11:10' },
-      { project: 'internal-auth-service', durationMinutes: 65, startAt: 'Yesterday 16:42' },
+      {
+        project: 'desktop-frontend',
+        durationMinutes: 82,
+        startAt: 'Today 09:12',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'kairos-backend-core',
+        durationMinutes: 53,
+        startAt: 'Today 11:10',
+        machineName: 'Kairos-MacBook-Pro',
+        osLabel: 'macOS',
+      },
+      {
+        project: 'internal-auth-service',
+        durationMinutes: 65,
+        startAt: 'Yesterday 16:42',
+        machineName: 'Kairos-ThinkPad',
+        osLabel: 'Ubuntu',
+      },
     ],
     activeHoursSummary: '10:00 - 14:00',
     syncHealth: {

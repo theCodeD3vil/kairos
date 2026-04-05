@@ -135,6 +135,7 @@ export function Navbar() {
             {notificationsOpen ? (
               <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl bg-transparent p-1">
                 <NotificationsFilter
+                  sound={false}
                   onCategoryChange={handleCategoryChange}
                   onItemSelect={(item) => handleNotificationSelect(item.title)}
                 />

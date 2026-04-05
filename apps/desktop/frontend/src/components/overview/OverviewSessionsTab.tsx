@@ -44,6 +44,9 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
                     <span className="font-numeric text-sm text-[#4a5d60]">{formatMinutes(session.durationMinutes)}</span>
                   </div>
                   <p className="font-numeric text-xs text-[#5c6d70]">{session.startAt}</p>
+                  <p className="mt-1 text-xs text-[#5c6d70]">
+                    {session.machineName} · {session.osLabel}
+                  </p>
                 </div>
               ))
             ) : (
@@ -66,6 +69,9 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
             </p>
             <p className="text-[#1d2428]">
               Last Active: <span className="font-medium font-numeric">{snapshot.lastActiveAt}</span>
+            </p>
+            <p className="text-[#1d2428]">
+              Last Active Machine: <span className="font-medium">{snapshot.lastActiveMachine}</span>
             </p>
           </div>
         </article>

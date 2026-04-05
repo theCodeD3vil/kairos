@@ -120,14 +120,14 @@ const DEFAULT_ITEMS: FilterItem[] = [
 
 /* ── CSS ── */
 
-const CSS = `.nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.62));--nf-border:rgba(0,0,0,.06);--nf-shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--nf-hi:rgba(0,0,0,.88);--nf-dim:rgba(0,0,0,.35);--nf-sep:rgba(0,0,0,.06);--nf-pill-bg:rgba(0,0,0,.88);--nf-pill-fg:rgba(255,255,255,.95);--nf-pill-idle:rgba(0,0,0,.45);--nf-hover:rgba(0,0,0,.03)}.dark .nf,[data-theme="dark"] .nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));--nf-border:rgba(255,255,255,.07);--nf-shadow:0 8px 32px rgba(0,0,0,.32),0 1px 2px rgba(0,0,0,.16);--nf-hi:rgba(255,255,255,.88);--nf-dim:rgba(255,255,255,.35);--nf-sep:rgba(255,255,255,.06);--nf-pill-bg:rgba(255,255,255,.88);--nf-pill-fg:rgba(0,0,0,.9);--nf-pill-idle:rgba(255,255,255,.45);--nf-hover:rgba(255,255,255,.03)}`;
+const CSS = `.nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.62));--nf-border:rgba(0,0,0,.06);--nf-shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--nf-hi:rgba(0,0,0,.88);--nf-dim:rgba(0,0,0,.35);--nf-sep:rgba(0,0,0,.06);--nf-pill-bg:hsl(var(--primary));--nf-pill-fg:hsl(var(--primary-foreground));--nf-pill-idle:hsl(var(--foreground)/.56);--nf-hover:hsl(var(--secondary)/.2)}`;
 
 /* ── Component ── */
 
 export function NotificationsFilter({
   items = DEFAULT_ITEMS,
   categories = DEFAULT_CATEGORIES,
-  sound = true,
+  sound = false,
   onCategoryChange,
   onItemSelect,
 }: NotificationsFilterProps) {

@@ -142,6 +142,40 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
       </div>
 
       <article className="rounded-xl bg-[#f2f5f4] p-3">
+        <h3 className="text-sm font-medium text-[#566568]">Current Machine</h3>
+        <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Machine Name</p>
+            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.machineName}</p>
+          </div>
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Operating System</p>
+            <p className="mt-1 text-sm font-medium text-[#1d2428]">
+              {snapshot.currentMachine.os} {snapshot.currentMachine.osVersion}
+            </p>
+          </div>
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Editor</p>
+            <p className="mt-1 text-sm font-medium text-[#1d2428]">
+              {snapshot.currentMachine.editorName} {snapshot.currentMachine.editorVersion}
+            </p>
+          </div>
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Local Only</p>
+            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.localOnlyMode ? 'Enabled' : 'Disabled'}</p>
+          </div>
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Tracking Status</p>
+            <p className="mt-1 text-sm font-medium text-[#1d2428]">{snapshot.trackingEnabled ? 'Enabled' : 'Disabled'}</p>
+          </div>
+          <div className="rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="text-xs text-[#607073]">Last Seen</p>
+            <p className="font-numeric mt-1 text-sm font-medium text-[#1d2428]">{snapshot.currentMachine.lastSeenAt}</p>
+          </div>
+        </div>
+      </article>
+
+      <article className="rounded-xl bg-[#f2f5f4] p-3">
         <h3 className="text-sm font-medium text-[#566568]">VS Code Sync Health</h3>
         <div className="mt-3 rounded-lg bg-[#e8edeb] p-3">
           <Tracker

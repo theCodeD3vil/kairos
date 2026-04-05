@@ -16,6 +16,10 @@ describe('getOverviewSnapshot', () => {
     expect(snapshot.localOnlyMode).toBeTypeOf('boolean');
     expect(snapshot.lastUpdatedAt).toBeTypeOf('string');
     expect(snapshot.activeHoursSummary).toBeTypeOf('string');
+    expect(snapshot.currentMachine.machineName).toBeTypeOf('string');
+    expect(snapshot.appStatus.appVersion).toBeTypeOf('string');
+    expect(snapshot.knownMachines.length).toBeGreaterThan(0);
+    expect(snapshot.lastActiveMachine).toBeTypeOf('string');
   });
 
   it('changes summary values and trend shape when switching ranges', () => {
@@ -38,5 +42,7 @@ describe('getOverviewSnapshot', () => {
     expect(snapshot.topProjects[0].project).toBeTruthy();
     expect(snapshot.topLanguages[0].language).toBeTruthy();
     expect(snapshot.recentSessions[0].project).toBeTruthy();
+    expect(snapshot.recentSessions[0].machineName).toBeTruthy();
+    expect(snapshot.recentSessions[0].osLabel).toBeTruthy();
   });
 });
