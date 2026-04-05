@@ -1,6 +1,6 @@
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 
-export type OverviewRange = 'today' | 'week' | 'month';
+export type OverviewRange = 'today' | 'week' | 'month' | 'custom';
 
 export type WeeklyTrendPoint = {
   label: string;

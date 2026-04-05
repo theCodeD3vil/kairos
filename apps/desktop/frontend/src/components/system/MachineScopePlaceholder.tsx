@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import SegmentedButton from '@/components/ui/segmented-button';
+import { ButtonDropdown } from '@/components/ruixen/button-dropdown';
 import type { MachineInfo } from '@/mocks/system-info';
 
 type MachineScopePlaceholderProps = {
@@ -24,13 +24,16 @@ export function MachineScopePlaceholder({
   }, [machines]);
 
   const [selectedMachine, setSelectedMachine] = useState<string>(currentMachineName);
+  const selectedOption = options.find((option) => option.id === selectedMachine);
+  const dropdownItems = options.map((option) => ({
+    label: option.label,
+    onClick: () => setSelectedMachine(option.id),
+  }));
 
   return (
-    <SegmentedButton
-      buttons={options}
-      value={selectedMachine}
-      onChange={setSelectedMachine}
-      size="sm"
+    <ButtonDropdown
+      label={selectedOption?.label ?? 'Select Machine'}
+      items={dropdownItems}
     />
   );
 }
