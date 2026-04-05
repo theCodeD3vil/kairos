@@ -1,1 +1,9 @@
-export type { DailySummary, LanguageSummary, MachineSummary, ProjectSummary, Session } from './types';
+export type {
+  DailySummary,
+  LanguageSummary,
+  MachineSummary,
+  ProjectSummary,
+  Session,
+  SessionRebuildResult,
+  SessionStats,
+} from './types';

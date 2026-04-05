@@ -2,10 +2,13 @@ package ingestion
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
@@ -52,6 +55,29 @@ func TestIngestEventsPartiallyRejectsInvalidBatch(t *testing.T) {
 
 	if len(response.Warnings) == 0 {
 		t.Fatal("expected warnings for rejected event")
+	}
+}
+
+func TestIngestEventsRejectsOversizedBatch(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Events = make([]contracts.ActivityEvent, config.MaxEventsPerBatch+1)
+	for i := range request.Events {
+		request.Events[i] = contracts.ActivityEvent{
+			ID:          "evt-" + strings.Repeat("x", 1),
+			Timestamp:   "2026-04-05T09:00:00Z",
+			EventType:   "open",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		}
+	}
+
+	_, err := service.IngestEvents(context.Background(), request)
+	var validationErr *ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected validation error, got %v", err)
 	}
 }
 
@@ -105,6 +131,20 @@ func TestExtensionStatusUpdatesAfterIngestion(t *testing.T) {
 
 	if status.LastEventAt != "2026-04-05T10:30:00Z" {
 		t.Fatalf("expected last event at latest timestamp, got %q", status.LastEventAt)
+	}
+}
+
+func TestMachineIDMismatchIsRejected(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Events[0].MachineID = "other-machine"
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected no fatal error, got %v", err)
+	}
+	if response.AcceptedCount != 1 || response.RejectedCount != 1 {
+		t.Fatalf("expected one accepted and one rejected event, got %d and %d", response.AcceptedCount, response.RejectedCount)
 	}
 }
 
@@ -199,6 +239,38 @@ func TestIngestionStatsUpdateCorrectly(t *testing.T) {
 
 	if stats.LastEventAt != "2026-04-05T10:30:00Z" {
 		t.Fatalf("expected last event at latest accepted event, got %q", stats.LastEventAt)
+	}
+}
+
+func TestOptionalFieldLengthLimitsAreTruncated(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Machine.Hostname = strings.Repeat("h", config.MaxHostnameLength+10)
+	request.Events[0].FilePath = strings.Repeat("/", config.MaxFilePathLength+50)
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if response.AcceptedCount != 2 {
+		t.Fatalf("expected accepted batch, got %d accepted", response.AcceptedCount)
+	}
+	if len(response.Warnings) == 0 {
+		t.Fatal("expected truncation warnings")
+	}
+}
+
+func TestRequiredFieldLengthLimitIsRejected(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Events[0].ProjectName = strings.Repeat("p", config.MaxProjectNameLength+1)
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected partial success, got %v", err)
+	}
+	if response.AcceptedCount != 1 || response.RejectedCount != 1 {
+		t.Fatalf("expected one accepted and one rejected event, got %d and %d", response.AcceptedCount, response.RejectedCount)
 	}
 }
 

@@ -22,6 +22,10 @@ export function GetIngestionStats() {
   return window['go']['main']['App']['GetIngestionStats']();
 }
 
+export function GetMigrationStatus() {
+  return window['go']['main']['App']['GetMigrationStatus']();
+}
+
 export function GetOverviewData() {
   return window['go']['main']['App']['GetOverviewData']();
 }

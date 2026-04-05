@@ -3,11 +3,13 @@ package ingestion
 import (
 	"context"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
@@ -41,10 +43,18 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 	}
 
 	serverTime := s.now().UTC().Format(time.RFC3339)
-	machine := mergeMachine(request.Machine)
+	machine, machineWarnings, err := sanitizeMachine(request.Machine)
+	if err != nil {
+		return contracts.IngestEventsResponse{}, err
+	}
+	extension, extensionWarnings, err := sanitizeExtension(request.Extension)
+	if err != nil {
+		return contracts.IngestEventsResponse{}, err
+	}
 
 	accepted := make([]contracts.ActivityEvent, 0, len(request.Events))
-	warnings := make([]string, 0)
+	warnings := append([]string{}, machineWarnings...)
+	warnings = append(warnings, extensionWarnings...)
 
 	for index, rawEvent := range request.Events {
 		event, eventWarnings, err := validateEvent(rawEvent, machine.MachineID)
@@ -62,24 +72,29 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 
 	persisted := accepted
 	if len(accepted) > 0 {
-		insertedEvents, insertWarnings, err := s.store.InsertEvents(ctx, accepted, serverTime)
+		persistResult, err := s.store.PersistIngestionBatch(
+			ctx,
+			machine,
+			buildExtensionStatus(extension, accepted, serverTime),
+			accepted,
+			serverTime,
+		)
 		if err != nil {
+			log.Printf("ingestion: persist batch failed: %v", err)
 			return contracts.IngestEventsResponse{}, err
 		}
-		persisted = insertedEvents
-		warnings = append(warnings, insertWarnings...)
-	}
-
-	if err := s.store.UpsertMachine(ctx, machine, serverTime); err != nil {
-		return contracts.IngestEventsResponse{}, err
-	}
-
-	if err := s.store.UpsertExtensionStatus(
-		ctx,
-		buildExtensionStatus(request.Extension, persisted, serverTime),
-		serverTime,
-	); err != nil {
-		return contracts.IngestEventsResponse{}, err
+		persisted = persistResult.InsertedEvents
+		warnings = append(warnings, persistResult.Warnings...)
+	} else {
+		if err := s.store.PersistEmptyIngestionHeartbeat(
+			ctx,
+			machine,
+			buildExtensionStatus(extension, nil, serverTime),
+			serverTime,
+		); err != nil {
+			log.Printf("ingestion: persist heartbeat metadata failed: %v", err)
+			return contracts.IngestEventsResponse{}, err
+		}
 	}
 
 	rejectedCount := len(request.Events) - len(persisted)
@@ -110,7 +125,7 @@ func (s *ServiceImpl) ListKnownMachines(ctx context.Context) ([]contracts.Machin
 }
 
 func (s *ServiceImpl) ListRecentEvents(ctx context.Context, limit int) ([]contracts.ActivityEvent, error) {
-	return s.store.ListRecentEvents(ctx, limit)
+	return s.store.ListRecentEvents(ctx, clampRecentEventsLimit(limit))
 }
 
 func (s *ServiceImpl) GetIngestionStats(ctx context.Context) (contracts.IngestionStats, error) {
@@ -126,11 +141,15 @@ func validateRequest(request contracts.IngestEventsRequest) error {
 
 	switch {
 	case request.Machine.MachineID == "":
-		return fmt.Errorf("invalid ingest request: missing machine.machineId")
+		return &ValidationError{Message: "invalid ingest request: missing machine.machineId"}
 	case request.Extension.Editor == "":
-		return fmt.Errorf("invalid ingest request: missing extension.editor")
+		return &ValidationError{Message: "invalid ingest request: missing extension.editor"}
 	case request.Events == nil:
-		return fmt.Errorf("invalid ingest request: missing events array")
+		return &ValidationError{Message: "invalid ingest request: missing events array"}
+	case len(request.Events) == 0:
+		return &ValidationError{Message: "invalid ingest request: events array cannot be empty"}
+	case len(request.Events) > config.MaxEventsPerBatch:
+		return &ValidationError{Message: fmt.Sprintf("invalid ingest request: events array exceeds max batch size %d", config.MaxEventsPerBatch)}
 	default:
 		return nil
 	}
@@ -138,6 +157,7 @@ func validateRequest(request contracts.IngestEventsRequest) error {
 
 func validateEvent(event contracts.ActivityEvent, requestMachineID string) (contracts.ActivityEvent, []string, error) {
 	clean := sanitizeEvent(event)
+	warnings := make([]string, 0)
 
 	switch {
 	case clean.ID == "":
@@ -166,7 +186,35 @@ func validateEvent(event contracts.ActivityEvent, requestMachineID string) (cont
 		return contracts.ActivityEvent{}, nil, fmt.Errorf("invalid timestamp")
 	}
 
-	return clean, nil, nil
+	if err := validateRequiredLength("id", clean.ID, config.MaxEventIDLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+	if err := validateRequiredLength("eventType", clean.EventType, config.MaxEventTypeLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+	if err := validateRequiredLength("machineId", clean.MachineID, config.MaxMachineIDLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+	if err := validateRequiredLength("workspaceId", clean.WorkspaceID, config.MaxWorkspaceIDLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+	if err := validateRequiredLength("projectName", clean.ProjectName, config.MaxProjectNameLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+	if err := validateRequiredLength("language", clean.Language, config.MaxLanguageLength); err != nil {
+		return contracts.ActivityEvent{}, nil, err
+	}
+
+	if truncated, didTruncate := trimAndClampOptional(clean.FilePath, config.MaxFilePathLength); didTruncate {
+		clean.FilePath = truncated
+		warnings = append(warnings, "filePath truncated to max allowed length")
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.GitBranch, config.MaxGitBranchLength); didTruncate {
+		clean.GitBranch = truncated
+		warnings = append(warnings, "gitBranch truncated to max allowed length")
+	}
+
+	return clean, warnings, nil
 }
 
 func sanitizeEvent(event contracts.ActivityEvent) contracts.ActivityEvent {
@@ -197,12 +245,74 @@ func mergeMachine(machine contracts.MachineInfo) contracts.MachineInfo {
 	return machine
 }
 
+func sanitizeMachine(machine contracts.MachineInfo) (contracts.MachineInfo, []string, error) {
+	clean := mergeMachine(machine)
+	warnings := make([]string, 0)
+
+	if err := validateRequiredLength("machineId", clean.MachineID, config.MaxMachineIDLength); err != nil {
+		return contracts.MachineInfo{}, nil, &ValidationError{Message: fmt.Sprintf("invalid ingest request: %s", err.Error())}
+	}
+	if clean.MachineName == "" {
+		return contracts.MachineInfo{}, nil, &ValidationError{Message: "invalid ingest request: missing machine.machineName"}
+	}
+	if err := validateRequiredLength("machineName", clean.MachineName, config.MaxMachineNameLength); err != nil {
+		return contracts.MachineInfo{}, nil, &ValidationError{Message: fmt.Sprintf("invalid ingest request: %s", err.Error())}
+	}
+	if clean.OSPlatform == "" {
+		return contracts.MachineInfo{}, nil, &ValidationError{Message: "invalid ingest request: missing machine.osPlatform"}
+	}
+	if err := validateRequiredLength("osPlatform", clean.OSPlatform, config.MaxOSPlatformLength); err != nil {
+		return contracts.MachineInfo{}, nil, &ValidationError{Message: fmt.Sprintf("invalid ingest request: %s", err.Error())}
+	}
+
+	if truncated, didTruncate := trimAndClampOptional(clean.Hostname, config.MaxHostnameLength); didTruncate {
+		clean.Hostname = truncated
+		warnings = append(warnings, "machine.hostname truncated to max allowed length")
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.OSVersion, config.MaxOSVersionLength); didTruncate {
+		clean.OSVersion = truncated
+		warnings = append(warnings, "machine.osVersion truncated to max allowed length")
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.Arch, config.MaxArchLength); didTruncate {
+		clean.Arch = truncated
+		warnings = append(warnings, "machine.arch truncated to max allowed length")
+	}
+
+	return clean, warnings, nil
+}
+
+func sanitizeExtension(extension contracts.ExtensionInfo) (contracts.ExtensionInfo, []string, error) {
+	clean := contracts.ExtensionInfo{
+		Editor:           strings.TrimSpace(extension.Editor),
+		EditorVersion:    strings.TrimSpace(extension.EditorVersion),
+		ExtensionVersion: strings.TrimSpace(extension.ExtensionVersion),
+	}
+	warnings := make([]string, 0)
+
+	if clean.Editor == "" {
+		return contracts.ExtensionInfo{}, nil, &ValidationError{Message: "invalid ingest request: missing extension.editor"}
+	}
+	if err := validateRequiredLength("editor", clean.Editor, config.MaxEditorLength); err != nil {
+		return contracts.ExtensionInfo{}, nil, &ValidationError{Message: fmt.Sprintf("invalid ingest request: %s", err.Error())}
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.EditorVersion, config.MaxEditorVersionLength); didTruncate {
+		clean.EditorVersion = truncated
+		warnings = append(warnings, "extension.editorVersion truncated to max allowed length")
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.ExtensionVersion, config.MaxExtensionVersionLength); didTruncate {
+		clean.ExtensionVersion = truncated
+		warnings = append(warnings, "extension.extensionVersion truncated to max allowed length")
+	}
+
+	return clean, warnings, nil
+}
+
 func buildExtensionStatus(extension contracts.ExtensionInfo, accepted []contracts.ActivityEvent, serverTime string) contracts.ExtensionStatus {
 	status := contracts.ExtensionStatus{
 		Installed:        true,
 		Connected:        true,
-		Editor:           strings.TrimSpace(extension.Editor),
-		ExtensionVersion: strings.TrimSpace(extension.ExtensionVersion),
+		Editor:           clampRequiredString(strings.TrimSpace(extension.Editor), config.MaxEditorLength),
+		ExtensionVersion: clampOptionalString(strings.TrimSpace(extension.ExtensionVersion), config.MaxExtensionVersionLength),
 		LastHandshakeAt:  serverTime,
 	}
 
@@ -233,4 +343,18 @@ func isSupportedEventType(eventType string) bool {
 	default:
 		return false
 	}
+}
+
+func clampRequiredString(value string, max int) string {
+	if len(value) <= max {
+		return value
+	}
+	return value[:max]
+}
+
+func clampOptionalString(value string, max int) string {
+	if value == "" || len(value) <= max {
+		return value
+	}
+	return value[:max]
 }

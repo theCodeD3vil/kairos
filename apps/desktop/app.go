@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/ingestion"
@@ -26,6 +27,7 @@ func NewApp() *App {
 	settingsService := desktopsettings.NewStubService()
 	sqliteStore, err := storage.OpenDefault(context.Background())
 	if err != nil {
+		log.Printf("app: backend initialization failed: %v", err)
 		return &App{
 			initErr:         fmt.Errorf("initialize sqlite store: %w", err),
 			viewService:     views.NewStubService(),
@@ -50,7 +52,9 @@ func (a *App) startup(ctx context.Context) {
 
 func (a *App) shutdown(_ context.Context) {
 	if a.sqliteStore != nil {
-		_ = a.sqliteStore.Close()
+		if err := a.sqliteStore.Close(); err != nil {
+			log.Printf("app: sqlite shutdown error: %v", err)
+		}
 	}
 }
 
@@ -128,6 +132,13 @@ func (a *App) GetIngestionStats() (contracts.IngestionStats, error) {
 		return contracts.IngestionStats{}, a.initErr
 	}
 	return a.ingestionService.GetIngestionStats(a.requestContext())
+}
+
+func (a *App) GetMigrationStatus() (storage.MigrationStatus, error) {
+	if a.initErr != nil {
+		return storage.MigrationStatus{}, a.initErr
+	}
+	return a.sqliteStore.GetMigrationStatus(a.requestContext())
 }
 
 func (a *App) requestContext() context.Context {

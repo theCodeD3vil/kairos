@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -54,16 +55,34 @@ func Open(ctx context.Context, dbPath string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("enable WAL mode: %w", err)
 	}
+	if _, err := db.ExecContext(ctx, `PRAGMA busy_timeout = 5000;`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("configure busy timeout: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, `PRAGMA synchronous = NORMAL;`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("configure synchronous mode: %w", err)
+	}
+
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 
 	store := &Store{
 		db:   db,
 		path: dbPath,
 	}
 
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping sqlite database: %w", err)
+	}
+
 	if err := store.RunMigrations(ctx); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
+
+	log.Printf("storage: sqlite ready")
 
 	return store, nil
 }

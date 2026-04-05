@@ -8,6 +8,21 @@ export type Session = {
   language: string;
   machineId: string;
   machineName?: string;
+  sourceEventCount?: number;
+};
+
+export type SessionStats = {
+  totalSessions: number;
+  averageSessionMinutes: number;
+  longestSessionMinutes: number;
+};
+
+export type SessionRebuildResult = {
+  processedEventCount: number;
+  createdSessionCount: number;
+  startDate: string;
+  endDate: string;
+  rebuiltAt: string;
 };
 
 export type DailySummary = {

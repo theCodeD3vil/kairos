@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
@@ -13,8 +14,16 @@ func TestMigrationsRunOnFreshDatabase(t *testing.T) {
 
 	if count, err := countQuery(context.Background(), store.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 1 {
-		t.Fatalf("expected 1 migration, got %d", count)
+	} else if count != 2 {
+		t.Fatalf("expected 2 migrations, got %d", count)
+	}
+
+	status, err := store.GetMigrationStatus(context.Background())
+	if err != nil {
+		t.Fatalf("get migration status: %v", err)
+	}
+	if status.CurrentVersion != "002_query_hardening.sql" {
+		t.Fatalf("expected latest migration version, got %q", status.CurrentVersion)
 	}
 }
 
@@ -38,8 +47,21 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 
 	if count, err := countQuery(ctx, second.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 1 {
-		t.Fatalf("expected 1 migration record after rerun, got %d", count)
+	} else if count != 2 {
+		t.Fatalf("expected 2 migration records after rerun, got %d", count)
+	}
+}
+
+func TestMigrationFailureStopsCleanly(t *testing.T) {
+	store := openTestStore(t)
+	err := store.runMigrations(context.Background(), []migrationDefinition{
+		{Version: "999_bad.sql", SQL: "THIS IS NOT SQL;"},
+	})
+	if err == nil {
+		t.Fatal("expected invalid migration to fail")
+	}
+	if !strings.Contains(err.Error(), "999_bad.sql") {
+		t.Fatalf("expected migration version in error, got %v", err)
 	}
 }
 
@@ -185,6 +207,13 @@ func TestListAndCountMethodsReturnExpectedValues(t *testing.T) {
 	}
 	if lastIngestedAt != "2026-04-05T09:05:00Z" {
 		t.Fatalf("expected last ingested timestamp, got %q", lastIngestedAt)
+	}
+}
+
+func TestOpenFailsClearlyForInvalidPath(t *testing.T) {
+	_, err := Open(context.Background(), t.TempDir())
+	if err == nil {
+		t.Fatal("expected opening a directory as sqlite database to fail")
 	}
 }
 

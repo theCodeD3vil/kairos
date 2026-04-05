@@ -5,63 +5,22 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 )
 
 func (s *Store) InsertEvents(ctx context.Context, events []contracts.ActivityEvent, ingestedAt string) ([]contracts.ActivityEvent, []string, error) {
-	if len(events) == 0 {
-		return nil, nil, nil
-	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin insert events tx: %w", err)
 	}
-
 	defer func() {
 		_ = tx.Rollback()
 	}()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT OR IGNORE INTO events (
-			id, timestamp, event_type, machine_id, workspace_id, project_name, language, file_path, git_branch, ingested_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`)
+	inserted, warnings, err := insertEventsTx(ctx, tx, events, ingestedAt)
 	if err != nil {
-		return nil, nil, fmt.Errorf("prepare insert events: %w", err)
-	}
-	defer stmt.Close()
-
-	inserted := make([]contracts.ActivityEvent, 0, len(events))
-	warnings := make([]string, 0)
-	for _, event := range events {
-		result, err := stmt.ExecContext(
-			ctx,
-			event.ID,
-			event.Timestamp,
-			event.EventType,
-			event.MachineID,
-			event.WorkspaceID,
-			event.ProjectName,
-			event.Language,
-			nullIfEmpty(event.FilePath),
-			nullIfEmpty(event.GitBranch),
-			ingestedAt,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("insert event %s: %w", event.ID, err)
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return nil, nil, fmt.Errorf("read rows affected for event %s: %w", event.ID, err)
-		}
-		if rowsAffected == 0 {
-			warnings = append(warnings, fmt.Sprintf("duplicate event id %q ignored", event.ID))
-			continue
-		}
-
-		inserted = append(inserted, event)
+		return nil, nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -72,9 +31,7 @@ func (s *Store) InsertEvents(ctx context.Context, events []contracts.ActivityEve
 }
 
 func (s *Store) ListRecentEvents(ctx context.Context, limit int) ([]contracts.ActivityEvent, error) {
-	if limit <= 0 {
-		limit = 20
-	}
+	limit = config.ClampRecentEventsLimit(limit)
 
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, timestamp, event_type, machine_id, workspace_id, project_name, language, file_path, git_branch

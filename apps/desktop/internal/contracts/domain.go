@@ -10,6 +10,21 @@ type Session struct {
 	Language        string `json:"language"`
 	MachineID       string `json:"machineId"`
 	MachineName     string `json:"machineName,omitempty"`
+	SourceEventCount int   `json:"sourceEventCount,omitempty"`
+}
+
+type SessionStats struct {
+	TotalSessions         int `json:"totalSessions"`
+	AverageSessionMinutes int `json:"averageSessionMinutes"`
+	LongestSessionMinutes int `json:"longestSessionMinutes"`
+}
+
+type SessionRebuildResult struct {
+	ProcessedEventCount int    `json:"processedEventCount"`
+	CreatedSessionCount int    `json:"createdSessionCount"`
+	StartDate           string `json:"startDate"`
+	EndDate             string `json:"endDate"`
+	RebuiltAt           string `json:"rebuiltAt"`
 }
 
 type DailySummary struct {

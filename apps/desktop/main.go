@@ -14,6 +14,9 @@ var assets embed.FS
 
 func main() {
 	app := NewApp()
+	if app.initErr != nil {
+		log.Fatalf("kairos backend initialization failed: %v", app.initErr)
+	}
 
 	err := wails.Run(&options.App{
 		Title:         "Kairos",

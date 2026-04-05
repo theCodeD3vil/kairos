@@ -64,6 +64,7 @@ export namespace contracts {
 	    language: string;
 	    machineId: string;
 	    machineName?: string;
+	    sourceEventCount?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Session(source);
@@ -80,6 +81,7 @@ export namespace contracts {
 	        this.language = source["language"];
 	        this.machineId = source["machineId"];
 	        this.machineName = source["machineName"];
+	        this.sourceEventCount = source["sourceEventCount"];
 	    }
 	}
 	export class MachineSummary {
@@ -854,6 +856,29 @@ export namespace contracts {
 	}
 	
 	
+
+}
+
+export namespace storage {
+	
+	export class MigrationStatus {
+	    currentVersion: string;
+	    appliedMigrationCount: number;
+	    pendingMigrationCount: number;
+	    appliedVersions: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new MigrationStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.appliedMigrationCount = source["appliedMigrationCount"];
+	        this.pendingMigrationCount = source["pendingMigrationCount"];
+	        this.appliedVersions = source["appliedVersions"];
+	    }
+	}
 
 }
 
