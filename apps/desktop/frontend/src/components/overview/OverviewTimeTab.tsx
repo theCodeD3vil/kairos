@@ -1,4 +1,5 @@
 import { AreaChart, Tracker } from '@lobehub/charts';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
 import {
   AverageSessionBarsIllustration,
   CodingOrbitIllustration,
@@ -11,7 +12,7 @@ type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
 };
 
-const areaChartColors = ['#b9c95a'];
+const areaChartColors = [...overviewChartPalette];
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60);

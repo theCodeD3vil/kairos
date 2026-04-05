@@ -7,6 +7,7 @@ import { OverviewRangeSelector } from '@/components/overview/OverviewRangeSelect
 import { OverviewSessionsTab } from '@/components/overview/OverviewSessionsTab';
 import { OverviewStatusTab } from '@/components/overview/OverviewStatusTab';
 import { OverviewTimeTab } from '@/components/overview/OverviewTimeTab';
+import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import type { OverviewRange } from '@/components/overview/types';
 
 export function OverviewPage() {
@@ -26,7 +27,13 @@ export function OverviewPage() {
     <div className="space-y-4">
       <section className="flex items-center justify-between rounded-[18px] bg-[#e5e8e4] p-4">
         <h1 className="text-2xl font-semibold text-[#1d2428]">Overview</h1>
-        <OverviewRangeSelector value={range} onChange={setRange} />
+        <div className="flex items-center gap-3">
+          <MachineScopePlaceholder
+            machines={snapshot.knownMachines}
+            currentMachineName={snapshot.currentMachine.machineName}
+          />
+          <OverviewRangeSelector value={range} onChange={setRange} />
+        </div>
       </section>
 
       <section className="rounded-[18px] bg-[#ecefee] p-4">

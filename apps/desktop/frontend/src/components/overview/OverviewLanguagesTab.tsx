@@ -1,12 +1,13 @@
 import { DonutChart } from '@lobehub/charts';
 import { FileIcon } from 'react-files-icons';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
 type OverviewLanguagesTabProps = {
   snapshot: OverviewSnapshot;
 };
 
-const pieColors = ['#0f4f58', '#2c6b74', '#4f8a74', '#b9c95a', '#d4df86'];
+const pieColors = [...overviewChartPalette];
 
 function toLanguageFileName(language: string) {
   const normalized = language.trim().toLowerCase();

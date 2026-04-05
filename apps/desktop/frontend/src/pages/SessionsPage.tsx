@@ -1,4 +1,5 @@
 import { getOverviewSnapshot } from '@/components/overview/mock-data';
+import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 
 export function SessionsPage() {
   const snapshot = getOverviewSnapshot('week');
@@ -12,8 +13,12 @@ export function SessionsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[18px] bg-[#e5e8e4] p-4">
+      <section className="flex items-center justify-between rounded-[18px] bg-[#e5e8e4] p-4">
         <h1 className="text-2xl font-semibold text-[#1d2428]">Sessions</h1>
+        <MachineScopePlaceholder
+          machines={snapshot.knownMachines}
+          currentMachineName={snapshot.currentMachine.machineName}
+        />
       </section>
 
       <section className="rounded-[18px] bg-[#ecefee] p-4">

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 interface SegmentedButtonItem {
   id: string;
   label?: string | null;
+  title?: string;
 }
 
 interface SegmentedButtonProps {
@@ -14,6 +15,7 @@ interface SegmentedButtonProps {
   value?: string;
   onChange?: (activeId: string) => void;
   className?: string;
+  size?: 'sm' | 'md';
 }
 
 export default function SegmentedButton({
@@ -22,6 +24,7 @@ export default function SegmentedButton({
   value,
   onChange,
   className = "",
+  size = 'md',
 }: SegmentedButtonProps) {
   const [activeButton, setActiveButton] = useState(
     value || defaultActive || buttons[0]?.id || "",
@@ -55,11 +58,11 @@ export default function SegmentedButton({
 
   return (
     <div
-      className={`relative inline-flex items-center rounded-full bg-[#dfe4e2] p-1 ${className}`}
+      className={`relative inline-flex items-center rounded-full bg-[#dfe4e2] ${size === 'sm' ? 'p-0.5' : 'p-1'} ${className}`}
       role="group"
     >
       <motion.div
-        className="absolute top-1 bottom-1 z-0 rounded-full bg-primary shadow-[0_1px_3px_rgba(0,0,0,0.22)]"
+        className="absolute top-1 bottom-1 z-0 rounded-full bg-secondary"
         animate={{
           left: indicatorStyle.left,
           width: indicatorStyle.width,
@@ -82,9 +85,16 @@ export default function SegmentedButton({
             }}
             type="button"
             onClick={() => handleButtonClick(button.id)}
-            className="relative z-10 rounded-full px-4 py-1.5 text-sm transition-colors"
+            title={button.title ?? button.label ?? undefined}
+            className={`relative z-10 rounded-full transition-colors ${
+              size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
+            }`}
           >
-            <span className={active ? "text-white" : "text-[#2e3f43]"}>
+            <span
+              className={`inline-block max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap ${
+                active ? 'text-secondary-foreground' : 'text-[#2e3f43]'
+              }`}
+            >
               {button.label}
             </span>
           </button>

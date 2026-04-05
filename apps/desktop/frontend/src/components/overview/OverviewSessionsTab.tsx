@@ -1,3 +1,5 @@
+import { AreaChart } from '@lobehub/charts';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
 type OverviewSessionsTabProps = {
@@ -15,6 +17,12 @@ function SessionMetric({ title, value }: { title: string; value: string }) {
 
 export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
   const latestSession = snapshot.recentSessions[0];
+  const sessionDurationTrend = [...snapshot.recentSessions]
+    .reverse()
+    .map((session) => ({
+      label: session.startAt,
+      value: Number((session.durationMinutes / 60).toFixed(2)),
+    }));
 
   function formatMinutes(minutes: number) {
     const h = Math.floor(minutes / 60);
@@ -56,22 +64,25 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
         </article>
 
         <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Latest Session</h3>
-          <p className="font-numeric mt-2 text-lg font-semibold text-[#1d2428]">
-            {latestSession ? `${latestSession.project} · ${formatMinutes(latestSession.durationMinutes)}` : 'No recent activity'}
-          </p>
-          <div className="mt-4 space-y-2 rounded-lg bg-[#e8edeb] px-3 py-2 text-sm">
-            <p className="text-[#1d2428]">
-              Most Recently Active Project: <span className="font-medium">{latestSession?.project ?? 'N/A'}</span>
-            </p>
-            <p className="text-[#1d2428]">
-              Most Active Hours: <span className="font-medium font-numeric">{snapshot.activeHoursSummary}</span>
-            </p>
-            <p className="text-[#1d2428]">
-              Last Active: <span className="font-medium font-numeric">{snapshot.lastActiveAt}</span>
-            </p>
-            <p className="text-[#1d2428]">
-              Last Active Machine: <span className="font-medium">{snapshot.lastActiveMachine}</span>
+          <h3 className="text-sm font-medium text-[#566568]">Session Durations Over Time</h3>
+          <div className="mt-2 h-56">
+            <AreaChart
+              data={sessionDurationTrend}
+              index="label"
+              categories={['value']}
+              colors={[overviewChartPalette[2]]}
+              height={224}
+              showAnimation
+              animationDuration={900}
+              showLegend={false}
+              showGridLines
+              valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
+              yAxisWidth={44}
+            />
+          </div>
+          <div className="mt-3 rounded-lg bg-[#e8edeb] px-3 py-2">
+            <p className="font-numeric text-sm font-semibold text-[#1d2428]">
+              {latestSession ? `${latestSession.project} · ${formatMinutes(latestSession.durationMinutes)}` : 'No recent activity'}
             </p>
           </div>
         </article>

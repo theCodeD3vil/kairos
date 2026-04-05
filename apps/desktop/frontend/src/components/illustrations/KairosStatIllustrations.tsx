@@ -19,38 +19,30 @@ export function CodingOrbitIllustration() {
 }
 
 export function WeeklyMomentumIllustration() {
-  const bars = [
-    { x: 20, h: 58, fill: 0.35 },
-    { x: 43, h: 72, fill: 0.5 },
-    { x: 66, h: 64, fill: 0.42 },
-    { x: 89, h: 86, fill: 0.78 },
-    { x: 112, h: 74, fill: 0.56 },
-    { x: 135, h: 68, fill: 0.48 },
-    { x: 158, h: 80, fill: 0.72 },
-  ];
-
   return (
     <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Weekly coding momentum illustration">
-      <path d="M20 166 C52 160, 84 170, 116 162 C146 154, 172 158, 180 152" fill="none" stroke="#0F4E57" strokeWidth="3" strokeLinecap="round" />
-      {bars.map((bar, index) => {
-        const y = 166 - bar.h;
-        const activeH = bar.h * bar.fill;
-        const activeY = 166 - activeH;
+      <rect x="28" y="34" width="144" height="132" rx="18" fill="none" stroke="#0F4E57" strokeWidth="7" />
+      <line x1="28" y1="66" x2="172" y2="66" stroke="#0F4E57" strokeWidth="6" />
 
-        return (
-          <g key={`${bar.x}-${index}`}>
-            <rect x={bar.x} y={y} width="14" height={bar.h} rx="7" fill="none" stroke="#0F4E57" strokeWidth="3" />
-            <rect x={bar.x + 2.5} y={activeY + 2.5} width="9" height={Math.max(6, activeH - 5)} rx="4.5" fill="hsl(var(--secondary))" />
-          </g>
-        );
-      })}
-      <circle cx="27" cy="166" r="3.5" fill="#0F4E57" />
-      <circle cx="50" cy="160" r="3.5" fill="#0F4E57" />
-      <circle cx="73" cy="165" r="3.5" fill="#0F4E57" />
-      <circle cx="96" cy="156" r="3.5" fill="#0F4E57" />
-      <circle cx="119" cy="162" r="3.5" fill="#0F4E57" />
-      <circle cx="142" cy="157" r="3.5" fill="#0F4E57" />
-      <circle cx="165" cy="154" r="3.5" fill="#0F4E57" />
+      <rect x="52" y="26" width="12" height="20" rx="6" fill="#0F4E57" />
+      <rect x="136" y="26" width="12" height="20" rx="6" fill="#0F4E57" />
+
+      <rect x="44" y="78" width="16" height="16" rx="5" fill="#0F4E57" opacity="0.22" />
+      <rect x="66" y="78" width="16" height="16" rx="5" fill="#0F4E57" opacity="0.22" />
+      <rect x="88" y="78" width="16" height="16" rx="5" fill="#0F4E57" opacity="0.22" />
+      <rect x="110" y="78" width="16" height="16" rx="5" fill="#0F4E57" opacity="0.22" />
+      <rect x="132" y="78" width="16" height="16" rx="5" fill="#0F4E57" opacity="0.22" />
+
+      <rect x="44" y="100" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.55)" />
+      <rect x="66" y="100" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.72)" />
+      <rect x="88" y="100" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.6)" />
+      <rect x="110" y="100" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.9)" />
+      <rect x="132" y="100" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.75)" />
+      <rect x="44" y="122" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.5)" />
+      <rect x="66" y="122" width="16" height="16" rx="5" fill="hsl(var(--secondary) / 0.42)" />
+
+      <circle cx="154" cy="138" r="9" fill="#0F4E57" />
+      <path d="M154 133 v5 l4 2" stroke="hsl(var(--secondary))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -101,14 +93,15 @@ export function ContextSwitchIllustration() {
 export function SessionsTimelineIllustration() {
   return (
     <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Sessions timeline illustration">
-      <line x1="24" y1="136" x2="176" y2="136" stroke="#0F4E57" strokeWidth="6" strokeLinecap="round" />
-      <rect x="32" y="100" width="20" height="36" rx="8" fill="#0F4E57" opacity="0.25" />
-      <rect x="58" y="88" width="20" height="48" rx="8" fill="#0F4E57" opacity="0.35" />
-      <rect x="84" y="74" width="20" height="62" rx="8" fill="hsl(var(--secondary))" />
-      <rect x="110" y="92" width="20" height="44" rx="8" fill="#0F4E57" opacity="0.35" />
-      <rect x="136" y="80" width="20" height="56" rx="8" fill="hsl(var(--secondary) / 0.85)" />
-      <circle cx="94" cy="68" r="4" fill="#0F4E57" />
-      <circle cx="146" cy="74" r="4" fill="#0F4E57" />
+      <rect x="56" y="64" width="36" height="36" rx="10" fill="#0F4E57" opacity="0.28" />
+      <rect x="108" y="64" width="36" height="36" rx="10" fill="hsl(var(--secondary))" />
+      <rect x="56" y="106" width="36" height="36" rx="10" fill="#0F4E57" opacity="0.28" />
+      <rect x="108" y="106" width="36" height="36" rx="10" fill="hsl(var(--secondary) / 0.88)" />
+
+      <circle cx="75" cy="82" r="3.2" fill="#0F4E57" />
+      <circle cx="126" cy="82" r="3.2" fill="#0F4E57" opacity="0.6" />
+      <circle cx="75" cy="124" r="3.2" fill="#0F4E57" />
+      <circle cx="126" cy="124" r="3.2" fill="#0F4E57" opacity="0.6" />
     </svg>
   );
 }
@@ -116,13 +109,20 @@ export function SessionsTimelineIllustration() {
 export function AverageSessionBarsIllustration() {
   return (
     <svg viewBox="0 0 200 200" className="h-full w-full" role="img" aria-label="Average session illustration">
-      <line x1="28" y1="142" x2="172" y2="142" stroke="#0F4E57" strokeWidth="5" strokeLinecap="round" />
-      <rect x="36" y="112" width="18" height="30" rx="6" fill="#0F4E57" opacity="0.35" />
-      <rect x="62" y="98" width="18" height="44" rx="6" fill="#0F4E57" opacity="0.45" />
-      <rect x="88" y="82" width="22" height="60" rx="7" fill="hsl(var(--secondary))" />
-      <rect x="118" y="100" width="18" height="42" rx="6" fill="#0F4E57" opacity="0.45" />
-      <rect x="144" y="108" width="18" height="34" rx="6" fill="#0F4E57" opacity="0.35" />
-      <line x1="24" y1="82" x2="176" y2="82" stroke="#0F4E57" strokeWidth="3" strokeDasharray="6 6" opacity="0.6" />
+      <circle cx="100" cy="106" r="54" fill="none" stroke="#0F4E57" strokeWidth="8" opacity="0.22" />
+      <path d="M100 52 A54 54 0 0 1 145 77" fill="none" stroke="hsl(var(--secondary))" strokeWidth="8" strokeLinecap="round" />
+      <path d="M145 77 A54 54 0 0 1 156 106" fill="none" stroke="hsl(var(--secondary) / 0.65)" strokeWidth="8" strokeLinecap="round" />
+
+      <circle cx="100" cy="106" r="28" fill="none" stroke="#0F4E57" strokeWidth="5" opacity="0.35" />
+      <line x1="100" y1="106" x2="129" y2="93" stroke="#0F4E57" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="100" cy="106" r="7" fill="#0F4E57" />
+
+      <rect x="88" y="28" width="24" height="16" rx="6" fill="#0F4E57" />
+      <rect x="121" y="34" width="12" height="8" rx="4" fill="#0F4E57" opacity="0.6" />
+
+      <path d="M54 154 H146" stroke="#0F4E57" strokeWidth="4" strokeLinecap="round" opacity="0.55" />
+      <circle cx="84" cy="154" r="5.5" fill="#0F4E57" opacity="0.35" />
+      <circle cx="116" cy="154" r="5.5" fill="hsl(var(--secondary))" />
     </svg>
   );
 }

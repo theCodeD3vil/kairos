@@ -18,6 +18,7 @@ export function OverviewRangeSelector({ value, onChange }: OverviewRangeSelector
       buttons={buttons}
       value={value}
       onChange={(activeId) => onChange(activeId as OverviewRange)}
+      size="sm"
     />
   );
 }

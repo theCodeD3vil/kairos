@@ -6,7 +6,7 @@
   :root {
     --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-title: 'Syne', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-numeric: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-numeric: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --background: 200 20% 95%;
     --foreground: 210 18% 14%;
     --card: 0 0% 100%;

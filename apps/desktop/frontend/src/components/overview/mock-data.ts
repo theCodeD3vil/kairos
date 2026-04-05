@@ -1,3 +1,4 @@
+import { overviewChartSemanticColors } from '@/components/overview/chart-colors';
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
 import { systemInfoSnapshot } from '@/mocks/system-info';
 
@@ -35,6 +36,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'SQL', minutes: 52, share: 13 },
       { language: 'Markdown', minutes: 33, share: 8 },
     ],
+    machineDistribution: [
+      { machineName: 'Kairos-MacBook-Pro', minutes: 348, share: 85 },
+      { machineName: 'Kairos-ThinkPad', minutes: 60, share: 15 },
+    ],
     recentSessions: [
       {
         project: 'desktop-frontend',
@@ -63,12 +68,12 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       status: 'Healthy',
       lastSyncAt: 'Today 14:27',
       blocks: [
-        { key: '1', color: '#0f4f58', tooltip: '09:00 sync ok' },
-        { key: '2', color: '#0f4f58', tooltip: '10:00 sync ok' },
-        { key: '3', color: '#0f4f58', tooltip: '11:00 sync ok' },
-        { key: '4', color: '#b9c95a', tooltip: '12:00 minor delay' },
-        { key: '5', color: '#0f4f58', tooltip: '13:00 sync ok' },
-        { key: '6', color: '#0f4f58', tooltip: '14:00 sync ok' },
+        { key: '1', color: overviewChartSemanticColors.success, tooltip: '09:00 sync ok' },
+        { key: '2', color: overviewChartSemanticColors.info, tooltip: '10:00 sync ok' },
+        { key: '3', color: overviewChartSemanticColors.accent, tooltip: '11:00 sync ok' },
+        { key: '4', color: overviewChartSemanticColors.warning, tooltip: '12:00 minor delay' },
+        { key: '5', color: overviewChartSemanticColors.success, tooltip: '13:00 sync ok' },
+        { key: '6', color: overviewChartSemanticColors.info, tooltip: '14:00 sync ok' },
       ],
     },
   },
@@ -109,6 +114,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'Markdown', minutes: 142, share: 7 },
       { language: 'YAML', minutes: 133, share: 6 },
     ],
+    machineDistribution: [
+      { machineName: 'Kairos-MacBook-Pro', minutes: 1616, share: 80 },
+      { machineName: 'Kairos-ThinkPad', minutes: 405, share: 20 },
+    ],
     recentSessions: [
       {
         project: 'desktop-frontend',
@@ -137,13 +146,13 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       status: 'Healthy',
       lastSyncAt: 'Today 14:27',
       blocks: [
-        { key: 'mon', color: '#0f4f58', tooltip: 'Mon: stable sync' },
-        { key: 'tue', color: '#0f4f58', tooltip: 'Tue: stable sync' },
-        { key: 'wed', color: '#b9c95a', tooltip: 'Wed: brief queue' },
-        { key: 'thu', color: '#0f4f58', tooltip: 'Thu: stable sync' },
-        { key: 'fri', color: '#0f4f58', tooltip: 'Fri: stable sync' },
-        { key: 'sat', color: '#b9c95a', tooltip: 'Sat: low activity' },
-        { key: 'sun', color: '#b9c95a', tooltip: 'Sun: low activity' },
+        { key: 'mon', color: overviewChartSemanticColors.success, tooltip: 'Mon: stable sync' },
+        { key: 'tue', color: overviewChartSemanticColors.info, tooltip: 'Tue: stable sync' },
+        { key: 'wed', color: overviewChartSemanticColors.warning, tooltip: 'Wed: brief queue' },
+        { key: 'thu', color: overviewChartSemanticColors.accent, tooltip: 'Thu: stable sync' },
+        { key: 'fri', color: overviewChartSemanticColors.success, tooltip: 'Fri: stable sync' },
+        { key: 'sat', color: overviewChartSemanticColors.warning, tooltip: 'Sat: low activity' },
+        { key: 'sun', color: overviewChartSemanticColors.info, tooltip: 'Sun: low activity' },
       ],
     },
   },
@@ -181,6 +190,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       { language: 'Markdown', minutes: 651, share: 8 },
       { language: 'YAML', minutes: 566, share: 7 },
     ],
+    machineDistribution: [
+      { machineName: 'Kairos-MacBook-Pro', minutes: 5920, share: 73 },
+      { machineName: 'Kairos-ThinkPad', minutes: 2230, share: 27 },
+    ],
     recentSessions: [
       {
         project: 'desktop-frontend',
@@ -209,10 +222,10 @@ const rangeSeeds: Record<OverviewRange, Omit<OverviewSnapshot, 'range'>> = {
       status: 'Degraded',
       lastSyncAt: 'Today 14:27',
       blocks: [
-        { key: 'w1', color: '#0f4f58', tooltip: 'W1: stable sync' },
-        { key: 'w2', color: '#0f4f58', tooltip: 'W2: stable sync' },
-        { key: 'w3', color: '#b9c95a', tooltip: 'W3: periodic delay' },
-        { key: 'w4', color: '#8d9b3d', tooltip: 'W4: extension restart needed' },
+        { key: 'w1', color: overviewChartSemanticColors.info, tooltip: 'W1: stable sync' },
+        { key: 'w2', color: overviewChartSemanticColors.accent, tooltip: 'W2: stable sync' },
+        { key: 'w3', color: overviewChartSemanticColors.warning, tooltip: 'W3: periodic delay' },
+        { key: 'w4', color: overviewChartSemanticColors.danger, tooltip: 'W4: extension restart needed' },
       ],
     },
   },

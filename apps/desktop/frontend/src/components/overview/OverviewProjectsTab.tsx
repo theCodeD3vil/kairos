@@ -1,11 +1,13 @@
-import { BarChart } from '@lobehub/charts';
+import { BarChart, DonutChart } from '@lobehub/charts';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
 type OverviewProjectsTabProps = {
   snapshot: OverviewSnapshot;
 };
 
-const chartColors = ['#b9c95a', '#aaba4f', '#9baa45', '#8d9b3d', '#7f8b35'];
+const chartColors = [...overviewChartPalette];
+const machinePieColors = [...overviewChartPalette];
 
 export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
   if (snapshot.topProjects.length === 0) {
@@ -50,13 +52,38 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         </article>
 
         <article className="rounded-xl bg-[#f2f5f4] p-3">
-          <h3 className="text-sm font-medium text-[#566568]">Most Active Project</h3>
-          <p className="mt-2 text-lg font-semibold text-[#1d2428]">{topProject.project}</p>
-          <p className="font-numeric mt-1 text-sm text-[#566568]">{formatMinutes(topProject.minutes)} in selected range</p>
-          <p className="mt-6 text-sm text-[#566568]">Recent Project Activity</p>
-          <p className="font-numeric mt-1 font-medium text-[#1d2428]">{topProject.recentActivityAt}</p>
+          <h3 className="text-sm font-medium text-[#566568]">Machine Time Distribution</h3>
+          <div className="mt-2 h-48">
+            <DonutChart
+              data={snapshot.machineDistribution}
+              index="machineName"
+              category="share"
+              colors={machinePieColors}
+              showAnimation
+              animationDuration={900}
+              showLabel={false}
+              style={{ height: 192 }}
+              valueFormatter={(value) => `${value}%`}
+            />
+          </div>
+          <div className="mt-2 space-y-2">
+            {snapshot.machineDistribution.map((machine) => (
+              <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[#e8edeb] px-2 py-1.5">
+                <span className="text-xs font-medium text-[#1d2428]">{machine.machineName}</span>
+                <span className="font-numeric text-xs text-[#4a5d60]">{formatMinutes(machine.minutes)}</span>
+              </div>
+            ))}
+          </div>
         </article>
       </div>
+
+      <article className="rounded-xl bg-[#f2f5f4] p-3">
+        <h3 className="text-sm font-medium text-[#566568]">Most Active Project</h3>
+        <p className="mt-2 text-lg font-semibold text-[#1d2428]">{topProject.project}</p>
+        <p className="font-numeric mt-1 text-sm text-[#566568]">{formatMinutes(topProject.minutes)} in selected range</p>
+        <p className="mt-3 text-sm text-[#566568]">Recent Project Activity</p>
+        <p className="font-numeric mt-1 font-medium text-[#1d2428]">{topProject.recentActivityAt}</p>
+      </article>
 
       <article className="rounded-xl bg-[#f2f5f4] p-3">
         <h3 className="text-sm font-medium text-[#566568]">Top Active Projects</h3>

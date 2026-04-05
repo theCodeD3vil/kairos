@@ -38,11 +38,13 @@ describe('getOverviewSnapshot', () => {
 
     expect(snapshot.topProjects.length).toBeGreaterThan(0);
     expect(snapshot.topLanguages.length).toBeGreaterThan(0);
+    expect(snapshot.machineDistribution.length).toBeGreaterThan(0);
     expect(snapshot.recentSessions.length).toBeGreaterThan(0);
     expect(snapshot.topProjects[0].project).toBeTruthy();
     expect(snapshot.topLanguages[0].language).toBeTruthy();
     expect(snapshot.recentSessions[0].project).toBeTruthy();
     expect(snapshot.recentSessions[0].machineName).toBeTruthy();
     expect(snapshot.recentSessions[0].osLabel).toBeTruthy();
+    expect(snapshot.machineDistribution[0].machineName).toBeTruthy();
   });
 });
