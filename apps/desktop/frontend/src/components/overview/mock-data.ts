@@ -1,4 +1,4 @@
-import { syncUptimeColors } from '@/components/overview/chart-colors';
+import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
 import { systemInfoSnapshot } from '@/mocks/system-info';
 
@@ -60,10 +60,10 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { label: 'Fri', value: 6.8 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 175, recentActivityAt: '10m ago', color: 'var(--chart-green)' },
-      { project: 'kairos-backend-core', minutes: 126, recentActivityAt: '1h ago', color: 'var(--chart-blue)' },
-      { project: 'internal-auth-service', minutes: 72, recentActivityAt: '3h ago', color: 'var(--chart-indigo)' },
-      { project: 'kairos-vscode', minutes: 35, recentActivityAt: '6h ago', color: 'var(--chart-red)' },
+      { project: 'desktop-frontend', minutes: 175, recentActivityAt: '10m ago', color: overviewChartPalette[0] },
+      { project: 'kairos-backend-core', minutes: 126, recentActivityAt: '1h ago', color: overviewChartPalette[1] },
+      { project: 'internal-auth-service', minutes: 72, recentActivityAt: '3h ago', color: overviewChartPalette[2] },
+      { project: 'kairos-vscode', minutes: 35, recentActivityAt: '6h ago', color: overviewChartPalette[3] },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 220, share: 54 },
@@ -72,8 +72,8 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { language: 'Markdown', minutes: 33, share: 8 },
     ],
     machineDistribution: [
-      { machineName: 'Kairos-MacBook-Pro', minutes: 348, share: 85 },
-      { machineName: 'Kairos-ThinkPad', minutes: 60, share: 15 },
+      { machineName: 'Kairos-MacBook-Pro', minutes: 348, share: 85, color: overviewChartPalette[0] },
+      { machineName: 'Kairos-ThinkPad', minutes: 60, share: 15, color: overviewChartPalette[1] },
     ],
     recentSessions: [
       {
@@ -129,11 +129,11 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { label: 'Sun', value: 1.4 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 724, recentActivityAt: '10m ago', color: 'var(--chart-green)' },
-      { project: 'kairos-backend-core', minutes: 525, recentActivityAt: '1h ago', color: 'var(--chart-blue)' },
-      { project: 'internal-auth-service', minutes: 391, recentActivityAt: '3h ago', color: 'var(--chart-indigo)' },
-      { project: 'kairos-vscode', minutes: 238, recentActivityAt: '6h ago', color: 'var(--chart-red)' },
-      { project: 'docs-site', minutes: 143, recentActivityAt: '1d ago', color: 'var(--chart-amber)' },
+      { project: 'desktop-frontend', minutes: 724, recentActivityAt: '10m ago', color: overviewChartPalette[0] },
+      { project: 'kairos-backend-core', minutes: 525, recentActivityAt: '1h ago', color: overviewChartPalette[1] },
+      { project: 'internal-auth-service', minutes: 391, recentActivityAt: '3h ago', color: overviewChartPalette[2] },
+      { project: 'kairos-vscode', minutes: 238, recentActivityAt: '6h ago', color: overviewChartPalette[3] },
+      { project: 'docs-site', minutes: 143, recentActivityAt: '1d ago', color: overviewChartPalette[4] },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 909, share: 45 },
@@ -143,8 +143,8 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { language: 'YAML', minutes: 133, share: 6 },
     ],
     machineDistribution: [
-      { machineName: 'Kairos-MacBook-Pro', minutes: 1616, share: 80 },
-      { machineName: 'Kairos-ThinkPad', minutes: 405, share: 20 },
+      { machineName: 'Kairos-MacBook-Pro', minutes: 1616, share: 80, color: overviewChartPalette[0] },
+      { machineName: 'Kairos-ThinkPad', minutes: 405, share: 20, color: overviewChartPalette[1] },
     ],
     recentSessions: [
       {
@@ -197,11 +197,11 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { label: 'W4', value: 33.6 },
     ],
     topProjects: [
-      { project: 'desktop-frontend', minutes: 2972, recentActivityAt: '10m ago', color: 'var(--chart-green)' },
-      { project: 'kairos-backend-core', minutes: 2043, recentActivityAt: '1h ago', color: 'var(--chart-blue)' },
-      { project: 'internal-auth-service', minutes: 1529, recentActivityAt: '3h ago', color: 'var(--chart-indigo)' },
-      { project: 'kairos-vscode', minutes: 921, recentActivityAt: '6h ago', color: 'var(--chart-red)' },
-      { project: 'ops-automation', minutes: 645, recentActivityAt: '2d ago', color: 'var(--chart-amber)' },
+      { project: 'desktop-frontend', minutes: 2972, recentActivityAt: '10m ago', color: overviewChartPalette[0] },
+      { project: 'kairos-backend-core', minutes: 2043, recentActivityAt: '1h ago', color: overviewChartPalette[1] },
+      { project: 'internal-auth-service', minutes: 1529, recentActivityAt: '3h ago', color: overviewChartPalette[2] },
+      { project: 'kairos-vscode', minutes: 921, recentActivityAt: '6h ago', color: overviewChartPalette[3] },
+      { project: 'ops-automation', minutes: 645, recentActivityAt: '2d ago', color: overviewChartPalette[4] },
     ],
     topLanguages: [
       { language: 'TypeScript', minutes: 3492, share: 43 },
@@ -211,8 +211,8 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       { language: 'YAML', minutes: 566, share: 7 },
     ],
     machineDistribution: [
-      { machineName: 'Kairos-MacBook-Pro', minutes: 5920, share: 73 },
-      { machineName: 'Kairos-ThinkPad', minutes: 2230, share: 27 },
+      { machineName: 'Kairos-MacBook-Pro', minutes: 5920, share: 73, color: overviewChartPalette[0] },
+      { machineName: 'Kairos-ThinkPad', minutes: 2230, share: 27, color: overviewChartPalette[1] },
     ],
     recentSessions: [
       {

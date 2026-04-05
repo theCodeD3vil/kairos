@@ -32,10 +32,10 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="grid gap-3 grid-cols-2">
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Language Distribution</h3>
-          <div className="mt-2 h-56">
+          <div className="mt-2 h-56 grid items-center">
             <DonutChart
               data={languages}
               index="language"
@@ -50,7 +50,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
           </div>
         </article>
 
-        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+        <article className="rounded-xl h-max overflow-y-scroll bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Top Languages</h3>
           <div className="mt-2 space-y-2">
             {languages.map((language) => (

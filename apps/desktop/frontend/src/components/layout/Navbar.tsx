@@ -1,4 +1,4 @@
-import { Bell, Home, LineChart, ReceiptText, Settings, CalendarDays, Gauge } from 'lucide-react';
+import { Bell, Home, LineChart, ReceiptText, Settings, CalendarDays, Gauge, Palette } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AccountMenu, { type AccountMenuAction } from '@/components/ruixen/account-menu';
@@ -7,14 +7,19 @@ import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-cap
 import { useToast } from '@/components/toast/ToastProvider';
 import { Button } from '@/components/ui/button';
 
-const tabs: NavTab[] = [
-  { title: 'Dashboard', url: '/overview', icon: <Home size={16} /> },
-  { title: 'Analytics', url: '/activity', icon: <LineChart size={16} /> },
-  { title: 'Reports', url: '/projects', icon: <ReceiptText size={16} /> },
-  { title: 'Calendar', url: '/sessions', icon: <CalendarDays size={16} /> },
-  { title: 'Languages', url: '/languages', icon: <Gauge size={16} /> },
-  { title: 'Settings', url: '/settings', icon: <Settings size={16} /> },
-];
+const showTheme = import.meta.env.DEV;
+
+const tabs: NavTab[] = (
+  [
+    { title: 'Dashboard', url: '/overview', icon: <Home size={16} /> },
+    { title: 'Analytics', url: '/activity', icon: <LineChart size={16} /> },
+    { title: 'Reports', url: '/projects', icon: <ReceiptText size={16} /> },
+    { title: 'Calendar', url: '/sessions', icon: <CalendarDays size={16} /> },
+    { title: 'Languages', url: '/languages', icon: <Gauge size={16} /> },
+    { title: 'Settings', url: '/settings', icon: <Settings size={16} /> },
+    showTheme ? { title: 'Theme', url: '/theme', icon: <Palette size={16} /> } : null,
+  ].filter(Boolean) as NavTab[]
+);
 
 function resolveTabFromPath(pathname: string) {
   const exact = tabs.find((tab) => tab.url === pathname);
@@ -127,13 +132,13 @@ export function Navbar() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full border-black/10 bg-white text-[var(--ink-primary)]"
+              className="rounded-full border-black/10 bg-white hover:bg-[var(--surface-subtle)] hover:border-[var(--surface-subtle)] text-[var(--ink-primary)]"
               onClick={handleNotificationsToggle}
             >
               <Bell size={16} />
             </Button>
             {notificationsOpen ? (
-              <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl bg-transparent p-1">
+              <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl hover:border-[var(--surface-subtle)] bg-transparent p-1">
                 <NotificationsFilter
                   sound={false}
                   onCategoryChange={handleCategoryChange}

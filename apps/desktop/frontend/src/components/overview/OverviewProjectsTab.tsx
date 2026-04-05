@@ -8,7 +8,8 @@ type OverviewProjectsTabProps = {
 };
 
 const chartColors = [...overviewChartPalette];
-const machinePieColors = [...overviewChartPalette];
+const machinePieColors = (distribution: OverviewSnapshot['machineDistribution']) =>
+  distribution.map((machine, index) => machine.color ?? overviewChartPalette[index % overviewChartPalette.length]);
 
 type ProjectTableRow = {
   id: string;
@@ -63,7 +64,20 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
     {
       id: 'project',
       header: 'Project',
-      accessorKey: 'project',
+      cell: (row) => {
+        const projectColor = snapshot.topProjects.find((p) => p.project === row.project)?.color ?? overviewChartPalette[0];
+        return (
+          <span className="inline-flex items-center gap-2">
+            <span
+              className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
+              style={{ backgroundColor: projectColor }}
+              aria-hidden
+            />
+            {row.project}
+          </span>
+        );
+      },
+      align: 'left',
     },
     {
       id: 'minutes',
@@ -111,22 +125,29 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Machine Time Distribution</h3>
           <div className="mt-2 h-44">
-            <DonutChart
-              data={snapshot.machineDistribution}
-              index="machineName"
-              category="share"
-              colors={machinePieColors}
-              showAnimation
-              animationDuration={900}
-              showLabel={false}
-              style={{ height: 176 }}
-              valueFormatter={(value) => `${value}%`}
+          <DonutChart
+            data={snapshot.machineDistribution}
+            index="machineName"
+            category="share"
+            colors={machinePieColors(snapshot.machineDistribution)}
+            showAnimation
+            animationDuration={900}
+            showLabel={false}
+            style={{ height: 176 }}
+            valueFormatter={(value) => `${value}%`}
             />
           </div>
           <div className="mt-2 space-y-2">
             {snapshot.machineDistribution.map((machine) => (
               <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-2 py-1.5">
-                <span className="text-xs font-medium text-[var(--ink-strong)]">{machine.machineName}</span>
+                <span className="text-xs font-medium text-[var(--ink-strong)] inline-flex items-center gap-2">
+                  <span
+                    className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
+                    style={{ backgroundColor: machine.color ?? overviewChartPalette[0] }}
+                    aria-hidden
+                  />
+                  {machine.machineName}
+                </span>
                 <span className="font-numeric text-xs text-[var(--ink-label)]">{formatMinutes(machine.minutes)}</span>
               </div>
             ))}
@@ -134,7 +155,8 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         </article>
       </div>
 
-      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+      <div className="grid grid-cols-2 gap-3">
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Most Active Project</h3>
         <p className="mt-2 text-lg font-semibold text-[var(--ink-strong)]">{topProject.project}</p>
         <p className="font-numeric mt-1 text-sm text-[var(--ink-secondary)]">{formatMinutes(topProject.minutes)} in selected range</p>
@@ -162,6 +184,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
           />
         </div>
       </article>
+      </div>
 
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Top Active Projects</h3>

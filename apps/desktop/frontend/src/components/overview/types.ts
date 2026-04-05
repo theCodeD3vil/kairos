@@ -24,6 +24,7 @@ export type MachineTimeShare = {
   machineName: string;
   minutes: number;
   share: number;
+  color: string;
 };
 
 export type RecentSession = {
