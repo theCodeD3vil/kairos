@@ -5,14 +5,50 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./ingestion": {
+      "types": "./dist/ingestion/index.d.ts",
+      "default": "./dist/ingestion/index.js"
+    },
+    "./domain": {
+      "types": "./dist/domain/index.d.ts",
+      "default": "./dist/domain/index.js"
+    },
+    "./views": {
+      "types": "./dist/views/index.d.ts",
+      "default": "./dist/views/index.js"
+    },
+    "./settings": {
+      "types": "./dist/settings/index.d.ts",
+      "default": "./dist/settings/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "ingestion": [
+        "./dist/ingestion/index.d.ts"
+      ],
+      "domain": [
+        "./dist/domain/index.d.ts"
+      ],
+      "views": [
+        "./dist/views/index.d.ts"
+      ],
+      "settings": [
+        "./dist/settings/index.d.ts"
+      ]
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"No lint rules configured yet for @kairos/shared\""
   },
