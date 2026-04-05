@@ -24,7 +24,7 @@ function formatMinutes(minutes: number) {
 
 function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+    <article className="rounded-xl bg-[#e6e6e6] p-3 ">
       <h3 className="text-sm font-medium text-[#566568]">{title}</h3>
       <p className="font-numeric mt-1 text-2xl font-semibold text-[#1d2428]">{value}</p>
       {hint ? <p className="mt-1 text-xs text-[#6d7a7d]">{hint}</p> : null}
@@ -34,9 +34,9 @@ function Metric({ title, value, hint }: { title: string; value: string; hint?: s
 
 function CodingTimeTodayCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
           <CodingOrbitIllustration />
         </div>
         <div className="min-w-0">
@@ -50,9 +50,9 @@ function CodingTimeTodayCard({ value }: { value: string }) {
 
 function CodingTimeWeekCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
           <WeeklyMomentumIllustration />
         </div>
         <div className="min-w-0">
@@ -66,9 +66,9 @@ function CodingTimeWeekCard({ value }: { value: string }) {
 
 function SessionsCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
           <SessionsTimelineIllustration />
         </div>
         <div className="min-w-0">
@@ -82,9 +82,9 @@ function SessionsCard({ value }: { value: string }) {
 
 function AvgSessionCard({ value }: { value: string }) {
   return (
-    <article className="rounded-xl bg-[#f2f5f4] p-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]">
+    <article className="rounded-xl bg-[#f2f5f4] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
+        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[#e7edeb] p-2">
           <AverageSessionBarsIllustration />
         </div>
         <div className="min-w-0">
@@ -113,7 +113,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-4">
         <CodingTimeTodayCard value={formatMinutes(snapshot.todayMinutes)} />
         <CodingTimeWeekCard value={formatMinutes(snapshot.weekMinutes)} />
         <SessionsCard value={String(snapshot.sessionCount)} />
