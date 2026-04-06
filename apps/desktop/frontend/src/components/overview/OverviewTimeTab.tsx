@@ -8,6 +8,7 @@ import {
 } from '@/components/illustrations/KairosStatIllustrations';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
@@ -103,6 +104,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
       : snapshot.syncHealth.status === 'Degraded'
         ? 'degraded'
         : 'offline';
+  const hasTrackedActivity = snapshot.todayMinutes > 0 || snapshot.weekMinutes > 0 || snapshot.sessionCount > 0;
 
   const trendTitleByRange: Record<OverviewSnapshot['range'], string> = {
     today: 'Today Trend',
@@ -143,51 +145,53 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Work Pattern</h3>
           <div className="mt-2 grid gap-3 md:grid-cols-4 lg:grid-cols-2">
-            <Metric title="Coding Days" value={String(snapshot.codingDaysThisWeek)} />
-            <Metric title="Most Active Hours" value={snapshot.activeHoursSummary} />
-            <Metric title="Last Active" value={snapshot.lastActiveAt} />
-            <Metric title="Last Updated" value={snapshot.lastUpdatedAt} />
+            <Metric title="Coding Days" value={hasTrackedActivity ? String(snapshot.codingDaysThisWeek) : '-'} />
+            <Metric title="Most Active Hours" value={hasTrackedActivity ? snapshot.activeHoursSummary : '-'} />
+            <Metric title="Last Active" value={hasTrackedActivity ? snapshot.lastActiveAt : '-'} />
+            <Metric title="Last Updated" value={hasTrackedActivity ? snapshot.lastUpdatedAt : '-'} />
           </div>
         </article>
       </div>
 
-      <article className="rounded-xl bg-[var(--surface-muted)] p-3">
-        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Current Machine</h3>
-        <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-6">
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Machine Name</p>
-            <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
-            <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
-              {snapshot.currentMachine.os} {snapshot.currentMachine.osVersion}
-            </p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Editor</p>
-            <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
-              {snapshot.currentMachine.editorName} {snapshot.currentMachine.editorVersion}
-            </p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Local Only</p>
-            <div className="mt-1">
-              <StatusBadge status={snapshot.localOnlyMode ? 'enabled' : 'disabled'} />
+      {SHOW_MULTI_MACHINE_UI ? (
+        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Current Machine</h3>
+          <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-6">
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Machine Name</p>
+              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
+            </div>
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
+              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
+                {snapshot.currentMachine.os} {snapshot.currentMachine.osVersion}
+              </p>
+            </div>
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Editor</p>
+              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
+                {snapshot.currentMachine.editorName} {snapshot.currentMachine.editorVersion}
+              </p>
+            </div>
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Local Only</p>
+              <div className="mt-1">
+                <StatusBadge status={snapshot.localOnlyMode ? 'enabled' : 'disabled'} />
+              </div>
+            </div>
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Tracking Status</p>
+              <div className="mt-1">
+                <StatusBadge status={snapshot.trackingEnabled ? 'enabled' : 'disabled'} />
+              </div>
+            </div>
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Last Seen</p>
+              <p className="font-numeric mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.lastSeenAt}</p>
             </div>
           </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Tracking Status</p>
-            <div className="mt-1">
-              <StatusBadge status={snapshot.trackingEnabled ? 'enabled' : 'disabled'} />
-            </div>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Last Seen</p>
-            <p className="font-numeric mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.lastSeenAt}</p>
-          </div>
-        </div>
-      </article>
+        </article>
+      ) : null}
 
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>

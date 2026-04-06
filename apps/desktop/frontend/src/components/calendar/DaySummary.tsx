@@ -1,4 +1,5 @@
 import type { CalendarDayDetail } from '@/data/mockCalendar';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { LanguageIcon } from '@/lib/languageIcons';
 
 function formatMinutes(totalMinutes: number) {
@@ -17,7 +18,7 @@ export function DaySummary({ detail }: { detail: CalendarDayDetail }) {
     { label: 'Last active', value: detail.lastActiveAt ?? '—' },
     { label: 'Top project', value: detail.topProject ?? '—' },
     detail.topLanguage ? { label: 'Top language', value: detail.topLanguage } : null,
-    { label: 'Machines', value: `${detail.machines.length}` },
+    SHOW_MULTI_MACHINE_UI ? { label: 'Machines', value: `${detail.machines.length}` } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return (

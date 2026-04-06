@@ -42,8 +42,17 @@ func NewApp() *App {
 	settingsService = desktopsettings.NewService(sqliteStore)
 	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
 	viewService := views.NewService(sqliteStore, settingsService)
-	ingestionService := ingestion.NewService(sqliteStore, settingsService)
 	sessionService := sessionization.NewService(sqliteStore, settingsService)
+	if err := ensureSessionsCurrent(context.Background(), sqliteStore, sessionService); err != nil {
+		log.Printf("app: session warm-up failed: %v", err)
+		_ = sqliteStore.Close()
+		return &App{
+			initErr:         fmt.Errorf("initialize session state: %w", err),
+			viewService:     views.NewStubService(),
+			settingsService: settingsService,
+		}
+	}
+	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService)
 	localServer, err := desktopserver.NewLocalServer(desktopserver.DefaultConfig(), ingestionService)
 	if err != nil {
 		log.Printf("app: local extension server initialization failed: %v", err)
@@ -64,6 +73,49 @@ func NewApp() *App {
 		viewService:      viewService,
 		settingsService:  settingsService,
 	}
+}
+
+func ensureSessionsCurrent(ctx context.Context, sqliteStore *storage.Store, sessionService sessionization.Service) error {
+	totalEvents, err := sqliteStore.CountAcceptedEvents(ctx)
+	if err != nil {
+		return fmt.Errorf("count accepted events: %w", err)
+	}
+	if totalEvents == 0 {
+		return nil
+	}
+
+	totalSessions, err := sqliteStore.CountAllSessions(ctx)
+	if err != nil {
+		return fmt.Errorf("count sessions: %w", err)
+	}
+	if totalSessions == 0 {
+		_, err := sessionService.RebuildAllSessions(ctx)
+		if err != nil {
+			return fmt.Errorf("rebuild all sessions from empty session store: %w", err)
+		}
+		return nil
+	}
+
+	lastEventAt, err := sqliteStore.GetLastEventTimestamp(ctx)
+	if err != nil {
+		return fmt.Errorf("get last event timestamp: %w", err)
+	}
+	lastSessionEndAt, err := sqliteStore.GetLastSessionEndTime(ctx)
+	if err != nil {
+		return fmt.Errorf("get last session end time: %w", err)
+	}
+	if lastEventAt == "" || lastSessionEndAt == "" || lastEventAt <= lastSessionEndAt {
+		return nil
+	}
+
+	startDate := lastSessionEndAt[:10]
+	endDate := lastEventAt[:10]
+	_, err = sessionService.RebuildSessionsForRange(ctx, startDate, endDate)
+	if err != nil {
+		return fmt.Errorf("rebuild stale sessions for %s..%s: %w", startDate, endDate, err)
+	}
+
+	return nil
 }
 
 // startup stores the application context.

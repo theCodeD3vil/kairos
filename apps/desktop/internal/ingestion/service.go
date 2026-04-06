@@ -30,6 +30,9 @@ type ServiceImpl struct {
 		GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
 		GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
 	}
+	sessions interface {
+		RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error)
+	}
 	now func() time.Time
 
 	mu                 sync.Mutex
@@ -39,10 +42,13 @@ type ServiceImpl struct {
 func NewService(sqliteStore *storage.Store, settingsProvider interface {
 	GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
 	GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
+}, sessionRebuilder interface {
+	RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error)
 }) *ServiceImpl {
 	return &ServiceImpl{
 		store:    sqliteStore,
 		settings: settingsProvider,
+		sessions: sessionRebuilder,
 		now:      time.Now,
 	}
 }
@@ -111,6 +117,14 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 		}
 		persisted = persistResult.InsertedEvents
 		warnings = append(warnings, persistResult.Warnings...)
+		if len(persisted) > 0 {
+			if rebuildWarnings, err := s.rebuildSessionsForAcceptedEvents(ctx, persisted); err != nil {
+				log.Printf("ingestion: session rebuild failed: %v", err)
+				return contracts.IngestEventsResponse{}, err
+			} else {
+				warnings = append(warnings, rebuildWarnings...)
+			}
+		}
 	} else {
 		if err := s.store.PersistEmptyIngestionHeartbeat(
 			ctx,
@@ -140,6 +154,37 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 	}
 
 	return response, nil
+}
+
+func (s *ServiceImpl) rebuildSessionsForAcceptedEvents(ctx context.Context, events []contracts.ActivityEvent) ([]string, error) {
+	if s.sessions == nil || len(events) == 0 {
+		return nil, nil
+	}
+
+	startDate := ""
+	endDate := ""
+	for _, event := range events {
+		if len(event.Timestamp) < 10 {
+			continue
+		}
+		date := event.Timestamp[:10]
+		if startDate == "" || date < startDate {
+			startDate = date
+		}
+		if endDate == "" || date > endDate {
+			endDate = date
+		}
+	}
+
+	if startDate == "" || endDate == "" {
+		return []string{"session rebuild skipped because accepted events had invalid timestamps"}, nil
+	}
+
+	if _, err := s.sessions.RebuildSessionsForRange(ctx, startDate, endDate); err != nil {
+		return nil, fmt.Errorf("rebuild sessions for %s..%s: %w", startDate, endDate, err)
+	}
+
+	return nil, nil
 }
 
 func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.ExtensionHandshakeRequest) (contracts.ExtensionHandshakeResponse, error) {

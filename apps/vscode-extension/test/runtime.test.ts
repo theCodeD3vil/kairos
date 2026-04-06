@@ -15,7 +15,14 @@ import type {
 import { INITIAL_RETRY_DELAY_MS, MAX_BUFFERED_EVENTS } from '../src/runtime/constants';
 import { getDefaultEffectiveSettings } from '../src/runtime/filters';
 import { KairosRuntime } from '../src/runtime/runtime';
-import type { ConnectionState, DesktopClient, EditorContext, RuntimeObserver, RuntimeScheduler, RuntimeSchedulerHandle } from '../src/runtime/types';
+import type {
+  DesktopClient,
+  EditorContext,
+  RuntimeObserver,
+  RuntimeScheduler,
+  RuntimeSchedulerHandle,
+  RuntimeStatusSnapshot,
+} from '../src/runtime/types';
 
 const machine: MachineInfo = {
   machineId: 'machine-1',
@@ -50,6 +57,19 @@ test('trackingEnabled=false suppresses event emission', async () => {
 
   assert.equal(harness.client.ingestRequests.length, 0);
   assert.equal(harness.runtime.getBufferedEventCount(), 0);
+});
+
+test('today tracked minutes are derived from retained activity windows', async () => {
+  const harness = createHarness({});
+
+  await harness.runtime.start();
+  await harness.runtime.recordEdit(baseContext);
+  harness.setNow('2026-04-06T10:04:00Z');
+  await harness.runtime.recordEdit(baseContext);
+
+  const snapshot = harness.runtime.getStatusSnapshot();
+  assert.equal(snapshot.todayTrackedMinutes, 5);
+  assert.equal(snapshot.displayState, 'active');
 });
 
 test('startup degrades gracefully when desktop is unavailable', async () => {
@@ -109,13 +129,13 @@ test('filePathMode privacy shaping masks file paths before send', async () => {
 
 test('heartbeat interval settings are applied', async () => {
   const harness = createHarness({
-    heartbeatIntervalSeconds: 15,
+    heartbeatIntervalSeconds: 1,
   });
 
   await harness.runtime.start();
   await harness.runtime.updateActiveEditor(baseContext);
 
-  harness.scheduler.advanceBy(15000);
+  harness.scheduler.advanceBy(1000);
   await flushMicrotasks();
 
   assert.equal(harness.client.ingestRequests.length, 1);
@@ -183,7 +203,7 @@ test('extension status updates reflect connection transitions', async () => {
   await harness.runtime.start();
   await harness.runtime.recordEdit(baseContext);
 
-  const states = harness.observer.statusUpdates.map((entry) => entry.state);
+  const states = harness.observer.statusUpdates.map((entry) => entry.connectionState);
   assert.ok(states.includes('connecting'));
   assert.ok(states.includes('connected'));
   assert.ok(states.includes('offline-buffering'));
@@ -224,6 +244,19 @@ test('disabled open/save/edit categories are respected', async () => {
   assert.equal(harness.client.ingestRequests.length, 0);
 });
 
+test('tracking disabled does not accumulate misleading time', async () => {
+  const harness = createHarness({
+    trackingEnabled: false,
+  });
+
+  await harness.runtime.start();
+  harness.setNow('2026-04-06T10:20:00Z');
+
+  const snapshot = harness.runtime.getStatusSnapshot();
+  assert.equal(snapshot.todayTrackedMinutes, 0);
+  assert.equal(snapshot.displayState, 'tracking-disabled');
+});
+
 function createHarness(overrides: Partial<ExtensionEffectiveSettings>) {
   const settings = {
     ...getDefaultEffectiveSettings(),
@@ -236,12 +269,13 @@ function createHarness(overrides: Partial<ExtensionEffectiveSettings>) {
   const client = new FakeDesktopClient(settings);
   const scheduler = new FakeScheduler();
   const observer = new FakeObserver();
+  let now = new Date('2026-04-06T10:00:00Z');
   const runtime = new KairosRuntime({
     client,
     observer,
     scheduler,
     environment: {
-      now: () => new Date('2026-04-06T10:00:00Z'),
+      now: () => new Date(now),
       randomID: (() => {
         let counter = 0;
         return () => `event-${++counter}`;
@@ -251,7 +285,15 @@ function createHarness(overrides: Partial<ExtensionEffectiveSettings>) {
     },
   });
 
-  return { client, scheduler, observer, runtime };
+  return {
+    client,
+    scheduler,
+    observer,
+    runtime,
+    setNow(value: string | Date) {
+      now = new Date(value);
+    },
+  };
 }
 
 class FakeDesktopClient implements DesktopClient {
@@ -305,7 +347,7 @@ class FakeObserver implements RuntimeObserver {
   readonly infos: string[] = [];
   readonly warns: string[] = [];
   readonly errors: string[] = [];
-  readonly statusUpdates: Array<{ state: ConnectionState; detail?: string }> = [];
+  readonly statusUpdates: RuntimeStatusSnapshot[] = [];
 
   logInfo(message: string): void {
     this.infos.push(message);
@@ -319,8 +361,8 @@ class FakeObserver implements RuntimeObserver {
     this.errors.push(message);
   }
 
-  updateStatus(state: ConnectionState, detail?: string): void {
-    this.statusUpdates.push({ state, detail });
+  updateStatus(snapshot: RuntimeStatusSnapshot): void {
+    this.statusUpdates.push(snapshot);
   }
 }
 

@@ -155,6 +155,14 @@ func (s *Store) CountSessionsInRange(ctx context.Context, startDate string, endD
 	`, startDate, endDate)
 }
 
+func (s *Store) CountAllSessions(ctx context.Context) (int, error) {
+	return countQuery(ctx, s.db, `SELECT COUNT(*) FROM sessions`)
+}
+
+func (s *Store) GetLastSessionEndTime(ctx context.Context) (string, error) {
+	return nullableStringQuery(ctx, s.db, `SELECT MAX(end_time) FROM sessions`)
+}
+
 func (s *Store) GetLongestSessionMinutesInRange(ctx context.Context, startDate string, endDate string) (int, error) {
 	return intQueryWithArgs(ctx, s.db, `
 		SELECT COALESCE(MAX(duration_minutes), 0)

@@ -2,15 +2,13 @@ import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type OverviewProjectsTabProps = {
   snapshot: OverviewSnapshot;
 };
 
 const chartColors = [...overviewChartPalette];
-const machinePieColors = (distribution: OverviewSnapshot['machineDistribution']) =>
-  distribution.map((machine, index) => machine.color ?? overviewChartPalette[index % overviewChartPalette.length]);
-
 type ProjectTableRow = {
   id: string;
   project: string;
@@ -101,8 +99,8 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-3">
-        <article className="rounded-xl bg-[var(--surface-muted)] p-3 lg:col-span-2">
+      <div className={SHOW_MULTI_MACHINE_UI ? 'grid gap-3 lg:grid-cols-3' : 'grid gap-3'}>
+        <article className={SHOW_MULTI_MACHINE_UI ? 'rounded-xl bg-[var(--surface-muted)] p-3 lg:col-span-2' : 'rounded-xl bg-[var(--surface-muted)] p-3'}>
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Time Spent per Project</h3>
           <div className="mt-2 h-56">
             <BarChart
@@ -122,37 +120,39 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
           </div>
         </article>
 
-        <article className="rounded-xl bg-[var(--surface-muted)] p-3">
-          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Machine Time Distribution</h3>
-          <div className="mt-2 h-44">
-          <DonutChart
-            data={snapshot.machineDistribution}
-            index="machineName"
-            category="share"
-            colors={machinePieColors(snapshot.machineDistribution)}
-            showAnimation
-            animationDuration={900}
-            showLabel={false}
-            style={{ height: 176 }}
-            valueFormatter={(value) => `${value}%`}
-            />
-          </div>
-          <div className="mt-2 space-y-2">
-            {snapshot.machineDistribution.map((machine) => (
-              <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-2 py-1.5">
-                <span className="text-xs font-medium text-[var(--ink-strong)] inline-flex items-center gap-2">
-                  <span
-                    className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
-                    style={{ backgroundColor: machine.color ?? overviewChartPalette[0] }}
-                    aria-hidden
-                  />
-                  {machine.machineName}
-                </span>
-                <span className="font-numeric text-xs text-[var(--ink-label)]">{formatMinutes(machine.minutes)}</span>
-              </div>
-            ))}
-          </div>
-        </article>
+        {SHOW_MULTI_MACHINE_UI ? (
+          <article className="rounded-xl bg-[var(--surface-muted)] p-3">
+            <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Machine Time Distribution</h3>
+            <div className="mt-2 h-44">
+              <DonutChart
+                data={snapshot.machineDistribution}
+                index="machineName"
+                category="share"
+                colors={snapshot.machineDistribution.map((machine, index) => machine.color ?? overviewChartPalette[index % overviewChartPalette.length])}
+                showAnimation
+                animationDuration={900}
+                showLabel={false}
+                style={{ height: 176 }}
+                valueFormatter={(value) => `${value}%`}
+              />
+            </div>
+            <div className="mt-2 space-y-2">
+              {snapshot.machineDistribution.map((machine) => (
+                <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-2 py-1.5">
+                  <span className="text-xs font-medium text-[var(--ink-strong)] inline-flex items-center gap-2">
+                    <span
+                      className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
+                      style={{ backgroundColor: machine.color ?? overviewChartPalette[0] }}
+                      aria-hidden
+                    />
+                    {machine.machineName}
+                  </span>
+                  <span className="font-numeric text-xs text-[var(--ink-label)]">{formatMinutes(machine.minutes)}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

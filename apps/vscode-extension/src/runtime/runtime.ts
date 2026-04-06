@@ -24,6 +24,8 @@ import type {
   RuntimeObserver,
   RuntimeOptions,
   RuntimeSchedulerHandle,
+  RuntimeStatusSnapshot,
+  StatusDisplayState,
 } from './types';
 
 export class KairosRuntime {
@@ -42,6 +44,13 @@ export class KairosRuntime {
   private heartbeatHandle?: RuntimeSchedulerHandle;
   private retryHandle?: RuntimeSchedulerHandle;
   private retryDelayMs = INITIAL_RETRY_DELAY_MS;
+  private stateDetail = 'Disconnected';
+  private trackedMinuteKeys = new Set<string>();
+  private trackedDateKey: string;
+  private lastTrackedActivityAt?: Date;
+  private lastHandshakeAt?: string;
+  private lastSuccessfulSendAt?: string;
+  private lastEventAt?: string;
 
   constructor(options: RuntimeOptions) {
     this.client = options.client;
@@ -49,6 +58,7 @@ export class KairosRuntime {
     this.scheduler = options.scheduler;
     this.environment = options.environment;
     this.settings = sanitizeEffectiveSettings(options.initialSettings ?? getDefaultEffectiveSettings());
+    this.trackedDateKey = toDateKey(this.environment.now());
   }
 
   async start(): Promise<void> {
@@ -77,17 +87,23 @@ export class KairosRuntime {
     return this.settings;
   }
 
+  getStatusSnapshot(): RuntimeStatusSnapshot {
+    return this.createStatusSnapshot();
+  }
+
   async refreshSettings(): Promise<void> {
     await this.connectAndSync();
   }
 
   async updateActiveEditor(context?: EditorContext): Promise<void> {
     this.activeContext = context;
+    this.publishStatus();
   }
 
   async setWindowFocused(focused: boolean): Promise<void> {
     const changed = this.focused !== focused;
     this.focused = focused;
+    this.publishStatus();
     if (!changed || !this.activeContext) {
       return;
     }
@@ -127,6 +143,7 @@ export class KairosRuntime {
         extension: this.environment.extension,
       });
       this.settings = sanitizeEffectiveSettings(response.settings);
+      this.lastHandshakeAt = response.serverTimestamp;
       this.retryDelayMs = INITIAL_RETRY_DELAY_MS;
       this.retryHandle?.cancel();
       this.retryHandle = undefined;
@@ -169,7 +186,12 @@ export class KairosRuntime {
     );
 
     this.pendingEvents.push(event);
+    this.lastEventAt = event.timestamp;
     this.enforceQueueBounds();
+    if (this.state === 'connected' || this.settings.bufferEventsWhenOffline) {
+      this.recordTrackedActivity(eventType, new Date(event.timestamp));
+    }
+    this.publishStatus();
     await this.flushQueueOrBuffer();
   }
 
@@ -213,6 +235,7 @@ export class KairosRuntime {
         try {
           const response = await this.client.ingestEvents(request);
           this.pendingEvents.splice(0, batch.length);
+          this.lastSuccessfulSendAt = response.serverTimestamp;
 
           if (response.warnings?.length) {
             this.observer.logWarn(`Desktop warnings: ${response.warnings.join(' | ')}`);
@@ -231,6 +254,7 @@ export class KairosRuntime {
       }
 
       this.setState('connected', 'Connected');
+      this.publishStatus();
     } finally {
       this.flushing = false;
     }
@@ -287,11 +311,119 @@ export class KairosRuntime {
     const droppedCount = this.pendingEvents.length - MAX_BUFFERED_EVENTS;
     this.pendingEvents.splice(0, droppedCount);
     this.observer.logWarn(`Buffered event queue limit reached; dropped ${droppedCount} oldest event(s)`);
+    this.publishStatus();
   }
 
   private setState(state: ConnectionState, detail: string): void {
     this.state = state;
-    this.observer.updateStatus(state, detail);
+    this.stateDetail = detail;
+    this.publishStatus();
+  }
+
+  private publishStatus(): void {
+    this.observer.updateStatus(this.createStatusSnapshot());
+  }
+
+  private createStatusSnapshot(): RuntimeStatusSnapshot {
+    const now = this.environment.now();
+    this.ensureTrackedDay(now);
+
+    return {
+      connectionState: this.state,
+      displayState: this.getDisplayState(now),
+      detail: this.stateDetail,
+      todayTrackedMinutes: this.getTodayTrackedMinutes(now),
+      trackingEnabled: this.settings.trackingEnabled,
+      queueSize: this.pendingEvents.length,
+      focused: this.focused,
+      trackOnlyWhenFocused: this.settings.trackOnlyWhenFocused,
+      bufferingEnabled: this.settings.bufferEventsWhenOffline,
+      heartbeatIntervalSeconds: this.settings.heartbeatIntervalSeconds,
+      filePathMode: this.settings.filePathMode,
+      machineName: this.environment.machine.machineName,
+      extensionVersion: this.environment.extension.extensionVersion,
+      lastHandshakeAt: this.lastHandshakeAt,
+      lastSuccessfulSendAt: this.lastSuccessfulSendAt,
+      lastEventAt: this.lastEventAt,
+    };
+  }
+
+  private getDisplayState(now: Date): StatusDisplayState {
+    if (!this.settings.trackingEnabled) {
+      return 'tracking-disabled';
+    }
+
+    switch (this.state) {
+      case 'connecting':
+        return 'connecting';
+      case 'retrying':
+        return 'retrying';
+      case 'offline-buffering':
+        return 'buffering';
+      case 'disconnected':
+        return 'disconnected';
+      case 'connected':
+      default:
+        return this.isActiveNow(now) ? 'active' : 'idle';
+    }
+  }
+
+  private getTodayTrackedMinutes(now: Date): number {
+    const effectiveMinutes = new Set(this.trackedMinuteKeys);
+    if (this.isActiveNow(now) && this.lastTrackedActivityAt) {
+      addMinuteKeysBetween(effectiveMinutes, this.lastTrackedActivityAt, now);
+    }
+
+    return effectiveMinutes.size;
+  }
+
+  private isActiveNow(now: Date): boolean {
+    if (!this.lastTrackedActivityAt) {
+      return false;
+    }
+
+    if (toDateKey(this.lastTrackedActivityAt) !== toDateKey(now)) {
+      return false;
+    }
+
+    return now.getTime() - this.lastTrackedActivityAt.getTime() <= this.getIdleThresholdMs();
+  }
+
+  private getIdleThresholdMs(): number {
+    return Math.max(1, this.settings.idleTimeoutMinutes) * 60 * 1000;
+  }
+
+  private recordTrackedActivity(eventType: ActivityEventType, at: Date): void {
+    if (eventType === 'focus' || eventType === 'blur') {
+      return;
+    }
+
+    this.ensureTrackedDay(at);
+    if (this.lastTrackedActivityAt && toDateKey(this.lastTrackedActivityAt) === this.trackedDateKey) {
+      const gapMs = at.getTime() - this.lastTrackedActivityAt.getTime();
+      if (gapMs >= 0 && gapMs <= this.getIdleThresholdMs()) {
+        addMinuteKeysBetween(this.trackedMinuteKeys, this.lastTrackedActivityAt, at);
+      } else {
+        this.trackedMinuteKeys.add(toMinuteKey(at));
+      }
+    } else {
+      this.trackedMinuteKeys.add(toMinuteKey(at));
+    }
+
+    this.lastTrackedActivityAt = at;
+  }
+
+  private ensureTrackedDay(at: Date): void {
+    const dateKey = toDateKey(at);
+    if (dateKey === this.trackedDateKey) {
+      return;
+    }
+
+    this.trackedDateKey = dateKey;
+    this.trackedMinuteKeys.clear();
+    if (this.lastTrackedActivityAt && toDateKey(this.lastTrackedActivityAt) !== dateKey) {
+      this.lastTrackedActivityAt = undefined;
+    }
   }
 }
 
@@ -300,4 +432,32 @@ function formatError(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function addMinuteKeysBetween(target: Set<string>, start: Date, end: Date): void {
+  const startMs = floorToMinute(start).getTime();
+  const endMs = floorToMinute(end).getTime();
+  const stepMs = 60 * 1000;
+
+  for (let currentMs = Math.min(startMs, endMs); currentMs <= Math.max(startMs, endMs); currentMs += stepMs) {
+    target.add(toMinuteKey(new Date(currentMs)));
+  }
+}
+
+function floorToMinute(date: Date): Date {
+  const floored = new Date(date);
+  floored.setSeconds(0, 0);
+  return floored;
+}
+
+function toDateKey(date: Date): string {
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+}
+
+function toMinuteKey(date: Date): string {
+  return `${toDateKey(date)}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+}
+
+function padNumber(value: number): string {
+  return String(value).padStart(2, '0');
 }

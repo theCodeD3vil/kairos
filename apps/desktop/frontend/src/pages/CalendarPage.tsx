@@ -5,8 +5,12 @@ import { DaySummary } from '@/components/calendar/DaySummary';
 import { DaySessions } from '@/components/calendar/DaySessions';
 import { DayProjects } from '@/components/calendar/DayProjects';
 import { DayMachines } from '@/components/calendar/DayMachines';
+import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
 import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
 
 function addMonths(base: Date, delta: number) {
   const next = new Date(base);
@@ -38,55 +42,41 @@ export function CalendarPage() {
   const [monthLabel, setMonthLabel] = useState(() => formatMonthLabel(monthRef));
   const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshPulseKey, setRefreshPulseKey] = useState(0);
 
   const leading = leadingEmptyDays(monthRef);
   const selectedIsInMonth = monthData.some((day) => day.date === selectedDate);
 
-  useEffect(() => {
-    let cancelled = false;
+  const monthPolling = useRouteReadyPolling({
+    dependencies: [monthRef],
+    deferInitialLoad: true,
+    load: () => loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth()),
+    onSuccess: (result) => {
+      setLoadError(null);
+      setMonthData(result.days);
+      setMonthLabel(result.monthLabel);
+      setRefreshPulseKey((current) => current + 1);
+    },
+    onError: () => {
+      setLoadError('Unable to load calendar data from the desktop backend.');
+      setMonthData([]);
+      setMonthLabel(formatMonthLabel(monthRef));
+    },
+  });
 
-    loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth())
-      .then((result) => {
-        if (!cancelled) {
-          setLoadError(null);
-          setMonthData(result.days);
-          setMonthLabel(result.monthLabel);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLoadError('Unable to load calendar data from the desktop backend.');
-          setMonthData([]);
-          setMonthLabel(formatMonthLabel(monthRef));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [monthRef]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    loadCalendarDay(selectedDate)
-      .then((detail) => {
-        if (!cancelled) {
-          setLoadError(null);
-          setDayDetail(detail);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLoadError('Unable to load selected day activity.');
-          setDayDetail(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDate]);
+  const dayPolling = useRouteReadyPolling({
+    dependencies: [selectedDate],
+    deferInitialLoad: true,
+    load: () => loadCalendarDay(selectedDate),
+    onSuccess: (detail) => {
+      setLoadError(null);
+      setDayDetail(detail);
+    },
+    onError: () => {
+      setLoadError('Unable to load selected day activity.');
+      setDayDetail(null);
+    },
+  });
 
   useEffect(() => {
     if (!selectedIsInMonth && monthData.length > 0) {
@@ -110,6 +100,7 @@ export function CalendarPage() {
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[var(--surface-strong)] p-3">
         <h1 className="text-2xl font-semibold text-[var(--ink-strong)]">Calendar</h1>
         <div className="flex items-center gap-2">
+          <LiveRefreshIndicator pulseKey={refreshPulseKey} />
           <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={handlePrevMonth}>
             Prev
           </Button>
@@ -128,25 +119,47 @@ export function CalendarPage() {
             {loadError}
           </div>
         ) : null}
-        <CalendarMonthGrid
-          monthLabel={monthLabel}
-          days={monthData}
-          onSelect={setSelectedDate}
-          selectedDate={selectedDate}
-          leadingEmpty={leading}
-        />
+        {monthPolling.isWaitingForFirstPoll && !loadError ? (
+          <div className="grid grid-cols-7 gap-2">
+            {Array.from({ length: 35 }, (_, index) => (
+              <Skeleton key={`calendar-skeleton-${index + 1}`} className="h-24 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <CalendarMonthGrid
+            monthLabel={monthLabel}
+            days={monthData}
+            onSelect={setSelectedDate}
+            selectedDate={selectedDate}
+            leadingEmpty={leading}
+          />
+        )}
       </section>
 
       <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">
           {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
         </h2>
-        {dayDetail ? (
+        {dayPolling.isWaitingForFirstPoll && !loadError ? (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <Skeleton className="h-56" />
+              <Skeleton className="h-56" />
+            </div>
+            <Skeleton className="h-72" />
+          </>
+        ) : dayDetail ? (
           <>
             <DaySummary detail={dayDetail} />
             <div className="grid gap-3 lg:grid-cols-2">
               <DayProjects detail={dayDetail} />
-              <DayMachines detail={dayDetail} />
+              {SHOW_MULTI_MACHINE_UI ? <DayMachines detail={dayDetail} /> : null}
             </div>
             <DaySessions detail={dayDetail} />
           </>

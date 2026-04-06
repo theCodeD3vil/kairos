@@ -11,6 +11,16 @@ Kairos for VS Code sends local editor activity to the Kairos desktop app so the 
 - enforces desktop-owned exclusions before sending
 - buffers events in memory when the desktop app is temporarily unavailable, if enabled by desktop settings
 
+## Status Bar
+
+The extension adds a Kairos status bar item inside VS Code.
+
+- The primary label shows a compact Kairos runtime state or your live tracked time for today.
+- The hover tooltip shows the current state, today total, queue/buffering detail, last handshake, last successful send, last event, machine name, extension version, file path mode, and heartbeat interval.
+- Clicking the status bar item opens a Kairos action picker.
+
+The live today total is an extension-local runtime estimate for immediate visibility. The desktop app remains the canonical persisted source of truth.
+
 ## Desktop Dependency
 
 The extension expects the Kairos desktop app to be running locally.
@@ -38,6 +48,11 @@ The extension applies the current effective desktop settings for:
 ## Commands
 
 - `Kairos: Refresh Desktop Settings`
+- `Kairos: Reconnect to Kairos Desktop`
+- `Kairos: Open Kairos Desktop`
+- `Kairos: Open Kairos Actions`
+- `Kairos: Show Kairos Status`
+- `Kairos: Show Kairos Output`
 
 ## Local Development
 
@@ -78,7 +93,14 @@ If the extension does not connect:
 - confirm the Kairos desktop app is running
 - confirm the desktop local extension bridge is listening on `127.0.0.1:42137`
 - run `Kairos: Refresh Desktop Settings`
+- run `Kairos: Reconnect to Kairos Desktop`
 - open the `Kairos` output channel inside VS Code for runtime details
+
+If the status bar shows `Disconnected` or `Buffering`:
+
+- confirm the desktop app is open
+- click the Kairos status bar item and choose `Reconnect to Kairos Desktop`
+- if `Open Kairos Desktop` cannot launch the app automatically on your machine, open the desktop app manually and refresh settings
 
 If tracking appears suppressed:
 

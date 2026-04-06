@@ -21,6 +21,7 @@ import type {
   VscodeExtensionSettings,
 } from '@/data/mockSettings';
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+import { trackSyncOperation } from '@/lib/sync-status';
 
 export const settingsSections = {
   general: 'general',
@@ -330,95 +331,167 @@ export function emptySettingsScreenData(): SettingsScreenData {
 }
 
 export async function loadSettingsScreenData(): Promise<SettingsScreenData> {
-  const data = await GetSettingsData();
-  return adaptSettingsScreenData(data);
+  return trackSyncOperation(
+    async () => {
+      const data = await GetSettingsData();
+      return adaptSettingsScreenData(data);
+    },
+    {
+      inProgressMessage: 'Syncing settings',
+      successMessage: 'Settings synced',
+      errorMessage: 'Settings sync failed',
+    },
+  );
 }
 
 export async function saveGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {
-  const updated = await UpdateGeneralSettings({
-    machineDisplayName: input.machineDisplayName,
-    defaultDateRange: input.defaultDateRange,
-    timeFormat: input.timeFormat,
-    weekStartsOn: input.weekStartDay === 'Sunday' ? 'sunday' : 'monday',
-    preferredLandingPage: input.landingPage,
-  });
-  return toGeneral(updated);
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdateGeneralSettings({
+        machineDisplayName: input.machineDisplayName,
+        defaultDateRange: input.defaultDateRange,
+        timeFormat: input.timeFormat,
+        weekStartsOn: input.weekStartDay === 'Sunday' ? 'sunday' : 'monday',
+        preferredLandingPage: input.landingPage,
+      });
+      return toGeneral(updated);
+    },
+    {
+      inProgressMessage: 'Saving general settings',
+      successMessage: 'General settings saved',
+      errorMessage: 'Saving general settings failed',
+    },
+  );
 }
 
 export async function savePrivacySettings(input: PrivacySettings): Promise<PrivacySettings> {
-  const updated = await UpdatePrivacySettings({
-    localOnlyMode: input.localOnlyMode,
-    filePathMode: input.filePathVisibility,
-    showMachineNames: input.showMachineNames,
-    showHostname: input.showHostname,
-    obfuscateProjectNames: input.obfuscateSensitiveProjects,
-    minimizeExtensionMetadata: input.minimizeExtensionMetadata,
-  });
-  return toPrivacy(updated);
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdatePrivacySettings({
+        localOnlyMode: input.localOnlyMode,
+        filePathMode: input.filePathVisibility,
+        showMachineNames: input.showMachineNames,
+        showHostname: input.showHostname,
+        obfuscateProjectNames: input.obfuscateSensitiveProjects,
+        minimizeExtensionMetadata: input.minimizeExtensionMetadata,
+      });
+      return toPrivacy(updated);
+    },
+    {
+      inProgressMessage: 'Saving privacy settings',
+      successMessage: 'Privacy settings saved',
+      errorMessage: 'Saving privacy settings failed',
+    },
+  );
 }
 
 export async function saveTrackingSettings(input: TrackingSettings): Promise<TrackingSettings> {
-  const updated = await UpdateTrackingSettings({
-    trackingEnabled: input.trackingEnabled,
-    idleDetectionEnabled: input.idleDetectionEnabled,
-    trackProjectActivity: input.trackProjectActivity,
-    trackLanguageActivity: input.trackLanguageActivity,
-    trackMachineAttribution: input.trackMachineAttribution,
-    trackSessionBoundaries: input.trackSessionBoundaries,
-    idleTimeoutMinutes: Number.parseInt(input.idleTimeoutMinutes, 10) || 0,
-    sessionMergeThresholdMinutes: Number.parseInt(input.sessionMergeThresholdMinutes, 10) || 0,
-  });
-  return toTracking(updated);
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdateTrackingSettings({
+        trackingEnabled: input.trackingEnabled,
+        idleDetectionEnabled: input.idleDetectionEnabled,
+        trackProjectActivity: input.trackProjectActivity,
+        trackLanguageActivity: input.trackLanguageActivity,
+        trackMachineAttribution: input.trackMachineAttribution,
+        trackSessionBoundaries: input.trackSessionBoundaries,
+        idleTimeoutMinutes: Number.parseInt(input.idleTimeoutMinutes, 10) || 0,
+        sessionMergeThresholdMinutes: Number.parseInt(input.sessionMergeThresholdMinutes, 10) || 0,
+      });
+      return toTracking(updated);
+    },
+    {
+      inProgressMessage: 'Saving tracking settings',
+      successMessage: 'Tracking settings saved',
+      errorMessage: 'Saving tracking settings failed',
+    },
+  );
 }
 
 export async function saveExclusionsSettings(input: ExclusionsSettings): Promise<ExclusionsSettings> {
-  const updated = await UpdateExclusionsSettings({
-    folders: input.folders,
-    projectNames: input.projectNames,
-    workspacePatterns: input.workspacePatterns,
-    fileExtensions: input.fileExtensions,
-    machines: input.machineNames,
-  });
-  return toExclusions(updated);
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdateExclusionsSettings({
+        folders: input.folders,
+        projectNames: input.projectNames,
+        workspacePatterns: input.workspacePatterns,
+        fileExtensions: input.fileExtensions,
+        machines: input.machineNames,
+      });
+      return toExclusions(updated);
+    },
+    {
+      inProgressMessage: 'Saving exclusions',
+      successMessage: 'Exclusions saved',
+      errorMessage: 'Saving exclusions failed',
+    },
+  );
 }
 
 export async function saveExtensionSettings(input: VscodeExtensionSettings): Promise<VscodeExtensionSettings> {
-  const updated = await UpdateExtensionSettings({
-    autoConnect: input.autoConnectToDesktop,
-    sendHeartbeatEvents: input.sendHeartbeatEvents,
-    heartbeatIntervalSeconds: Number.parseInt(input.heartbeatIntervalSeconds, 10) || 0,
-    sendProjectMetadata: input.sendProjectMetadata,
-    sendLanguageMetadata: input.sendLanguageMetadata,
-    sendMachineAttribution: input.sendMachineAttribution,
-    respectDesktopExclusions: input.respectDesktopExclusions,
-    bufferEventsWhenOffline: input.bufferEventsWhenOffline,
-    retryConnectionAutomatically: input.retryConnectionAutomatically,
-    trackOnlyWhenFocused: input.trackFocusedWindowOnly,
-    trackFileOpenEvents: input.trackFileOpenEvents,
-    trackSaveEvents: input.trackSaveEvents,
-    trackEditEvents: input.trackEditActivity,
-  });
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdateExtensionSettings({
+        autoConnect: input.autoConnectToDesktop,
+        sendHeartbeatEvents: input.sendHeartbeatEvents,
+        heartbeatIntervalSeconds: Number.parseInt(input.heartbeatIntervalSeconds, 10) || 0,
+        sendProjectMetadata: input.sendProjectMetadata,
+        sendLanguageMetadata: input.sendLanguageMetadata,
+        sendMachineAttribution: input.sendMachineAttribution,
+        respectDesktopExclusions: input.respectDesktopExclusions,
+        bufferEventsWhenOffline: input.bufferEventsWhenOffline,
+        retryConnectionAutomatically: input.retryConnectionAutomatically,
+        trackOnlyWhenFocused: input.trackFocusedWindowOnly,
+        trackFileOpenEvents: input.trackFileOpenEvents,
+        trackSaveEvents: input.trackSaveEvents,
+        trackEditEvents: input.trackEditActivity,
+      });
 
-  const data = await GetSettingsData();
-  return toVscodeExtension({
-    ...data,
-    extension: updated,
-  });
+      const data = await GetSettingsData();
+      return toVscodeExtension({
+        ...data,
+        extension: updated,
+      });
+    },
+    {
+      inProgressMessage: 'Saving extension settings',
+      successMessage: 'Extension settings saved',
+      errorMessage: 'Saving extension settings failed',
+    },
+  );
 }
 
 export async function saveAppBehaviorSettings(input: AppBehaviorSettings): Promise<AppBehaviorSettings> {
-  const updated = await UpdateAppBehaviorSettings({
-    launchOnStartup: input.launchOnStartup,
-    startMinimized: input.startMinimized,
-    minimizeToTray: input.minimizeToTray,
-    openOnSystemLogin: input.openOnSystemLogin,
-    rememberLastPage: input.rememberLastSelectedPage,
-    restoreLastDateRange: input.restoreLastSelectedDateRange,
-  });
-  return toAppBehavior(updated);
+  return trackSyncOperation(
+    async () => {
+      const updated = await UpdateAppBehaviorSettings({
+        launchOnStartup: input.launchOnStartup,
+        startMinimized: input.startMinimized,
+        minimizeToTray: input.minimizeToTray,
+        openOnSystemLogin: input.openOnSystemLogin,
+        rememberLastPage: input.rememberLastSelectedPage,
+        restoreLastDateRange: input.restoreLastSelectedDateRange,
+      });
+      return toAppBehavior(updated);
+    },
+    {
+      inProgressMessage: 'Saving app behavior',
+      successMessage: 'App behavior saved',
+      errorMessage: 'Saving app behavior failed',
+    },
+  );
 }
 
 export async function resetSettingsSectionViewModel(section: string): Promise<SettingsScreenData> {
-  const data = await ResetSettingsSection(section);
-  return adaptSettingsScreenData(data);
+  return trackSyncOperation(
+    async () => {
+      const data = await ResetSettingsSection(section);
+      return adaptSettingsScreenData(data);
+    },
+    {
+      inProgressMessage: 'Resetting settings',
+      successMessage: 'Settings reset',
+      errorMessage: 'Settings reset failed',
+    },
+  );
 }

@@ -1,6 +1,7 @@
 import { Tracker } from '@lobehub/charts';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type OverviewStatusTabProps = {
   snapshot: OverviewSnapshot;
@@ -19,10 +20,12 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">System Status</h3>
         <div className="mt-2 grid gap-2 md:grid-cols-4">
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Current Machine</p>
-            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
-          </div>
+          {SHOW_MULTI_MACHINE_UI ? (
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Current Machine</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
+            </div>
+          ) : null}
           <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
             <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.os}</p>
@@ -47,10 +50,12 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
             <p className="text-xs text-[var(--ink-muted)]">Last Active</p>
             <p className="font-numeric mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastActiveAt}</p>
           </div>
-          <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
-            <p className="text-xs text-[var(--ink-muted)]">Last Active Machine</p>
-            <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastActiveMachine}</p>
-          </div>
+          {SHOW_MULTI_MACHINE_UI ? (
+            <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+              <p className="text-xs text-[var(--ink-muted)]">Last Active Machine</p>
+              <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.lastActiveMachine}</p>
+            </div>
+          ) : null}
         </div>
       </article>
 

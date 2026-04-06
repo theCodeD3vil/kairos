@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BarChart } from '@lobehub/charts';
 import { useToast } from '@/components/toast/ToastProvider';
 import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
@@ -14,8 +14,11 @@ import { AnalyticsComparison } from '@/components/analytics/AnalyticsComparison'
 import { AnalyticsSessionsTable } from '@/components/analytics/AnalyticsSessions';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { AnalyticsFilters as Filters } from '@/data/mockAnalytics';
 import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
 
 const analyticsDefaultFilters: Filters = {
   range: 'week',
@@ -31,27 +34,19 @@ export function AnalyticsPage() {
   const [snapshot, setSnapshot] = useState(() => emptyAnalyticsSnapshot(analyticsDefaultFilters));
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    loadAnalyticsSnapshot(filters)
-      .then((nextSnapshot) => {
-        if (!cancelled) {
-          setLoadError(null);
-          setSnapshot(nextSnapshot);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLoadError('Unable to load analytics from persisted desktop data.');
-          setSnapshot(emptyAnalyticsSnapshot(filters));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [filters]);
+  const { isWaitingForFirstPoll } = useRouteReadyPolling({
+    dependencies: [filters],
+    deferInitialLoad: true,
+    load: () => loadAnalyticsSnapshot(filters),
+    onSuccess: (nextSnapshot) => {
+      setLoadError(null);
+      setSnapshot(nextSnapshot);
+    },
+    onError: () => {
+      setLoadError('Unable to load analytics from persisted desktop data.');
+      setSnapshot(emptyAnalyticsSnapshot(filters));
+    },
+  });
 
   const empty = snapshot.summary.totalMinutes === 0;
 
@@ -85,7 +80,7 @@ export function AnalyticsPage() {
           onChange={setFilters}
           projectOptions={snapshot.filters.projects}
           languageOptions={snapshot.filters.languages}
-          machineOptions={snapshot.filters.machines}
+          machineOptions={SHOW_MULTI_MACHINE_UI ? snapshot.filters.machines : []}
         />
       </section>
 
@@ -97,7 +92,38 @@ export function AnalyticsPage() {
         </section>
       ) : null}
 
-      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+      {isWaitingForFirstPoll && !loadError ? (
+        <>
+          <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+            <div className="grid gap-3 md:grid-cols-5">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+            </div>
+          </section>
+          <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Skeleton className="h-72" />
+              <Skeleton className="h-72" />
+            </div>
+          </section>
+          <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+            <div className="grid gap-3 lg:grid-cols-3">
+              <Skeleton className="h-80 lg:col-span-2" />
+              <Skeleton className="h-80" />
+            </div>
+          </section>
+          <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+            <Skeleton className="h-72" />
+          </section>
+        </>
+      ) : null}
+
+      {!isWaitingForFirstPoll ? (
+        <>
+          <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Analytics summary</h2>
         {empty ? (
           <div className="rounded-[14px] bg-[var(--surface-muted)] p-4 text-[var(--ink-tertiary)]">
@@ -210,10 +236,12 @@ export function AnalyticsPage() {
         <AnalyticsSessionsTable sessions={snapshot.sessions.recent} />
       </section>
 
-      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
-        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Machines</h2>
-        <AnalyticsMachineList items={snapshot.machines.items} />
-      </section>
+      {SHOW_MULTI_MACHINE_UI ? (
+        <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
+          <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Machines</h2>
+          <AnalyticsMachineList items={snapshot.machines.items} />
+        </section>
+      ) : null}
 
       <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Patterns</h2>
@@ -246,10 +274,12 @@ export function AnalyticsPage() {
         </article>
       </section>
 
-      <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-4">
-        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Period comparison</h2>
-        <AnalyticsComparison snapshot={snapshot} />
-      </section>
+          <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-4">
+            <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Period comparison</h2>
+            <AnalyticsComparison snapshot={snapshot} />
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

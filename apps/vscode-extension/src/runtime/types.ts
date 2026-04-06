@@ -12,6 +12,14 @@ import type {
 } from '@kairos/shared/settings';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'retrying' | 'offline-buffering';
+export type StatusDisplayState =
+  | 'active'
+  | 'idle'
+  | 'tracking-disabled'
+  | 'disconnected'
+  | 'buffering'
+  | 'connecting'
+  | 'retrying';
 
 export type EditorContext = {
   workspaceId: string;
@@ -30,7 +38,7 @@ export interface RuntimeObserver {
   logInfo(message: string): void;
   logWarn(message: string): void;
   logError(message: string): void;
-  updateStatus(state: ConnectionState, detail?: string): void;
+  updateStatus(snapshot: RuntimeStatusSnapshot): void;
 }
 
 export interface RuntimeSchedulerHandle {
@@ -55,6 +63,25 @@ export type RuntimeOptions = {
   scheduler: RuntimeScheduler;
   environment: RuntimeEnvironment;
   initialSettings?: ExtensionEffectiveSettings;
+};
+
+export type RuntimeStatusSnapshot = {
+  connectionState: ConnectionState;
+  displayState: StatusDisplayState;
+  detail: string;
+  todayTrackedMinutes: number;
+  trackingEnabled: boolean;
+  queueSize: number;
+  focused: boolean;
+  trackOnlyWhenFocused: boolean;
+  bufferingEnabled: boolean;
+  heartbeatIntervalSeconds: number;
+  filePathMode: ExtensionEffectiveSettings['filePathMode'];
+  machineName: string;
+  extensionVersion?: string;
+  lastHandshakeAt?: string;
+  lastSuccessfulSendAt?: string;
+  lastEventAt?: string;
 };
 
 export type PendingBatch = {

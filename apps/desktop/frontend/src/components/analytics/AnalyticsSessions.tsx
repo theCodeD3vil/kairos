@@ -2,6 +2,7 @@ import type { SessionRecord } from '@/data/mockAnalytics';
 import { formatMinutes } from '@/components/analytics/AnalyticsCards';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 import { LanguageIcon } from '@/lib/languageIcons';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type AnalyticsSessionsProps = {
   sessions: Array<SessionRecord & { dayLabel: string }>;
@@ -24,7 +25,6 @@ export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
           '—'
         ),
     },
-    { id: 'machine', header: 'Machine', cell: (row) => row.machine },
     {
       id: 'start',
       header: 'Start',
@@ -39,10 +39,14 @@ export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
     },
   ];
 
+  const visibleColumns = SHOW_MULTI_MACHINE_UI
+    ? columns
+    : columns.filter((column) => column.id !== 'machine');
+
   return (
     <AnimatedTable
       data={sessions}
-      columns={columns}
+      columns={visibleColumns}
       striped
       stickyHeader
       emptyMessage="No sessions for this filter."

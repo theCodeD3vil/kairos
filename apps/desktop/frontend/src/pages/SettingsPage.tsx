@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { useToast } from '@/components/toast/ToastProvider';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ExclusionEditor } from '@/components/settings/ExclusionEditor';
 import {
@@ -29,6 +30,7 @@ import {
   saveTrackingSettings,
   settingsSections,
 } from '@/lib/backend/settings';
+import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
 
 export function SettingsPage() {
   const { error, info, success } = useToast();
@@ -44,6 +46,7 @@ export function SettingsPage() {
   const [about, setAbout] = useState(initialData.viewModel.about);
   const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -58,28 +61,42 @@ export function SettingsPage() {
     setAppStatus(next.appStatus);
   }, []);
 
-  const reloadSettings = useCallback(async () => {
+  const reloadSettings = useCallback(async (options?: { silent?: boolean }) => {
     try {
       const next = await loadSettingsScreenData();
+      setLoadError(null);
       applyScreenData(next);
     } catch (cause) {
-      error('Settings Load Failed', cause instanceof Error ? cause.message : 'Unable to load desktop settings.');
+      setLoadError('Unable to load desktop settings.');
+      if (!options?.silent) {
+        error('Settings Load Failed', cause instanceof Error ? cause.message : 'Unable to load desktop settings.');
+      }
     }
   }, [applyScreenData, error]);
 
-  useEffect(() => {
-    void reloadSettings();
-  }, [reloadSettings]);
+  const { isWaitingForFirstPoll } = useRouteReadyPolling({
+    dependencies: [],
+    deferInitialLoad: true,
+    load: loadSettingsScreenData,
+    onSuccess: (next) => {
+      setLoadError(null);
+      applyScreenData(next);
+    },
+    onError: () => {
+      setLoadError('Unable to load desktop settings.');
+    },
+  });
 
   const persistSection = useCallback(
     async <T,>(next: T, save: (value: T) => Promise<T>, apply: (value: T) => void, label: string) => {
       apply(next);
       try {
         const saved = await save(next);
+        setLoadError(null);
         apply(saved);
       } catch (cause) {
         error(label, cause instanceof Error ? cause.message : 'Unable to persist settings.');
-        void reloadSettings();
+        void reloadSettings({ silent: true });
       }
     },
     [error, reloadSettings],
@@ -124,13 +141,13 @@ export function SettingsPage() {
       value: 'general',
       content: (
         <SettingsSection title="General" action={<ResetButton onClick={() => void handleResetSection(settingsSections.general, 'General Settings')} />}>
-          <SettingsRow label="Machine display name">
+          <SettingsRow label="Machine display name" helper="Shown in the desktop app and used for machine attribution labels.">
             <SettingsInput
               value={general.machineDisplayName}
               onChange={(event) => updateGeneralState({ ...general, machineDisplayName: event.target.value })}
             />
           </SettingsRow>
-          <SettingsRow label="Default date range">
+          <SettingsRow label="Default date range" helper="Used when opening Overview, Sessions, and Analytics without a saved page state.">
             <SettingsSelect
               value={general.defaultDateRange}
               onChange={(event) => updateGeneralState({ ...general, defaultDateRange: event.target.value as typeof general.defaultDateRange })}
@@ -142,7 +159,7 @@ export function SettingsPage() {
               ]}
             />
           </SettingsRow>
-          <SettingsRow label="Time format">
+          <SettingsRow label="Time format" helper="Controls how times are shown across the desktop app.">
             <SettingsSelect
               value={general.timeFormat}
               onChange={(event) => updateGeneralState({ ...general, timeFormat: event.target.value as typeof general.timeFormat })}
@@ -152,7 +169,7 @@ export function SettingsPage() {
               ]}
             />
           </SettingsRow>
-          <SettingsRow label="Week start day">
+          <SettingsRow label="Week start day" helper="Used for week-based views such as Overview trends and calendar logic.">
             <SettingsSelect
               value={general.weekStartDay}
               onChange={(event) => updateGeneralState({ ...general, weekStartDay: event.target.value as typeof general.weekStartDay })}
@@ -162,7 +179,7 @@ export function SettingsPage() {
               ]}
             />
           </SettingsRow>
-          <SettingsRow label="Preferred landing page">
+          <SettingsRow label="Preferred landing page" helper="Page to open first when the desktop app starts.">
             <SettingsSelect
               value={general.landingPage}
               onChange={(event) => updateGeneralState({ ...general, landingPage: event.target.value as typeof general.landingPage })}
@@ -182,7 +199,7 @@ export function SettingsPage() {
       value: 'privacy',
       content: (
         <SettingsSection title="Privacy" action={<ResetButton onClick={() => void handleResetSection(settingsSections.privacy, 'Privacy Settings')} />}>
-          <SettingsRow label="Local-only mode">
+          <SettingsRow label="Local-only mode" helper="Keeps Kairos desktop-first with no cloud sync behavior in v1.">
             <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => updatePrivacyState({ ...privacy, localOnlyMode: next })} />
           </SettingsRow>
           <SettingsRow label="Cloud sync" helper="Placeholder only">
@@ -191,7 +208,7 @@ export function SettingsPage() {
               onChange={() => placeholderAction('Cloud Sync', 'Cloud sync is intentionally out of scope for the local-first v1 release.')}
             />
           </SettingsRow>
-          <SettingsRow label="File path visibility">
+          <SettingsRow label="File path visibility" helper="Controls whether file paths are stored and returned as full paths, masked names, or hidden values.">
             <SettingsSelect
               value={privacy.filePathVisibility}
               onChange={(event) => updatePrivacyState({ ...privacy, filePathVisibility: event.target.value as typeof privacy.filePathVisibility })}
@@ -202,16 +219,16 @@ export function SettingsPage() {
               ]}
             />
           </SettingsRow>
-          <SettingsRow label="Show machine names">
+          <SettingsRow label="Show machine names" helper="Affects whether machine names are shown in desktop-facing summaries when available.">
             <SettingsToggle checked={privacy.showMachineNames} onChange={(next) => updatePrivacyState({ ...privacy, showMachineNames: next })} />
           </SettingsRow>
-          <SettingsRow label="Show hostname">
+          <SettingsRow label="Show hostname" helper="Controls whether hostnames can appear in desktop-facing device details.">
             <SettingsToggle checked={privacy.showHostname} onChange={(next) => updatePrivacyState({ ...privacy, showHostname: next })} />
           </SettingsRow>
-          <SettingsRow label="Obfuscate sensitive project names">
+          <SettingsRow label="Obfuscate sensitive project names" helper="Masks project labels in desktop-facing data where privacy rules apply.">
             <SettingsToggle checked={privacy.obfuscateSensitiveProjects} onChange={(next) => updatePrivacyState({ ...privacy, obfuscateSensitiveProjects: next })} />
           </SettingsRow>
-          <SettingsRow label="Minimize extension metadata">
+          <SettingsRow label="Minimize extension metadata" helper="Reduces non-essential VS Code metadata included in extension traffic and status.">
             <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => updatePrivacyState({ ...privacy, minimizeExtensionMetadata: next })} />
           </SettingsRow>
         </SettingsSection>
@@ -222,43 +239,45 @@ export function SettingsPage() {
       value: 'tracking',
       content: (
         <SettingsSection title="Tracking" action={<ResetButton onClick={() => void handleResetSection(settingsSections.tracking, 'Tracking Settings')} />}>
-          <SettingsRow label="Tracking enabled">
+          <SettingsRow label="Tracking enabled" helper="Turns Kairos activity ingestion on or off at the desktop authority layer.">
             <SettingsToggle checked={tracking.trackingEnabled} onChange={(next) => updateTrackingState({ ...tracking, trackingEnabled: next })} />
           </SettingsRow>
-          <SettingsRow label="Idle detection">
+          <SettingsRow label="Idle detection" helper="Allows gaps in activity to split sessions instead of treating all events as one continuous run.">
             <SettingsToggle checked={tracking.idleDetectionEnabled} onChange={(next) => updateTrackingState({ ...tracking, idleDetectionEnabled: next })} />
           </SettingsRow>
-          <SettingsRow label="Track project activity">
+          <SettingsRow label="Track project activity" helper="Keeps project names as first-class tracked fields in events and summaries.">
             <SettingsToggle checked={tracking.trackProjectActivity} onChange={(next) => updateTrackingState({ ...tracking, trackProjectActivity: next })} />
           </SettingsRow>
-          <SettingsRow label="Track language activity">
+          <SettingsRow label="Track language activity" helper="Keeps language as a first-class tracked field through ingestion, sessions, and analytics.">
             <SettingsToggle checked={tracking.trackLanguageActivity} onChange={(next) => updateTrackingState({ ...tracking, trackLanguageActivity: next })} />
           </SettingsRow>
-          <SettingsRow label="Track machine attribution">
+          <SettingsRow label="Track machine attribution" helper="Preserves machine-level attribution for raw events, sessions, and summaries.">
             <SettingsToggle checked={tracking.trackMachineAttribution} onChange={(next) => updateTrackingState({ ...tracking, trackMachineAttribution: next })} />
           </SettingsRow>
-          <SettingsRow label="Track session boundaries">
+          <SettingsRow label="Track session boundaries" helper="Keeps session derivation enabled when rebuilding sessions from persisted raw events.">
             <SettingsToggle checked={tracking.trackSessionBoundaries} onChange={(next) => updateTrackingState({ ...tracking, trackSessionBoundaries: next })} />
           </SettingsRow>
-          <SettingsRow label="Idle timeout threshold">
+          <SettingsRow label="Idle timeout threshold" helper="Minutes. If the gap between events exceeds this value, Kairos starts a new session.">
             <SettingsInput
               value={tracking.idleTimeoutMinutes}
+              inputMode="numeric"
               onChange={(event) => updateTrackingState({ ...tracking, idleTimeoutMinutes: event.target.value })}
             />
           </SettingsRow>
-          <SettingsRow label="Session merge threshold">
+          <SettingsRow label="Session merge threshold" helper="Minutes. Adjacent same-day sessions within this gap can be merged during session rebuilds.">
             <SettingsInput
               value={tracking.sessionMergeThresholdMinutes}
+              inputMode="numeric"
               onChange={(event) => updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: event.target.value })}
             />
           </SettingsRow>
-          <SettingsRow label="Detect active coding window">
+          <SettingsRow label="Detect active coding window" helper="Placeholder only. Intended to refine tracking to active editor-focused coding windows.">
             <SettingsToggle
               checked={tracking.detectActiveCodingWindow}
               onChange={() => placeholderAction('Active Coding Window', 'This desktop-only toggle is not implemented in v1.')}
             />
           </SettingsRow>
-          <SettingsRow label="Background activity capture" helper="Placeholder only">
+          <SettingsRow label="Background activity capture" helper="Placeholder only. Would include background/editor activity outside the current focused coding window.">
             <SettingsToggle
               checked={tracking.backgroundActivityCapture}
               onChange={() => placeholderAction('Background Activity Capture', 'Background activity capture is intentionally deferred.')}
@@ -360,49 +379,50 @@ export function SettingsPage() {
                 </div>
               }
             />
-            <SettingsRow label="Auto-connect to desktop app">
+            <SettingsRow label="Auto-connect to desktop app" helper="The extension attempts to connect to the local Kairos desktop server on startup.">
               <SettingsToggle checked={vscodeExtension.autoConnectToDesktop} onChange={(next) => updateExtensionState({ ...vscodeExtension, autoConnectToDesktop: next })} />
             </SettingsRow>
-            <SettingsRow label="Send heartbeat events">
+            <SettingsRow label="Send heartbeat events" helper="Allows the extension to emit periodic activity heartbeats while tracking is active.">
               <SettingsToggle checked={vscodeExtension.sendHeartbeatEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendHeartbeatEvents: next })} />
             </SettingsRow>
-            <SettingsRow label="Heartbeat interval">
+            <SettingsRow label="Heartbeat interval" helper="Seconds. Controls how often heartbeat events are emitted while the extension is active.">
               <SettingsInput
                 value={vscodeExtension.heartbeatIntervalSeconds}
+                inputMode="numeric"
                 onChange={(event) => updateExtensionState({ ...vscodeExtension, heartbeatIntervalSeconds: event.target.value })}
               />
             </SettingsRow>
-            <SettingsRow label="Send project metadata">
+            <SettingsRow label="Send project metadata" helper="Includes project and workspace context in extension events when allowed by privacy settings.">
               <SettingsToggle checked={vscodeExtension.sendProjectMetadata} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendProjectMetadata: next })} />
             </SettingsRow>
-            <SettingsRow label="Send language metadata">
+            <SettingsRow label="Send language metadata" helper="Includes detected file language in extension events and downstream summaries.">
               <SettingsToggle checked={vscodeExtension.sendLanguageMetadata} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendLanguageMetadata: next })} />
             </SettingsRow>
-            <SettingsRow label="Send machine attribution">
+            <SettingsRow label="Send machine attribution" helper="Includes machine identity in extension payloads when the current contract requires it.">
               <SettingsToggle checked={vscodeExtension.sendMachineAttribution} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendMachineAttribution: next })} />
             </SettingsRow>
-            <SettingsRow label="Respect desktop exclusions">
+            <SettingsRow label="Respect desktop exclusions" helper="Applies desktop-owned project, workspace, folder, and extension exclusions before sending events.">
               <SettingsToggle checked={vscodeExtension.respectDesktopExclusions} onChange={(next) => updateExtensionState({ ...vscodeExtension, respectDesktopExclusions: next })} />
             </SettingsRow>
-            <SettingsRow label="Buffer events when desktop is unavailable">
+            <SettingsRow label="Buffer events when desktop is unavailable" helper="Keeps a bounded in-memory queue in the extension until the desktop app reconnects.">
               <SettingsToggle checked={vscodeExtension.bufferEventsWhenOffline} onChange={(next) => updateExtensionState({ ...vscodeExtension, bufferEventsWhenOffline: next })} />
             </SettingsRow>
-            <SettingsRow label="Retry connection automatically">
+            <SettingsRow label="Retry connection automatically" helper="Allows the extension to retry the local desktop connection after send or handshake failures.">
               <SettingsToggle checked={vscodeExtension.retryConnectionAutomatically} onChange={(next) => updateExtensionState({ ...vscodeExtension, retryConnectionAutomatically: next })} />
             </SettingsRow>
-            <SettingsRow label="Track only focused VS Code window">
+            <SettingsRow label="Track only focused VS Code window" helper="Suppresses activity when the VS Code window is not focused.">
               <SettingsToggle checked={vscodeExtension.trackFocusedWindowOnly} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackFocusedWindowOnly: next })} />
             </SettingsRow>
-            <SettingsRow label="Track file open events">
+            <SettingsRow label="Track file open events" helper="Controls whether opening a file emits an `open` activity event.">
               <SettingsToggle checked={vscodeExtension.trackFileOpenEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackFileOpenEvents: next })} />
             </SettingsRow>
-            <SettingsRow label="Track save events">
+            <SettingsRow label="Track save events" helper="Controls whether saving a file emits a `save` activity event.">
               <SettingsToggle checked={vscodeExtension.trackSaveEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackSaveEvents: next })} />
             </SettingsRow>
-            <SettingsRow label="Track edit activity">
+            <SettingsRow label="Track edit activity" helper="Controls whether text edits emit `edit` activity events.">
               <SettingsToggle checked={vscodeExtension.trackEditActivity} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackEditActivity: next })} />
             </SettingsRow>
-            <SettingsRow label="Sessionization handled by">
+            <SettingsRow label="Sessionization handled by" helper="Desktop-owned in v1. The extension does not derive canonical sessions.">
               <SettingsSelect
                 value={vscodeExtension.sessionizationOwner}
                 onChange={() => placeholderAction('Sessionization Owner', 'Sessionization remains desktop-owned in the v1 release.')}
@@ -454,25 +474,25 @@ export function SettingsPage() {
       value: 'behavior',
       content: (
         <SettingsSection title="App Behavior" action={<ResetButton onClick={() => void handleResetSection(settingsSections.appBehavior, 'App Behavior Settings')} />}>
-          <SettingsRow label="Launch on startup">
+          <SettingsRow label="Launch on startup" helper="Opens Kairos automatically when your OS starts your user session, where supported.">
             <SettingsToggle checked={appBehavior.launchOnStartup} onChange={(next) => updateAppBehaviorState({ ...appBehavior, launchOnStartup: next })} />
           </SettingsRow>
-          <SettingsRow label="Start minimized">
+          <SettingsRow label="Start minimized" helper="Starts the desktop window minimized instead of foregrounded.">
             <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
           </SettingsRow>
-          <SettingsRow label="Minimize to tray">
+          <SettingsRow label="Minimize to tray" helper="Keeps Kairos running in the background when the window is minimized, where supported.">
             <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
           </SettingsRow>
-          <SettingsRow label="Open on system login">
+          <SettingsRow label="Open on system login" helper="Requests OS login-item behavior so Kairos launches after sign-in, where supported.">
             <SettingsToggle checked={appBehavior.openOnSystemLogin} onChange={(next) => updateAppBehaviorState({ ...appBehavior, openOnSystemLogin: next })} />
           </SettingsRow>
-          <SettingsRow label="Remember last selected page">
+          <SettingsRow label="Remember last selected page" helper="Restores the last desktop page you visited when the app reopens.">
             <SettingsToggle checked={appBehavior.rememberLastSelectedPage} onChange={(next) => updateAppBehaviorState({ ...appBehavior, rememberLastSelectedPage: next })} />
           </SettingsRow>
-          <SettingsRow label="Restore last selected date range">
+          <SettingsRow label="Restore last selected date range" helper="Reuses your previous Overview, Sessions, or Analytics date range when reopening the app.">
             <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => updateAppBehaviorState({ ...appBehavior, restoreLastSelectedDateRange: next })} />
           </SettingsRow>
-          <SettingsRow label="Reopen last viewed calendar month or analytics filters">
+          <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="Placeholder only. Would restore page-specific calendar state and analytics filters on reopen.">
             <SettingsToggle
               checked={appBehavior.reopenLastViewedContext}
               onChange={() => placeholderAction('Reopen Last Context', 'Restoring page-specific context is not implemented in v1.')}
@@ -616,14 +636,36 @@ export function SettingsPage() {
       </section>
 
       <section className="rounded-[16px] bg-[var(--surface)] p-3">
-        <VercelTabs
-          tabs={tabs}
-          defaultTab="general"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="items-start"
-          stickyTabList
-        />
+        {loadError ? (
+          <div className="mb-3 rounded-[14px] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--ink-tertiary)]">
+            {loadError}
+          </div>
+        ) : null}
+        {isWaitingForFirstPoll && !loadError ? (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24 rounded-full" />
+              <Skeleton className="h-9 w-24 rounded-full" />
+              <Skeleton className="h-9 w-24 rounded-full" />
+              <Skeleton className="h-9 w-28 rounded-full" />
+              <Skeleton className="h-9 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+          </div>
+        ) : (
+          <VercelTabs
+            tabs={tabs}
+            defaultTab="general"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="items-start"
+            stickyTabList
+          />
+        )}
       </section>
     </div>
   );

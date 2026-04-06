@@ -1,7 +1,7 @@
 {
   "name": "kairos-vscode",
   "displayName": "Kairos",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "kairos-dev",
   "description": "Local-first activity tracking for Kairos Desktop from inside VS Code.",
   "license": "UNLICENSED",
@@ -30,13 +30,43 @@
   "extensionKind": ["workspace"],
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:kairos.refreshSettings"
+    "onCommand:kairos.refreshSettings",
+    "onCommand:kairos.reconnectDesktop",
+    "onCommand:kairos.openDesktop",
+    "onCommand:kairos.showStatus",
+    "onCommand:kairos.showOutput",
+    "onCommand:kairos.statusAction"
   ],
   "contributes": {
     "commands": [
       {
         "command": "kairos.refreshSettings",
         "title": "Refresh Desktop Settings",
+        "category": "Kairos"
+      },
+      {
+        "command": "kairos.reconnectDesktop",
+        "title": "Reconnect to Kairos Desktop",
+        "category": "Kairos"
+      },
+      {
+        "command": "kairos.openDesktop",
+        "title": "Open Kairos Desktop",
+        "category": "Kairos"
+      },
+      {
+        "command": "kairos.showStatus",
+        "title": "Show Kairos Status",
+        "category": "Kairos"
+      },
+      {
+        "command": "kairos.showOutput",
+        "title": "Show Kairos Output",
+        "category": "Kairos"
+      },
+      {
+        "command": "kairos.statusAction",
+        "title": "Open Kairos Actions",
         "category": "Kairos"
       }
     ]

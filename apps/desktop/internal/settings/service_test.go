@@ -122,6 +122,32 @@ func TestUpdateAndResetSettingsSectionPersistCorrectly(t *testing.T) {
 	}
 }
 
+func TestUpdateExtensionSettingsAllowsLowHeartbeatIntervals(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	updated, err := service.UpdateExtensionSettings(context.Background(), contracts.ExtensionSettings{
+		AutoConnect:                  true,
+		SendHeartbeatEvents:          true,
+		HeartbeatIntervalSeconds:     1,
+		SendProjectMetadata:          true,
+		SendLanguageMetadata:         true,
+		SendMachineAttribution:       true,
+		RespectDesktopExclusions:     true,
+		BufferEventsWhenOffline:      true,
+		RetryConnectionAutomatically: true,
+		TrackOnlyWhenFocused:         true,
+		TrackFileOpenEvents:          true,
+		TrackSaveEvents:              true,
+		TrackEditEvents:              true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateExtensionSettings failed: %v", err)
+	}
+	if updated.HeartbeatIntervalSeconds != 1 {
+		t.Fatalf("expected heartbeat interval 1, got %d", updated.HeartbeatIntervalSeconds)
+	}
+}
+
 func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
 	service, _ := newTestSettingsService(t)
 

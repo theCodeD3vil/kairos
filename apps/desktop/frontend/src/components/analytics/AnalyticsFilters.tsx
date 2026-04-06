@@ -3,6 +3,7 @@ import { OverviewRangeSelector } from '@/components/overview/OverviewRangeSelect
 import type { OverviewRange } from '@/components/overview/types';
 import type { AnalyticsFilters } from '@/data/mockAnalytics';
 import type { DateRange } from '@/components/ruixen/range-calendar';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type AnalyticsFiltersProps = {
   filters: AnalyticsFilters;
@@ -45,7 +46,7 @@ export function AnalyticsFilters({
       />
       {dropdown('Projects', filters.project, projectOptions, 'project')}
       {dropdown('Languages', filters.language, languageOptions, 'language')}
-      {dropdown('Machines', filters.machine, machineOptions, 'machine')}
+      {SHOW_MULTI_MACHINE_UI ? dropdown('Machines', filters.machine, machineOptions, 'machine') : null}
     </div>
   );
 }

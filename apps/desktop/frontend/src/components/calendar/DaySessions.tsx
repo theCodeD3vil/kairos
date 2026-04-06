@@ -1,5 +1,6 @@
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 import type { CalendarDayDetail } from '@/data/mockCalendar';
+import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { LanguageIcon } from '@/lib/languageIcons';
 
 function formatMinutes(totalMinutes: number) {
@@ -14,7 +15,6 @@ export function DaySessions({ detail }: { detail: CalendarDayDetail }) {
     { id: 'start', header: 'Start', accessorKey: 'start', width: '90px' },
     { id: 'duration', header: 'Duration', cell: (row) => formatMinutes(row.durationMinutes), width: '100px' },
     { id: 'project', header: 'Project', accessorKey: 'project' },
-    { id: 'machine', header: 'Machine', accessorKey: 'machine' },
     {
       id: 'language',
       header: 'Language',
@@ -31,10 +31,14 @@ export function DaySessions({ detail }: { detail: CalendarDayDetail }) {
     },
   ];
 
+  const visibleColumns = SHOW_MULTI_MACHINE_UI
+    ? columns
+    : columns.filter((column) => column.id !== 'machine');
+
   return (
     <AnimatedTable
       data={detail.sessions}
-      columns={columns}
+      columns={visibleColumns}
       striped
       stickyHeader
       emptyMessage="No sessions recorded for this date."

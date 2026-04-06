@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- added the live Kairos status bar with today tracking time, richer tooltip detail, and quick actions
+- added reconnect, status, output, and desktop-open command palette actions
+- improved release validation coverage for status presentation and runtime transitions
+
 ## 0.1.0
 
 - added real desktop handshake and settings synchronization

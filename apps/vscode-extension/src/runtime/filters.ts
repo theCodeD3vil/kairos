@@ -11,7 +11,6 @@ import {
   MAX_EXTENSION_VERSION_LENGTH,
   MAX_FILE_PATH_LENGTH,
   MAX_GIT_BRANCH_LENGTH,
-  MAX_HEARTBEAT_INTERVAL_SECONDS,
   MAX_HOSTNAME_LENGTH,
   MAX_LANGUAGE_LENGTH,
   MAX_MACHINE_ID_LENGTH,
@@ -20,7 +19,6 @@ import {
   MAX_OS_VERSION_LENGTH,
   MAX_PROJECT_NAME_LENGTH,
   MAX_WORKSPACE_ID_LENGTH,
-  MIN_HEARTBEAT_INTERVAL_SECONDS,
   REDACTED_LANGUAGE,
   REDACTED_PROJECT_NAME,
   REDACTED_WORKSPACE_ID,
@@ -90,10 +88,8 @@ export function sanitizeEffectiveSettings(settings?: ExtensionEffectiveSettings)
     exclusions: sanitizeExclusions(settings.exclusions),
     autoConnect: settings.autoConnect,
     sendHeartbeatEvents: settings.sendHeartbeatEvents,
-    heartbeatIntervalSeconds: clampNumber(
+    heartbeatIntervalSeconds: sanitizePositiveInteger(
       settings.heartbeatIntervalSeconds,
-      MIN_HEARTBEAT_INTERVAL_SECONDS,
-      MAX_HEARTBEAT_INTERVAL_SECONDS,
       DEFAULT_EFFECTIVE_SETTINGS.heartbeatIntervalSeconds,
     ),
     sendProjectMetadata: settings.sendProjectMetadata,
@@ -320,6 +316,19 @@ function clampNumber(value: number, min: number, max: number, fallback: number):
     return max;
   }
   return Math.trunc(value);
+}
+
+function sanitizePositiveInteger(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  const normalized = Math.trunc(value);
+  if (normalized < 1) {
+    return fallback;
+  }
+
+  return normalized;
 }
 
 function matchWorkspacePattern(pattern: string, workspaceId: string): boolean {

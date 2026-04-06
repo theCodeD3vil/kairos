@@ -71,8 +71,8 @@ func validateExclusions(input contracts.ExclusionsSettings) contracts.Exclusions
 }
 
 func validateExtension(input contracts.ExtensionSettings) (contracts.ExtensionSettings, error) {
-	if input.HeartbeatIntervalSeconds < 5 || input.HeartbeatIntervalSeconds > 3600 {
-		return contracts.ExtensionSettings{}, fmt.Errorf("heartbeatIntervalSeconds must be between 5 and 3600")
+	if input.HeartbeatIntervalSeconds < 1 {
+		return contracts.ExtensionSettings{}, fmt.Errorf("heartbeatIntervalSeconds must be at least 1")
 	}
 	return input, nil
 }

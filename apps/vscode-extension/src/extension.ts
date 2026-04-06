@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -6,9 +7,17 @@ import * as vscode from 'vscode';
 
 import { HTTPDesktopClient } from './runtime/client';
 import { KairosRuntime } from './runtime/runtime';
-import type { ConnectionState, EditorContext, RuntimeObserver, RuntimeScheduler } from './runtime/types';
+import type { EditorContext, RuntimeObserver, RuntimeScheduler, RuntimeStatusSnapshot } from './runtime/types';
+import {
+  buildStatusBarText,
+  buildStatusBarTooltip,
+  buildStatusSummary,
+  getStatusBarActions,
+  type StatusBarAction,
+} from './statusbar';
 
 const MACHINE_ID_KEY = 'kairos.machineId';
+const STATUS_REFRESH_INTERVAL_MS = 15000;
 
 let runtime: KairosRuntime | undefined;
 
@@ -16,11 +25,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const output = vscode.window.createOutputChannel('Kairos');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBar.name = 'Kairos Status';
-  statusBar.command = 'kairos.refreshSettings';
+  statusBar.command = 'kairos.statusAction';
   statusBar.show();
+  const extensionVersion = context.extension.packageJSON.version as string | undefined;
 
   let lastLogLine = '';
   let lastLogAt = 0;
+  let latestStatus: RuntimeStatusSnapshot | undefined;
 
   const observer: RuntimeObserver = {
     logInfo(message) {
@@ -32,9 +43,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logError(message) {
       appendOutput(output, 'ERROR', message, { dedupe: true, dedupeWindowMs: 10000, lastLogAt, lastLogLine, update: updateLastLog });
     },
-    updateStatus(state, detail) {
-      statusBar.text = statusText(state);
-      statusBar.tooltip = detail ? `Kairos: ${detail}` : 'Kairos';
+    updateStatus(snapshot) {
+      latestStatus = snapshot;
+      renderStatusBar(statusBar, snapshot);
     },
   };
 
@@ -81,10 +92,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       extension: {
         editor: 'vscode',
         editorVersion: vscode.version,
-        extensionVersion: context.extension.packageJSON.version as string | undefined,
+        extensionVersion,
       },
     },
   });
+
+  latestStatus = runtime.getStatusSnapshot();
+  renderStatusBar(statusBar, latestStatus);
 
   const refreshCommand = vscode.commands.registerCommand('kairos.refreshSettings', async () => {
     if (!runtime) {
@@ -92,6 +106,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     try {
       await runtime.refreshSettings();
+      latestStatus = runtime.getStatusSnapshot();
+      renderStatusBar(statusBar, latestStatus);
       await vscode.window.showInformationMessage('Kairos settings refreshed from desktop');
     } catch (error) {
       observer.logError(`Manual settings refresh failed: ${formatError(error)}`);
@@ -99,7 +115,105 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   });
 
-  context.subscriptions.push(output, statusBar, refreshCommand);
+  const reconnectCommand = vscode.commands.registerCommand('kairos.reconnectDesktop', async () => {
+    if (!runtime) {
+      return;
+    }
+
+    try {
+      await runtime.refreshSettings();
+      latestStatus = runtime.getStatusSnapshot();
+      renderStatusBar(statusBar, latestStatus);
+      await vscode.window.showInformationMessage('Kairos reconnected to the desktop app');
+    } catch (error) {
+      observer.logWarn(`Reconnect failed: ${formatError(error)}`);
+      await vscode.window.showWarningMessage(`Kairos could not reconnect: ${formatError(error)}`);
+    }
+  });
+
+  const showStatusCommand = vscode.commands.registerCommand('kairos.showStatus', async () => {
+    if (!runtime) {
+      return;
+    }
+
+    latestStatus = runtime.getStatusSnapshot();
+    renderStatusBar(statusBar, latestStatus);
+    await vscode.window.showInformationMessage(buildStatusSummary(latestStatus));
+  });
+
+  const showOutputCommand = vscode.commands.registerCommand('kairos.showOutput', () => {
+    output.show(true);
+  });
+
+  const openDesktopCommand = vscode.commands.registerCommand('kairos.openDesktop', async () => {
+    const launched = await tryOpenKairosDesktop();
+    if (launched) {
+      observer.logInfo('Open Kairos Desktop command dispatched');
+      return;
+    }
+
+    observer.logWarn('Open Kairos Desktop is not available on this machine');
+    await vscode.window.showInformationMessage(
+      'Kairos Desktop could not be opened automatically. Start the desktop app manually, then use “Refresh Kairos Settings”.',
+    );
+  });
+
+  const statusActionCommand = vscode.commands.registerCommand('kairos.statusAction', async () => {
+    if (!runtime) {
+      return;
+    }
+
+    latestStatus = runtime.getStatusSnapshot();
+    renderStatusBar(statusBar, latestStatus);
+    const choice = await vscode.window.showQuickPick(
+      getStatusBarActions(latestStatus).map((item) => ({
+        label: item.label,
+        description: item.description,
+        action: item.action,
+      })),
+      {
+        title: 'Kairos',
+        placeHolder: 'Choose a Kairos action',
+      },
+    );
+
+    if (!choice) {
+      return;
+    }
+
+    await runStatusAction(choice.action, {
+      openDesktop: () => vscode.commands.executeCommand('kairos.openDesktop'),
+      reconnect: () => vscode.commands.executeCommand('kairos.reconnectDesktop'),
+      refresh: () => vscode.commands.executeCommand('kairos.refreshSettings'),
+      showStatus: () => vscode.commands.executeCommand('kairos.showStatus'),
+      showOutput: () => vscode.commands.executeCommand('kairos.showOutput'),
+    });
+  });
+
+  const statusTicker = setInterval(() => {
+    if (!runtime) {
+      return;
+    }
+
+    latestStatus = runtime.getStatusSnapshot();
+    renderStatusBar(statusBar, latestStatus);
+  }, STATUS_REFRESH_INTERVAL_MS);
+
+  context.subscriptions.push(
+    output,
+    statusBar,
+    refreshCommand,
+    reconnectCommand,
+    showStatusCommand,
+    showOutputCommand,
+    openDesktopCommand,
+    statusActionCommand,
+    {
+      dispose() {
+        clearInterval(statusTicker);
+      },
+    },
+  );
 
   await runtime.updateActiveEditor(toEditorContext(vscode.window.activeTextEditor?.document));
   await runtime.setWindowFocused(vscode.window.state.focused);
@@ -188,22 +302,6 @@ function fallbackProjectName(document: vscode.TextDocument, workspaceID: string)
   return path.basename(workspaceID) || 'untitled-project';
 }
 
-function statusText(state: ConnectionState): string {
-  switch (state) {
-    case 'connected':
-      return 'Kairos: Connected';
-    case 'connecting':
-      return 'Kairos: Connecting';
-    case 'retrying':
-      return 'Kairos: Retrying';
-    case 'offline-buffering':
-      return 'Kairos: Buffering';
-    case 'disconnected':
-    default:
-      return 'Kairos: Disconnected';
-  }
-}
-
 function formatError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -242,6 +340,100 @@ function appendOutput(
 
   output.appendLine(line);
   options?.update(line, now);
+}
+
+function renderStatusBar(statusBar: vscode.StatusBarItem, snapshot: RuntimeStatusSnapshot): void {
+  statusBar.text = buildStatusBarText(snapshot);
+  const tooltip = new vscode.MarkdownString(buildStatusBarTooltip(snapshot), true);
+  tooltip.supportThemeIcons = true;
+  tooltip.isTrusted = false;
+  statusBar.tooltip = tooltip;
+}
+
+async function runStatusAction(
+  action: StatusBarAction,
+  handlers: {
+    openDesktop: () => Thenable<unknown>;
+    reconnect: () => Thenable<unknown>;
+    refresh: () => Thenable<unknown>;
+    showStatus: () => Thenable<unknown>;
+    showOutput: () => Thenable<unknown>;
+  },
+): Promise<void> {
+  switch (action) {
+    case 'open-desktop':
+      await handlers.openDesktop();
+      break;
+    case 'reconnect-desktop':
+      await handlers.reconnect();
+      break;
+    case 'show-status':
+      await handlers.showStatus();
+      break;
+    case 'show-output':
+      await handlers.showOutput();
+      break;
+    case 'refresh-settings':
+    default:
+      await handlers.refresh();
+      break;
+  }
+}
+
+async function tryOpenKairosDesktop(): Promise<boolean> {
+  const candidates = getDesktopLaunchCandidates();
+  for (const candidate of candidates) {
+    const launched = await launchCommand(candidate.command, candidate.args);
+    if (launched) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getDesktopLaunchCandidates(): Array<{ command: string; args: string[] }> {
+  switch (process.platform) {
+    case 'darwin':
+      return [
+        { command: 'open', args: ['-a', 'Kairos'] },
+      ];
+    case 'win32':
+      return [
+        { command: 'cmd', args: ['/c', 'start', '', 'Kairos'] },
+      ];
+    case 'linux':
+      return [
+        { command: 'gtk-launch', args: ['kairos'] },
+        { command: 'xdg-open', args: ['kairos://desktop'] },
+      ];
+    default:
+      return [];
+  }
+}
+
+function launchCommand(command: string, args: string[]): Promise<boolean> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      detached: true,
+      stdio: 'ignore',
+    });
+
+    let settled = false;
+    child.once('error', () => {
+      if (!settled) {
+        settled = true;
+        resolve(false);
+      }
+    });
+    child.once('spawn', () => {
+      child.unref();
+      if (!settled) {
+        settled = true;
+        resolve(true);
+      }
+    });
+  });
 }
 
 function mapPlatform(platform: NodeJS.Platform): 'darwin' | 'windows' | 'linux' {

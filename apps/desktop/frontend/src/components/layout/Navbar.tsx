@@ -6,6 +6,7 @@ import { NotificationsFilter } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
 import { useToast } from '@/components/toast/ToastProvider';
 import { Button } from '@/components/ui/button';
+import kairosMark from '@/assets/kairos-mark.svg';
 
 const showTheme = import.meta.env.DEV;
 
@@ -108,13 +109,8 @@ export function Navbar() {
     <header className="px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6 lg:px-7 lg:pt-7">
       <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between rounded-[20px] bg-[var(--surface-navbar)] px-3 py-2.5 sm:px-5 sm:py-3 shadow-[var(--shadow-inset-faint)]">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <div className="grid size-10 place-items-center rounded-xl bg-[var(--surface-accent)] text-[var(--ink-accent-strong)]">
-            <div className="grid grid-cols-2 gap-1">
-              <span className="size-1.5 rounded-full bg-current" />
-              <span className="size-1.5 rounded-full bg-current" />
-              <span className="size-1.5 rounded-full bg-current" />
-              <span className="size-1.5 rounded-full bg-current" />
-            </div>
+          <div className="grid size-10 place-items-center">
+            <img src={kairosMark} alt="Kairos" className="size-8" />
           </div>
           <div className="min-w-0 max-w-full overflow-x-auto rounded-full bg-[var(--surface-pill)] p-1.5">
             <SlidingCapsuleNav

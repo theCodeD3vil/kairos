@@ -10,6 +10,7 @@ import (
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
+	"github.com/michaelnji/kairos/apps/desktop/internal/sessionization"
 	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
@@ -243,6 +244,22 @@ func TestIngestionStatsUpdateCorrectly(t *testing.T) {
 	}
 }
 
+func TestIngestEventsRebuildsSessionsForAcceptedEvents(t *testing.T) {
+	service := newTestService(t)
+
+	if _, err := service.IngestEvents(context.Background(), validRequest()); err != nil {
+		t.Fatalf("ingest failed: %v", err)
+	}
+
+	sessions, err := service.store.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list rebuilt sessions failed: %v", err)
+	}
+	if len(sessions) == 0 {
+		t.Fatal("expected sessions to be rebuilt from accepted events")
+	}
+}
+
 func TestOptionalFieldLengthLimitsAreTruncated(t *testing.T) {
 	service := newTestService(t)
 	request := validRequest()
@@ -366,8 +383,9 @@ func newTestServiceWithSettings(t *testing.T) (*ServiceImpl, *desktopsettings.Se
 
 	settingsService := desktopsettings.NewService(sqliteStore)
 	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
+	sessionService := sessionization.NewService(sqliteStore, settingsService)
 
-	service := NewService(sqliteStore, settingsService)
+	service := NewService(sqliteStore, settingsService, sessionService)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 5, 12, 45, 0, 0, time.UTC)
 	}
