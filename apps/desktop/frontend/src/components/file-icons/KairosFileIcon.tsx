@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileIcon } from 'react-file-icon';
-import { resolveKairosFileIcon, resolveKairosFileIconSync } from '@/lib/file-icons';
 import { cn } from '@/lib/utils';
+import { resolveKairosFileIcon, resolveKairosFileIconSync } from '@/lib/file-icons';
 
 type KairosFileIconProps = {
   filename: string;
@@ -21,12 +20,6 @@ export function KairosFileIcon({
     let isDisposed = false;
     setResolved(initialResolution);
 
-    if (initialResolution.resolutionSource !== 'fallback') {
-      return () => {
-        isDisposed = true;
-      };
-    }
-
     void resolveKairosFileIcon(filename).then((nextResolution) => {
       if (!isDisposed) {
         setResolved(nextResolution);
@@ -40,16 +33,17 @@ export function KairosFileIcon({
 
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center justify-center', className)}
+      className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden', className)}
       style={{ width: size, height: size }}
       aria-hidden="true"
       title={resolved.basename}
     >
-      <FileIcon
-        extension={resolved.extensionLabel}
-        {...resolved.style}
-        width={size}
-        height={size}
+      <i
+        className={cn('kairos-file-icon', resolved.className)}
+        style={{
+          transform: `scale(${size / 16})`,
+          transformOrigin: 'center',
+        }}
       />
     </span>
   );

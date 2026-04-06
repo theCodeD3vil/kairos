@@ -1,207 +1,110 @@
-import type { FileIconStyle } from 'react-file-icon';
-import {
-  fallbackFileIcon,
-  fileExtensionDefinitions,
-  resolveEnvSpecialDefinition,
-  specialFilenameDefinitions,
-} from '@/lib/file-icon-map';
-import { resolveFileIconsFallbackMatch } from '@/lib/file-icons-fallback';
+import fileIcons from '@exuanbo/file-icons-js';
 
-export type KairosFileIconResolutionSource =
-  | 'special-map'
-  | 'extension-map'
-  | 'file-icons-js'
-  | 'fallback';
+export type KairosFileIconResolutionSource = 'file-icons-js' | 'fallback';
 
 export type ResolvedKairosFileIcon = {
   basename: string;
-  normalizedBasename: string;
-  canonicalKey: string;
-  extensionLabel: string;
-  matchedExtension: string;
+  normalizedInput: string;
+  className: string;
+  classList: string[];
   resolutionSource: KairosFileIconResolutionSource;
-  style: FileIconStyle;
-  fileIconsClass?: string;
+  isFallback: boolean;
 };
 
-const extensionAliases: Record<string, string> = {
-  bash: 'sh',
-  conf: 'config',
-  config: 'config',
-  dockerfile: 'docker',
-  env: 'env',
-  gitignore: 'git',
-  jpeg: 'image',
-  jpg: 'image',
-  markdown: 'md',
-  plaintext: 'txt',
-  shell: 'sh',
-  shellscript: 'sh',
-  text: 'txt',
-  typescriptreact: 'tsx',
-};
+const FALLBACK_CLASS_LIST = ['icon', 'default-icon'];
+const fallbackResolutionCache = new Map<string, ResolvedKairosFileIcon>();
+const fallbackResolutionPromises = new Map<string, Promise<ResolvedKairosFileIcon>>();
 
-const fallbackResolutionCache = new Map<string, ResolvedKairosFileIcon | null>();
-const fallbackResolutionPromises = new Map<string, Promise<ResolvedKairosFileIcon | null>>();
+function sanitizeInput(input: string) {
+  return input.trim().replace(/[?#].*$/, '').replace(/\\/g, '/');
+}
 
 function basenameFromInput(input: string) {
-  const sanitized = input.trim().replace(/[?#].*$/, '').replace(/\\/g, '/');
+  const sanitized = sanitizeInput(input);
   const segments = sanitized.split('/').filter(Boolean);
   return segments[segments.length - 1] ?? sanitized;
 }
 
-function rawExtensionFromBasename(basename: string) {
-  if (!basename) {
-    return '';
+function normalizeClassList(result: string | string[]) {
+  if (Array.isArray(result)) {
+    return result.filter(Boolean);
   }
 
-  if (basename.startsWith('.') && basename.indexOf('.', 1) === -1) {
-    return basename.slice(1);
-  }
-
-  const lastDotIndex = basename.lastIndexOf('.');
-  if (lastDotIndex <= 0 || lastDotIndex === basename.length - 1) {
-    return '';
-  }
-
-  return basename.slice(lastDotIndex + 1);
-}
-
-function normalizeExtension(extension: string) {
-  return extensionAliases[extension] ?? extension;
+  return result.split(/\s+/).filter(Boolean);
 }
 
 function buildResolution(
   input: string,
-  definition: {
-    canonicalKey: string;
-    extensionLabel: string;
-    style: FileIconStyle;
-  },
+  classList: string[],
   resolutionSource: KairosFileIconResolutionSource,
-  matchedExtension = '',
-  fileIconsClass?: string,
 ): ResolvedKairosFileIcon {
+  const normalizedInput = sanitizeInput(input);
   const basename = basenameFromInput(input);
 
   return {
     basename,
-    normalizedBasename: basename.toLowerCase(),
-    canonicalKey: definition.canonicalKey,
-    extensionLabel: definition.extensionLabel,
-    matchedExtension,
+    normalizedInput,
+    className: classList.join(' '),
+    classList,
     resolutionSource,
-    style: definition.style,
-    fileIconsClass,
+    isFallback: resolutionSource === 'fallback',
   };
 }
 
-function fallbackDefinitionForExtension(extension: string) {
-  const normalized = normalizeExtension(extension.toLowerCase());
-
-  if (normalized && fileExtensionDefinitions[normalized]) {
-    return fileExtensionDefinitions[normalized];
-  }
-
-  if (normalized) {
-    return {
-      ...fallbackFileIcon,
-      extensionLabel: normalized.slice(0, 4) || fallbackFileIcon.extensionLabel,
-    };
-  }
-
-  return fallbackFileIcon;
+function fallbackResolution(input: string) {
+  return buildResolution(input, FALLBACK_CLASS_LIST, 'fallback');
 }
 
-function resolveFromExplicitMaps(input: string): ResolvedKairosFileIcon {
-  const basename = basenameFromInput(input);
-  const normalizedBasename = basename.toLowerCase();
-
-  const envSpecial = resolveEnvSpecialDefinition(normalizedBasename);
-  if (envSpecial) {
-    return buildResolution(input, envSpecial, 'special-map', 'env');
-  }
-
-  const specialDefinition = specialFilenameDefinitions[normalizedBasename];
-  if (specialDefinition) {
-    return buildResolution(input, specialDefinition, 'special-map');
-  }
-
-  const rawExtension = rawExtensionFromBasename(normalizedBasename);
-  const normalizedExtension = normalizeExtension(rawExtension);
-  const extensionDefinition = fileExtensionDefinitions[normalizedExtension];
-
-  if (extensionDefinition) {
-    return buildResolution(input, extensionDefinition, 'extension-map', normalizedExtension);
-  }
-
-  const fallbackDefinition = fallbackDefinitionForExtension(rawExtension);
-  return buildResolution(input, fallbackDefinition, 'fallback', rawExtension);
+function isFallbackClassList(classList: string[]) {
+  return !classList.some((token) => token.endsWith('-icon')) || classList.includes('default-icon');
 }
 
-export function resolveKairosFileIconSync(input: string): ResolvedKairosFileIcon {
-  const explicitResolution = resolveFromExplicitMaps(input);
-  if (explicitResolution.resolutionSource !== 'fallback') {
-    return explicitResolution;
-  }
-
-  const cachedFallbackResolution = fallbackResolutionCache.get(explicitResolution.normalizedBasename);
-  return cachedFallbackResolution ?? explicitResolution;
-}
-
-async function resolveKairosFileIconViaFallback(input: string, initialResolution: ResolvedKairosFileIcon) {
-  const cachedFallbackResolution = fallbackResolutionCache.get(initialResolution.normalizedBasename);
-  if (cachedFallbackResolution !== undefined) {
-    return cachedFallbackResolution;
-  }
-
-  const existingPromise = fallbackResolutionPromises.get(initialResolution.normalizedBasename);
-  if (existingPromise) {
-    return existingPromise;
-  }
-
-  const pendingResolution = resolveFileIconsFallbackMatch(initialResolution.basename)
-    .then((fallbackMatch) => {
-      const nextResolution = fallbackMatch
-        ? buildResolution(
-            input,
-            fallbackMatch.definition,
-            'file-icons-js',
-            initialResolution.matchedExtension,
-            fallbackMatch.fileIconsClass,
-          )
-        : null;
-
-      fallbackResolutionCache.set(initialResolution.normalizedBasename, nextResolution);
-      fallbackResolutionPromises.delete(initialResolution.normalizedBasename);
-      return nextResolution;
-    })
-    .catch(() => {
-      fallbackResolutionCache.set(initialResolution.normalizedBasename, null);
-      fallbackResolutionPromises.delete(initialResolution.normalizedBasename);
-      return null;
-    });
-
-  fallbackResolutionPromises.set(initialResolution.normalizedBasename, pendingResolution);
-  return pendingResolution;
+function cacheKeyForInput(input: string) {
+  return sanitizeInput(input).toLowerCase();
 }
 
 /**
- * Resolution order:
- * 1. Kairos explicit special filename map
- * 2. Kairos explicit extension map
- * 3. file-icons-js filename matcher
- * 4. deterministic generic fallback
+ * Kairos now uses `@exuanbo/file-icons-js` exclusively for file icon matching and
+ * rendering. We keep one deterministic fallback so unknown files still render a
+ * stable generic icon instead of empty state.
  */
-export async function resolveKairosFileIcon(input: string): Promise<ResolvedKairosFileIcon> {
-  const explicitResolution = resolveFromExplicitMaps(input);
+export function resolveKairosFileIconSync(input: string): ResolvedKairosFileIcon {
+  return fallbackResolutionCache.get(cacheKeyForInput(input)) ?? fallbackResolution(input);
+}
 
-  if (explicitResolution.resolutionSource !== 'fallback') {
-    return explicitResolution;
+export async function resolveKairosFileIcon(input: string): Promise<ResolvedKairosFileIcon> {
+  const key = cacheKeyForInput(input);
+  const cachedResolution = fallbackResolutionCache.get(key);
+  if (cachedResolution) {
+    return cachedResolution;
   }
 
-  const fallbackResolution = await resolveKairosFileIconViaFallback(input, explicitResolution);
-  return fallbackResolution ?? explicitResolution;
+  const pendingResolution = fallbackResolutionPromises.get(key);
+  if (pendingResolution) {
+    return pendingResolution;
+  }
+
+  const resolutionPromise = fileIcons
+    .getClass(sanitizeInput(input), { color: true, array: true })
+    .then((result) => {
+      const classList = normalizeClassList(result);
+      const resolution = isFallbackClassList(classList)
+        ? fallbackResolution(input)
+        : buildResolution(input, classList, 'file-icons-js');
+
+      fallbackResolutionCache.set(key, resolution);
+      fallbackResolutionPromises.delete(key);
+      return resolution;
+    })
+    .catch(() => {
+      const resolution = fallbackResolution(input);
+      fallbackResolutionCache.set(key, resolution);
+      fallbackResolutionPromises.delete(key);
+      return resolution;
+    });
+
+  fallbackResolutionPromises.set(key, resolutionPromise);
+  return resolutionPromise;
 }
 
 export function representativeFilenameForLanguage(language?: string | null) {
