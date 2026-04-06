@@ -149,17 +149,6 @@
   .metric-accent {
     @apply bg-primary/[0.08];
   }
-
-  .kairos-file-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-
-  .kairos-file-icon::before {
-    width: 16px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

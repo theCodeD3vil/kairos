@@ -1,79 +1,124 @@
 import { describe, expect, it } from 'vitest';
 import {
-  representativeFilenameForLanguage,
   resolveKairosFileIcon,
-  resolveKairosFileIconSync,
+  resolveKairosLanguageIcon,
 } from '@/lib/file-icons';
 
 describe('resolveKairosFileIcon', () => {
-  it('extracts filenames from paths', async () => {
-    await expect(resolveKairosFileIcon('src/components/App.tsx')).resolves.toMatchObject({
+  it('extracts filenames from full paths', () => {
+    expect(resolveKairosFileIcon('src/components/App.tsx')).toMatchObject({
       basename: 'App.tsx',
-      classList: ['icon', 'tsx-icon', 'light-blue'],
-      resolutionSource: 'file-icons-js',
+      iconKey: 'typescript-react',
+      resolutionSource: 'extension',
+      isFallback: false,
     });
 
-    await expect(resolveKairosFileIcon('C:\\Projects\\kairos\\main.go')).resolves.toMatchObject({
+    expect(resolveKairosFileIcon('C:\\Projects\\kairos\\main.go')).toMatchObject({
       basename: 'main.go',
-      classList: ['icon', 'go-icon', 'medium-blue'],
-      resolutionSource: 'file-icons-js',
+      iconKey: 'go',
+      resolutionSource: 'extension',
+      isFallback: false,
     });
   });
 
-  it('matches special filenames and dotfiles through file-icons-js', async () => {
-    await expect(resolveKairosFileIcon('Dockerfile')).resolves.toMatchObject({
-      classList: ['icon', 'docker-icon', 'dark-blue'],
+  it('resolves upstream special filenames before extension checks', () => {
+    expect(resolveKairosFileIcon('Dockerfile')).toMatchObject({
+      iconKey: 'docker',
+      resolutionSource: 'exact-filename',
     });
 
-    await expect(resolveKairosFileIcon('docker-compose.yml')).resolves.toMatchObject({
-      classList: ['icon', 'docker-icon', 'dark-blue'],
+    expect(resolveKairosFileIcon('docker-compose.yml')).toMatchObject({
+      iconKey: 'docker-compose',
+      resolutionSource: 'exact-filename',
     });
 
-    await expect(resolveKairosFileIcon('.gitignore')).resolves.toMatchObject({
-      classList: ['icon', 'git-icon', 'medium-red'],
+    expect(resolveKairosFileIcon('package.json')).toMatchObject({
+      iconKey: 'package-json',
+      resolutionSource: 'exact-filename',
     });
 
-    await expect(resolveKairosFileIcon('.env.local')).resolves.toMatchObject({
-      classList: ['icon', 'gear-icon', 'dark-green'],
-    });
-  });
-
-  it('handles multi-dot and special config filenames', async () => {
-    await expect(resolveKairosFileIcon('vite.config.ts')).resolves.toMatchObject({
-      classList: ['icon', 'ts-icon', 'medium-blue'],
-    });
-
-    await expect(resolveKairosFileIcon('go.mod')).resolves.toMatchObject({
-      classList: ['icon', 'config-go-icon', 'dark-blue'],
-    });
-
-    await expect(resolveKairosFileIcon('go.sum')).resolves.toMatchObject({
-      classList: ['icon', 'config-go-icon', 'medium-green'],
+    expect(resolveKairosFileIcon('pnpm-lock.yaml')).toMatchObject({
+      iconKey: 'pnpm-lock',
+      resolutionSource: 'exact-filename',
     });
   });
 
-  it('uses deterministic fallback for unknown files', async () => {
-    await expect(resolveKairosFileIcon('unknown.weirdext')).resolves.toMatchObject({
-      classList: ['icon', 'default-icon'],
+  it('handles dotfiles and config-style files', () => {
+    expect(resolveKairosFileIcon('.env.local')).toMatchObject({
+      iconKey: 'env',
+      resolutionSource: 'exact-filename',
+    });
+
+    expect(resolveKairosFileIcon('.gitignore')).toMatchObject({
+      iconKey: 'git',
+      resolutionSource: 'exact-filename',
+    });
+
+    expect(resolveKairosFileIcon('.prettierrc')).toMatchObject({
+      iconKey: 'prettier',
+      resolutionSource: 'exact-filename',
+    });
+  });
+
+  it('handles extension mappings deterministically, including multi-part suffixes', () => {
+    expect(resolveKairosFileIcon('index.ts')).toMatchObject({ iconKey: 'typescript' });
+    expect(resolveKairosFileIcon('Component.jsx')).toMatchObject({ iconKey: 'javascript-react' });
+    expect(resolveKairosFileIcon('README.md')).toMatchObject({
+      iconKey: 'readme',
+      resolutionSource: 'exact-filename',
+    });
+    expect(resolveKairosFileIcon('settings.yaml')).toMatchObject({ iconKey: 'yaml' });
+    expect(resolveKairosFileIcon('config.toml')).toMatchObject({ iconKey: 'toml' });
+    expect(resolveKairosFileIcon('index.test.ts')).toMatchObject({
+      iconKey: 'typescript-test',
+      resolutionSource: 'extension',
+    });
+    expect(resolveKairosFileIcon('styles.css.map')).toMatchObject({ iconKey: 'css-map' });
+  });
+
+  it('uses a deterministic generic fallback for unknown files', () => {
+    expect(resolveKairosFileIcon('unknown.weirdext')).toMatchObject({
+      iconKey: '_file',
       resolutionSource: 'fallback',
       isFallback: true,
     });
-  });
-});
 
-describe('resolveKairosFileIconSync', () => {
-  it('returns the deterministic fallback before async resolution has populated the cache', () => {
-    expect(resolveKairosFileIconSync('README.md')).toMatchObject({
-      classList: ['icon', 'default-icon'],
-      resolutionSource: 'fallback',
+    expect(resolveKairosFileIcon('LICENSE')).toMatchObject({
+      iconKey: 'license',
+      resolutionSource: 'exact-filename',
+      isFallback: false,
     });
   });
 });
 
-describe('representativeFilenameForLanguage', () => {
-  it('maps known languages to stable representative filenames', () => {
-    expect(representativeFilenameForLanguage('typescriptreact')).toBe('Component.tsx');
-    expect(representativeFilenameForLanguage('mdc')).toBe('README.md');
-    expect(representativeFilenameForLanguage('plaintext')).toBe('notes.txt');
+describe('resolveKairosLanguageIcon', () => {
+  it('resolves upstream language ids directly', () => {
+    expect(resolveKairosLanguageIcon('typescriptreact')).toMatchObject({
+      iconKey: 'typescript-react',
+      resolutionSource: 'language-id',
+      isFallback: false,
+    });
+
+    expect(resolveKairosLanguageIcon('plaintext')).toMatchObject({
+      iconKey: 'text',
+      resolutionSource: 'language-id',
+      isFallback: false,
+    });
+  });
+
+  it('supports local aliases for language names not exposed upstream', () => {
+    expect(resolveKairosLanguageIcon('mdc')).toMatchObject({
+      iconKey: 'markdown',
+      resolutionSource: 'language-alias',
+      isFallback: false,
+    });
+  });
+
+  it('falls back deterministically for unknown languages', () => {
+    expect(resolveKairosLanguageIcon('madeuplang')).toMatchObject({
+      iconKey: '_file',
+      resolutionSource: 'fallback',
+      isFallback: true,
+    });
   });
 });

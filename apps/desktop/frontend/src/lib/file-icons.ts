@@ -1,19 +1,46 @@
-import fileIcons from '@exuanbo/file-icons-js';
+import {
+  catppuccinAvailableIconKeys,
+  catppuccinFileExtensionToIconKey,
+  catppuccinFileNameToIconKey,
+  catppuccinLanguageIdToIconKey,
+} from '@/lib/catppuccin-file-icons.generated';
 
-export type KairosFileIconResolutionSource = 'file-icons-js' | 'fallback';
+export type KairosFileIconResolutionSource =
+  | 'exact-filename'
+  | 'extension'
+  | 'language-id'
+  | 'language-alias'
+  | 'fallback';
 
 export type ResolvedKairosFileIcon = {
   basename: string;
-  normalizedInput: string;
-  className: string;
-  classList: string[];
+  normalizedBasename: string;
+  iconKey: string;
+  src: string;
   resolutionSource: KairosFileIconResolutionSource;
   isFallback: boolean;
 };
 
-const FALLBACK_CLASS_LIST = ['icon', 'default-icon'];
-const fallbackResolutionCache = new Map<string, ResolvedKairosFileIcon>();
-const fallbackResolutionPromises = new Map<string, Promise<ResolvedKairosFileIcon>>();
+const fallbackIconKey = '_file';
+const iconBasePath = '/file-icons/catppuccin/latte';
+const availableIconKeys = new Set<string>(catppuccinAvailableIconKeys);
+
+const languageAliases: Record<string, string> = {
+  golang: 'go',
+  javascriptreact: 'javascript-react',
+  js: 'javascript',
+  jsx: 'javascript-react',
+  markdown: 'markdown',
+  md: 'markdown',
+  mdc: 'markdown',
+  plaintext: 'text',
+  py: 'python',
+  rs: 'rust',
+  ts: 'typescript',
+  tsx: 'typescript-react',
+  typescriptreact: 'typescript-react',
+  yml: 'yaml',
+};
 
 function sanitizeInput(input: string) {
   return input.trim().replace(/[?#].*$/, '').replace(/\\/g, '/');
@@ -25,137 +52,89 @@ function basenameFromInput(input: string) {
   return segments[segments.length - 1] ?? sanitized;
 }
 
-function normalizeClassList(result: string | string[]) {
-  if (Array.isArray(result)) {
-    return result.filter(Boolean);
+function extensionCandidatesFromBasename(basename: string) {
+  if (!basename || !basename.includes('.')) {
+    return [];
   }
 
-  return result.split(/\s+/).filter(Boolean);
+  const parts = basename.split('.');
+  const candidates: string[] = [];
+
+  for (let index = 1; index < parts.length; index += 1) {
+    const candidate = parts.slice(index).join('.');
+    if (candidate) {
+      candidates.push(candidate);
+    }
+  }
+
+  return candidates;
 }
 
 function buildResolution(
   input: string,
-  classList: string[],
+  iconKey: string,
   resolutionSource: KairosFileIconResolutionSource,
 ): ResolvedKairosFileIcon {
-  const normalizedInput = sanitizeInput(input);
   const basename = basenameFromInput(input);
+  const normalizedBasename = basename.toLowerCase();
+  const resolvedKey = availableIconKeys.has(iconKey) ? iconKey : fallbackIconKey;
+  const src = `${iconBasePath}/${resolvedKey}.svg`;
+  const isFallback = resolvedKey === fallbackIconKey;
 
   return {
     basename,
-    normalizedInput,
-    className: classList.join(' '),
-    classList,
-    resolutionSource,
-    isFallback: resolutionSource === 'fallback',
+    normalizedBasename,
+    iconKey: resolvedKey,
+    src,
+    resolutionSource: resolvedKey === fallbackIconKey && resolutionSource !== 'fallback'
+      ? 'fallback'
+      : resolutionSource,
+    isFallback,
   };
-}
-
-function fallbackResolution(input: string) {
-  return buildResolution(input, FALLBACK_CLASS_LIST, 'fallback');
-}
-
-function isFallbackClassList(classList: string[]) {
-  return !classList.some((token) => token.endsWith('-icon')) || classList.includes('default-icon');
-}
-
-function cacheKeyForInput(input: string) {
-  return sanitizeInput(input).toLowerCase();
 }
 
 /**
- * Kairos now uses `@exuanbo/file-icons-js` exclusively for file icon matching and
- * rendering. We keep one deterministic fallback so unknown files still render a
- * stable generic icon instead of empty state.
+ * Resolution order:
+ * 1. upstream filename map
+ * 2. upstream extension map, including multi-part suffixes like `d.ts`
+ * 3. deterministic generic fallback
  */
-export function resolveKairosFileIconSync(input: string): ResolvedKairosFileIcon {
-  return fallbackResolutionCache.get(cacheKeyForInput(input)) ?? fallbackResolution(input);
-}
+export function resolveKairosFileIcon(input: string): ResolvedKairosFileIcon {
+  const basename = basenameFromInput(input);
+  const normalizedBasename = basename.toLowerCase();
 
-export async function resolveKairosFileIcon(input: string): Promise<ResolvedKairosFileIcon> {
-  const key = cacheKeyForInput(input);
-  const cachedResolution = fallbackResolutionCache.get(key);
-  if (cachedResolution) {
-    return cachedResolution;
+  const exactMatch = catppuccinFileNameToIconKey[normalizedBasename];
+  if (exactMatch) {
+    return buildResolution(input, exactMatch, 'exact-filename');
   }
 
-  const pendingResolution = fallbackResolutionPromises.get(key);
-  if (pendingResolution) {
-    return pendingResolution;
+  for (const candidate of extensionCandidatesFromBasename(normalizedBasename)) {
+    const extensionMatch = catppuccinFileExtensionToIconKey[candidate];
+    if (extensionMatch) {
+      return buildResolution(input, extensionMatch, 'extension');
+    }
   }
 
-  const resolutionPromise = fileIcons
-    .getClass(sanitizeInput(input), { color: true, array: true })
-    .then((result) => {
-      const classList = normalizeClassList(result);
-      const resolution = isFallbackClassList(classList)
-        ? fallbackResolution(input)
-        : buildResolution(input, classList, 'file-icons-js');
-
-      fallbackResolutionCache.set(key, resolution);
-      fallbackResolutionPromises.delete(key);
-      return resolution;
-    })
-    .catch(() => {
-      const resolution = fallbackResolution(input);
-      fallbackResolutionCache.set(key, resolution);
-      fallbackResolutionPromises.delete(key);
-      return resolution;
-    });
-
-  fallbackResolutionPromises.set(key, resolutionPromise);
-  return resolutionPromise;
+  return buildResolution(input, fallbackIconKey, 'fallback');
 }
 
-export function representativeFilenameForLanguage(language?: string | null) {
+export function resolveKairosLanguageIcon(
+  language?: string | null,
+): ResolvedKairosFileIcon {
   const normalized = language?.trim().toLowerCase();
   if (!normalized) {
-    return 'file.txt';
+    return buildResolution('file.txt', fallbackIconKey, 'fallback');
   }
 
-  const representativeFiles: Record<string, string> = {
-    c: 'main.c',
-    cpp: 'main.cpp',
-    css: 'styles.css',
-    go: 'main.go',
-    golang: 'main.go',
-    html: 'index.html',
-    java: 'Main.java',
-    javascript: 'index.js',
-    javascriptreact: 'Component.jsx',
-    js: 'index.js',
-    json: 'package.json',
-    jsx: 'Component.jsx',
-    kotlin: 'Main.kt',
-    kt: 'Main.kt',
-    markdown: 'README.md',
-    mdc: 'README.md',
-    md: 'README.md',
-    plaintext: 'notes.txt',
-    py: 'script.py',
-    python: 'script.py',
-    rb: 'script.rb',
-    rs: 'lib.rs',
-    rust: 'lib.rs',
-    sass: 'styles.sass',
-    scala: 'Main.scala',
-    scss: 'styles.scss',
-    shellscript: 'script.sh',
-    sh: 'script.sh',
-    sql: 'query.sql',
-    swift: 'App.swift',
-    text: 'notes.txt',
-    toml: 'config.toml',
-    ts: 'index.ts',
-    tsx: 'Component.tsx',
-    typescript: 'index.ts',
-    typescriptreact: 'Component.tsx',
-    txt: 'notes.txt',
-    xml: 'config.xml',
-    yaml: 'docker-compose.yml',
-    yml: 'docker-compose.yml',
-    zsh: '.zshrc',
-  };
+  const directMatch = catppuccinLanguageIdToIconKey[normalized];
+  if (directMatch) {
+    return buildResolution(normalized, directMatch, 'language-id');
+  }
 
-  return representativeFiles[normalized] ?? `${normalized.slice(0, 8) || 'file'}.txt`;
+  const aliasedMatch = languageAliases[normalized];
+  if (aliasedMatch) {
+    return buildResolution(normalized, aliasedMatch, 'language-alias');
+  }
+
+  return buildResolution(normalized, fallbackIconKey, 'fallback');
 }

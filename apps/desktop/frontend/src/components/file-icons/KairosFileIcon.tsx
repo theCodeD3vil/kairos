@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { resolveKairosFileIcon } from '@/lib/file-icons';
 import { cn } from '@/lib/utils';
-import { resolveKairosFileIcon, resolveKairosFileIconSync } from '@/lib/file-icons';
 
 type KairosFileIconProps = {
   filename: string;
@@ -13,37 +12,22 @@ export function KairosFileIcon({
   size = 16,
   className,
 }: KairosFileIconProps) {
-  const initialResolution = useMemo(() => resolveKairosFileIconSync(filename), [filename]);
-  const [resolved, setResolved] = useState(initialResolution);
-
-  useEffect(() => {
-    let isDisposed = false;
-    setResolved(initialResolution);
-
-    void resolveKairosFileIcon(filename).then((nextResolution) => {
-      if (!isDisposed) {
-        setResolved(nextResolution);
-      }
-    });
-
-    return () => {
-      isDisposed = true;
-    };
-  }, [filename, initialResolution]);
+  const resolved = resolveKairosFileIcon(filename);
 
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden', className)}
+      className={cn('inline-flex shrink-0 items-center justify-center', className)}
       style={{ width: size, height: size }}
       aria-hidden="true"
       title={resolved.basename}
     >
-      <i
-        className={cn('kairos-file-icon', resolved.className)}
-        style={{
-          transform: `scale(${size / 16})`,
-          transformOrigin: 'center',
-        }}
+      <img
+        src={resolved.src}
+        alt=""
+        width={size}
+        height={size}
+        className="block shrink-0"
+        loading="lazy"
       />
     </span>
   );

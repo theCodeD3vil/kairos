@@ -14,9 +14,6 @@ importers:
 
   apps/desktop/frontend:
     dependencies:
-      '@exuanbo/file-icons-js':
-        specifier: ^3.3.0
-        version: 3.3.0
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -594,9 +591,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@exuanbo/file-icons-js@3.3.0':
-    resolution: {integrity: sha512-utn/kkeIhbfxJtn9ZDGXL1p8BtyUlgoDls3xGYIxk1FgNnMx6CqN2fBYeeAYIPL1O4nexWZ/2thssNwIMUqHKA==}
 
   '@floating-ui/core@1.7.5':
     resolution: {integrity: sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==}
@@ -4014,8 +4008,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.24.2':
     optional: true
-
-  '@exuanbo/file-icons-js@3.3.0': {}
 
   '@floating-ui/core@1.7.5':
     dependencies:
