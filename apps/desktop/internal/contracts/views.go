@@ -11,36 +11,36 @@ type DailyTotalPoint struct {
 }
 
 type OverviewData struct {
-	TodayMinutes           int              `json:"todayMinutes"`
-	WeekMinutes            int              `json:"weekMinutes"`
-	SessionCount           int              `json:"sessionCount"`
-	AverageSessionMinutes  int              `json:"averageSessionMinutes"`
-	CodingDaysThisWeek     int              `json:"codingDaysThisWeek"`
-	LastActiveAt           string           `json:"lastActiveAt,omitempty"`
-	TopProjects            []ProjectSummary `json:"topProjects"`
-	TopLanguages           []LanguageSummary `json:"topLanguages"`
-	RecentSessions         []Session        `json:"recentSessions"`
-	WeeklyTrend            []WeeklyTrendPoint `json:"weeklyTrend"`
-	ActiveHoursSummary     string           `json:"activeHoursSummary"`
-	TrackingEnabled        bool             `json:"trackingEnabled"`
-	LocalOnlyMode          bool             `json:"localOnlyMode"`
-	CurrentMachine         *MachineInfo     `json:"currentMachine,omitempty"`
-	LastUpdatedAt          string           `json:"lastUpdatedAt"`
+	TodayMinutes          int                `json:"todayMinutes"`
+	WeekMinutes           int                `json:"weekMinutes"`
+	SessionCount          int                `json:"sessionCount"`
+	AverageSessionMinutes int                `json:"averageSessionMinutes"`
+	CodingDaysThisWeek    int                `json:"codingDaysThisWeek"`
+	LastActiveAt          string             `json:"lastActiveAt,omitempty"`
+	TopProjects           []ProjectSummary   `json:"topProjects"`
+	TopLanguages          []LanguageSummary  `json:"topLanguages"`
+	RecentSessions        []Session          `json:"recentSessions"`
+	WeeklyTrend           []WeeklyTrendPoint `json:"weeklyTrend"`
+	ActiveHoursSummary    string             `json:"activeHoursSummary"`
+	TrackingEnabled       bool               `json:"trackingEnabled"`
+	LocalOnlyMode         bool               `json:"localOnlyMode"`
+	CurrentMachine        *MachineInfo       `json:"currentMachine,omitempty"`
+	LastUpdatedAt         string             `json:"lastUpdatedAt"`
 }
 
 type AnalyticsData struct {
-	RangeLabel            string           `json:"rangeLabel"`
-	TotalMinutes          int              `json:"totalMinutes"`
-	ActiveDays            int              `json:"activeDays"`
-	SessionCount          int              `json:"sessionCount"`
-	AverageSessionMinutes int              `json:"averageSessionMinutes"`
-	LongestDayMinutes     int              `json:"longestDayMinutes"`
-	PreviousPeriodMinutes *int             `json:"previousPeriodMinutes,omitempty"`
+	RangeLabel            string            `json:"rangeLabel"`
+	TotalMinutes          int               `json:"totalMinutes"`
+	ActiveDays            int               `json:"activeDays"`
+	SessionCount          int               `json:"sessionCount"`
+	AverageSessionMinutes int               `json:"averageSessionMinutes"`
+	LongestDayMinutes     int               `json:"longestDayMinutes"`
+	PreviousPeriodMinutes *int              `json:"previousPeriodMinutes,omitempty"`
 	DailyTotals           []DailyTotalPoint `json:"dailyTotals"`
-	ProjectSummaries      []ProjectSummary `json:"projectSummaries"`
+	ProjectSummaries      []ProjectSummary  `json:"projectSummaries"`
 	LanguageSummaries     []LanguageSummary `json:"languageSummaries"`
-	MachineSummaries      []MachineSummary `json:"machineSummaries"`
-	RecentSessions        []Session        `json:"recentSessions"`
+	MachineSummaries      []MachineSummary  `json:"machineSummaries"`
+	RecentSessions        []Session         `json:"recentSessions"`
 }
 
 type CalendarDaySummary struct {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarMonthGrid } from '@/components/calendar/CalendarMonthGrid';
 import { DaySummary } from '@/components/calendar/DaySummary';
@@ -6,6 +6,7 @@ import { DaySessions } from '@/components/calendar/DaySessions';
 import { DayProjects } from '@/components/calendar/DayProjects';
 import { DayMachines } from '@/components/calendar/DayMachines';
 import { getMonthActivity, getDayDetail, type CalendarDay } from '@/data/mockCalendar';
+import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
 
 function addMonths(base: Date, delta: number) {
   const next = new Date(base);
@@ -31,15 +32,56 @@ function findInitialSelection(monthDays: CalendarDay[], fallbackDate: string) {
 }
 
 export function CalendarPage() {
-  const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date('2026-04-05T00:00:00')));
-  const [selectedDate, setSelectedDate] = useState<string>(() => '2026-04-05');
+  const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [monthData, setMonthData] = useState<CalendarDay[]>(() => getMonthActivity(monthRef.getFullYear(), monthRef.getMonth()));
+  const [monthLabel, setMonthLabel] = useState(() => formatMonthLabel(monthRef));
+  const [dayDetail, setDayDetail] = useState(() => getDayDetail(selectedDate));
 
-  const monthData = useMemo(() => getMonthActivity(monthRef.getFullYear(), monthRef.getMonth()), [monthRef]);
-  const monthLabel = formatMonthLabel(monthRef);
   const leading = leadingEmptyDays(monthRef);
-
-  const dayDetail = getDayDetail(selectedDate);
   const selectedIsInMonth = monthData.some((day) => day.date === selectedDate);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth())
+      .then((result) => {
+        if (!cancelled) {
+          setMonthData(result.days);
+          setMonthLabel(result.monthLabel);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMonthData(getMonthActivity(monthRef.getFullYear(), monthRef.getMonth()));
+          setMonthLabel(formatMonthLabel(monthRef));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [monthRef]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCalendarDay(selectedDate)
+      .then((detail) => {
+        if (!cancelled) {
+          setDayDetail(detail);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDayDetail(getDayDetail(selectedDate));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate]);
 
   useEffect(() => {
     if (!selectedIsInMonth && monthData.length > 0) {
@@ -51,9 +93,10 @@ export function CalendarPage() {
   const handlePrevMonth = () => setMonthRef((prev) => addMonths(prev, -1));
   const handleNextMonth = () => setMonthRef((prev) => addMonths(prev, 1));
   const handleToday = () => {
-    const today = startOfMonth(new Date('2026-04-05T00:00:00'));
+    const current = new Date();
+    const today = startOfMonth(current);
     setMonthRef(today);
-    const todaysDate = '2026-04-05';
+    const todaysDate = current.toISOString().slice(0, 10);
     setSelectedDate(todaysDate);
   };
 

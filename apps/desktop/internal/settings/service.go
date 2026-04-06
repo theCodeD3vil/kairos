@@ -2,8 +2,12 @@ package settings
 
 import (
 	"context"
+	"os"
+	"runtime"
+	"time"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
+	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
 
 type Service interface {
@@ -13,16 +17,19 @@ type Service interface {
 	GetSystemInfo(ctx context.Context) (contracts.SystemInfo, error)
 }
 
-type StubService struct {
+type ServiceImpl struct {
+	store    *storage.Store
 	settings contracts.SettingsData
+	now      func() time.Time
 }
 
-func NewStubService() *StubService {
+func NewService(store *storage.Store) *ServiceImpl {
 	pendingEventCount := 0
+	hostname, _ := os.Hostname()
 
 	defaults := contracts.SettingsData{
 		General: contracts.GeneralSettings{
-			MachineDisplayName:   "Kairos Desktop",
+			MachineDisplayName:   hostnameOrFallback(hostname, "Kairos Desktop"),
 			DefaultDateRange:     "week",
 			TimeFormat:           "24h",
 			WeekStartsOn:         "monday",
@@ -69,15 +76,16 @@ func NewStubService() *StubService {
 			TrackEditEvents:              true,
 		},
 		ExtensionStatus: contracts.ExtensionStatus{
-			Installed: true,
+			Installed: false,
 			Connected: false,
 			Editor:    "vscode",
 		},
 		System: contracts.SystemInfo{
-			MachineID:   "desktop-dev-machine",
-			MachineName: "Kairos Desktop",
-			OSPlatform:  "darwin",
-			Arch:        "arm64",
+			MachineID:   hostnameOrFallback(hostname, "kairos-desktop"),
+			MachineName: hostnameOrFallback(hostname, "Kairos Desktop"),
+			Hostname:    hostname,
+			OSPlatform:  runtime.GOOS,
+			Arch:        runtime.GOARCH,
 			Editor:      "vscode",
 		},
 		AppBehavior: contracts.AppBehaviorSettings{
@@ -103,27 +111,78 @@ func NewStubService() *StubService {
 		},
 	}
 
-	return &StubService{settings: defaults}
+	service := &ServiceImpl{
+		store:    store,
+		settings: defaults,
+		now:      time.Now,
+	}
+	service.updateStorageMetadata()
+
+	return service
 }
 
-func (s *StubService) GetSettingsData(_ context.Context) (contracts.SettingsData, error) {
+func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsData, error) {
+	s.updateStorageMetadata()
+
+	if s.store != nil {
+		extensionStatus, err := s.store.GetExtensionStatus(ctx, "vscode")
+		if err != nil {
+			return contracts.SettingsData{}, err
+		}
+		s.settings.ExtensionStatus = extensionStatus
+		s.settings.System.ExtensionVersion = extensionStatus.ExtensionVersion
+
+		lastIngestedAt, err := s.store.GetLastIngestedAt(ctx)
+		if err == nil && lastIngestedAt != "" {
+			s.settings.DataStorage.LastProcessedAt = lastIngestedAt
+		}
+	}
+
+	s.settings.System.LastSeenAt = s.now().UTC().Format(time.RFC3339)
 	return s.settings, nil
 }
 
-func (s *StubService) UpdateSettingsData(_ context.Context, data contracts.SettingsData) (contracts.SettingsData, error) {
+func (s *ServiceImpl) UpdateSettingsData(_ context.Context, data contracts.SettingsData) (contracts.SettingsData, error) {
 	s.settings = data
+	s.updateStorageMetadata()
 	return s.settings, nil
 }
 
-func (s *StubService) GetExtensionStatus(_ context.Context) (contracts.ExtensionStatus, error) {
-	return s.settings.ExtensionStatus, nil
+func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {
+	if s.store == nil {
+		return s.settings.ExtensionStatus, nil
+	}
+
+	status, err := s.store.GetExtensionStatus(ctx, "vscode")
+	if err != nil {
+		return contracts.ExtensionStatus{}, err
+	}
+	s.settings.ExtensionStatus = status
+	return status, nil
 }
 
-func (s *StubService) GetSystemInfo(_ context.Context) (contracts.SystemInfo, error) {
+func (s *ServiceImpl) GetSystemInfo(_ context.Context) (contracts.SystemInfo, error) {
+	s.settings.System.LastSeenAt = s.now().UTC().Format(time.RFC3339)
 	return s.settings.System, nil
 }
 
-func (s *StubService) SetDataStorageInfo(localDataPath string, databaseStatus string) {
+func (s *ServiceImpl) SetDataStorageInfo(localDataPath string, databaseStatus string) {
 	s.settings.DataStorage.LocalDataPath = localDataPath
 	s.settings.DataStorage.DatabaseStatus = databaseStatus
+}
+
+func (s *ServiceImpl) updateStorageMetadata() {
+	if s.store == nil {
+		return
+	}
+
+	s.settings.DataStorage.LocalDataPath = s.store.Path()
+	s.settings.DataStorage.DatabaseStatus = "ready"
+}
+
+func hostnameOrFallback(value string, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }

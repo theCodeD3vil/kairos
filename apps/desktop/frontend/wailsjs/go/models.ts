@@ -710,6 +710,42 @@ export namespace contracts {
 		}
 	}
 	
+	export class SessionRebuildResult {
+	    processedEventCount: number;
+	    createdSessionCount: number;
+	    startDate: string;
+	    endDate: string;
+	    rebuiltAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionRebuildResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.processedEventCount = source["processedEventCount"];
+	        this.createdSessionCount = source["createdSessionCount"];
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	        this.rebuiltAt = source["rebuiltAt"];
+	    }
+	}
+	export class SessionStats {
+	    totalSessions: number;
+	    averageSessionMinutes: number;
+	    longestSessionMinutes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalSessions = source["totalSessions"];
+	        this.averageSessionMinutes = source["averageSessionMinutes"];
+	        this.longestSessionMinutes = source["longestSessionMinutes"];
+	    }
+	}
 	export class SessionsPageData {
 	    rangeLabel: string;
 	    totalSessions: number;

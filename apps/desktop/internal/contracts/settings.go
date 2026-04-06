@@ -1,10 +1,10 @@
 package contracts
 
 type GeneralSettings struct {
-	MachineDisplayName  string `json:"machineDisplayName"`
-	DefaultDateRange    string `json:"defaultDateRange"`
-	TimeFormat          string `json:"timeFormat"`
-	WeekStartsOn        string `json:"weekStartsOn"`
+	MachineDisplayName   string `json:"machineDisplayName"`
+	DefaultDateRange     string `json:"defaultDateRange"`
+	TimeFormat           string `json:"timeFormat"`
+	WeekStartsOn         string `json:"weekStartsOn"`
 	PreferredLandingPage string `json:"preferredLandingPage"`
 }
 
@@ -18,38 +18,38 @@ type PrivacySettings struct {
 }
 
 type TrackingSettings struct {
-	TrackingEnabled             bool `json:"trackingEnabled"`
-	IdleDetectionEnabled        bool `json:"idleDetectionEnabled"`
-	TrackProjectActivity        bool `json:"trackProjectActivity"`
-	TrackLanguageActivity       bool `json:"trackLanguageActivity"`
-	TrackMachineAttribution     bool `json:"trackMachineAttribution"`
-	TrackSessionBoundaries      bool `json:"trackSessionBoundaries"`
-	IdleTimeoutMinutes          int  `json:"idleTimeoutMinutes"`
+	TrackingEnabled              bool `json:"trackingEnabled"`
+	IdleDetectionEnabled         bool `json:"idleDetectionEnabled"`
+	TrackProjectActivity         bool `json:"trackProjectActivity"`
+	TrackLanguageActivity        bool `json:"trackLanguageActivity"`
+	TrackMachineAttribution      bool `json:"trackMachineAttribution"`
+	TrackSessionBoundaries       bool `json:"trackSessionBoundaries"`
+	IdleTimeoutMinutes           int  `json:"idleTimeoutMinutes"`
 	SessionMergeThresholdMinutes int  `json:"sessionMergeThresholdMinutes"`
 }
 
 type ExclusionsSettings struct {
-	Folders          []string `json:"folders"`
-	ProjectNames     []string `json:"projectNames"`
+	Folders           []string `json:"folders"`
+	ProjectNames      []string `json:"projectNames"`
 	WorkspacePatterns []string `json:"workspacePatterns"`
-	FileExtensions   []string `json:"fileExtensions"`
-	Machines         []string `json:"machines"`
+	FileExtensions    []string `json:"fileExtensions"`
+	Machines          []string `json:"machines"`
 }
 
 type ExtensionSettings struct {
-	AutoConnect                bool `json:"autoConnect"`
-	SendHeartbeatEvents        bool `json:"sendHeartbeatEvents"`
-	HeartbeatIntervalSeconds   int  `json:"heartbeatIntervalSeconds"`
-	SendProjectMetadata        bool `json:"sendProjectMetadata"`
-	SendLanguageMetadata       bool `json:"sendLanguageMetadata"`
-	SendMachineAttribution     bool `json:"sendMachineAttribution"`
-	RespectDesktopExclusions   bool `json:"respectDesktopExclusions"`
-	BufferEventsWhenOffline    bool `json:"bufferEventsWhenOffline"`
+	AutoConnect                  bool `json:"autoConnect"`
+	SendHeartbeatEvents          bool `json:"sendHeartbeatEvents"`
+	HeartbeatIntervalSeconds     int  `json:"heartbeatIntervalSeconds"`
+	SendProjectMetadata          bool `json:"sendProjectMetadata"`
+	SendLanguageMetadata         bool `json:"sendLanguageMetadata"`
+	SendMachineAttribution       bool `json:"sendMachineAttribution"`
+	RespectDesktopExclusions     bool `json:"respectDesktopExclusions"`
+	BufferEventsWhenOffline      bool `json:"bufferEventsWhenOffline"`
 	RetryConnectionAutomatically bool `json:"retryConnectionAutomatically"`
-	TrackOnlyWhenFocused       bool `json:"trackOnlyWhenFocused"`
-	TrackFileOpenEvents        bool `json:"trackFileOpenEvents"`
-	TrackSaveEvents            bool `json:"trackSaveEvents"`
-	TrackEditEvents            bool `json:"trackEditEvents"`
+	TrackOnlyWhenFocused         bool `json:"trackOnlyWhenFocused"`
+	TrackFileOpenEvents          bool `json:"trackFileOpenEvents"`
+	TrackSaveEvents              bool `json:"trackSaveEvents"`
+	TrackEditEvents              bool `json:"trackEditEvents"`
 }
 
 type ExtensionStatus struct {
@@ -76,18 +76,18 @@ type SystemInfo struct {
 }
 
 type AppBehaviorSettings struct {
-	LaunchOnStartup    bool `json:"launchOnStartup"`
-	StartMinimized     bool `json:"startMinimized"`
-	MinimizeToTray     bool `json:"minimizeToTray"`
-	OpenOnSystemLogin  bool `json:"openOnSystemLogin"`
-	RememberLastPage   bool `json:"rememberLastPage"`
+	LaunchOnStartup      bool `json:"launchOnStartup"`
+	StartMinimized       bool `json:"startMinimized"`
+	MinimizeToTray       bool `json:"minimizeToTray"`
+	OpenOnSystemLogin    bool `json:"openOnSystemLogin"`
+	RememberLastPage     bool `json:"rememberLastPage"`
 	RestoreLastDateRange bool `json:"restoreLastDateRange"`
 }
 
 type DataStorageInfo struct {
-	LocalDataPath    string `json:"localDataPath"`
-	DatabaseStatus   string `json:"databaseStatus"`
-	LastProcessedAt  string `json:"lastProcessedAt,omitempty"`
+	LocalDataPath     string `json:"localDataPath"`
+	DatabaseStatus    string `json:"databaseStatus"`
+	LastProcessedAt   string `json:"lastProcessedAt,omitempty"`
 	PendingEventCount *int   `json:"pendingEventCount,omitempty"`
 }
 

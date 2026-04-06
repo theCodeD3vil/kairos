@@ -1,16 +1,16 @@
 package contracts
 
 type Session struct {
-	ID              string `json:"id"`
-	Date            string `json:"date"`
-	StartTime       string `json:"startTime"`
-	EndTime         string `json:"endTime"`
-	DurationMinutes int    `json:"durationMinutes"`
-	ProjectName     string `json:"projectName"`
-	Language        string `json:"language"`
-	MachineID       string `json:"machineId"`
-	MachineName     string `json:"machineName,omitempty"`
-	SourceEventCount int   `json:"sourceEventCount,omitempty"`
+	ID               string `json:"id"`
+	Date             string `json:"date"`
+	StartTime        string `json:"startTime"`
+	EndTime          string `json:"endTime"`
+	DurationMinutes  int    `json:"durationMinutes"`
+	ProjectName      string `json:"projectName"`
+	Language         string `json:"language"`
+	MachineID        string `json:"machineId"`
+	MachineName      string `json:"machineName,omitempty"`
+	SourceEventCount int    `json:"sourceEventCount,omitempty"`
 }
 
 type SessionStats struct {
@@ -60,11 +60,11 @@ type LanguageSummary struct {
 }
 
 type MachineSummary struct {
-	MachineID    string  `json:"machineId"`
-	MachineName  string  `json:"machineName"`
-	OSPlatform   string  `json:"osPlatform,omitempty"`
-	TotalMinutes int     `json:"totalMinutes"`
-	SessionCount int     `json:"sessionCount"`
-	ActiveDays   int     `json:"activeDays"`
-	LastActiveAt string  `json:"lastActiveAt,omitempty"`
+	MachineID    string `json:"machineId"`
+	MachineName  string `json:"machineName"`
+	OSPlatform   string `json:"osPlatform,omitempty"`
+	TotalMinutes int    `json:"totalMinutes"`
+	SessionCount int    `json:"sessionCount"`
+	ActiveDays   int    `json:"activeDays"`
+	LastActiveAt string `json:"lastActiveAt,omitempty"`
 }

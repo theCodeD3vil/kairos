@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { OverviewLanguagesTab } from '@/components/overview/OverviewLanguagesTab';
 import { getOverviewSnapshot } from '@/components/overview/mock-data';
@@ -9,13 +9,14 @@ import { OverviewStatusTab } from '@/components/overview/OverviewStatusTab';
 import { OverviewTimeTab } from '@/components/overview/OverviewTimeTab';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
-import type { OverviewRange } from '@/components/overview/types';
+import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
+import { loadOverviewSnapshot } from '@/lib/backend/page-data';
 
 export function OverviewPage() {
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [activeTab, setActiveTab] = useState('time');
-  const snapshot = useMemo(() => {
+  const fallbackSnapshot = useMemo(() => {
     if (range !== 'custom' || !customRange) return getOverviewSnapshot(range);
 
     const days = Math.max(
@@ -25,6 +26,27 @@ export function OverviewPage() {
     const mappedRange: OverviewRange = days <= 1 ? 'today' : days <= 7 ? 'week' : 'month';
     return getOverviewSnapshot(mappedRange);
   }, [range, customRange]);
+  const [snapshot, setSnapshot] = useState<OverviewSnapshot>(fallbackSnapshot);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOverviewSnapshot(range, customRange)
+      .then((nextSnapshot) => {
+        if (!cancelled) {
+          setSnapshot(nextSnapshot);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSnapshot(fallbackSnapshot);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customRange, fallbackSnapshot, range]);
 
   const tabs = [
     { label: 'Time', value: 'time', content: <OverviewTimeTab snapshot={snapshot} /> },

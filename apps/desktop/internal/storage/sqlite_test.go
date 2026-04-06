@@ -14,15 +14,15 @@ func TestMigrationsRunOnFreshDatabase(t *testing.T) {
 
 	if count, err := countQuery(context.Background(), store.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 2 {
-		t.Fatalf("expected 2 migrations, got %d", count)
+	} else if count != 3 {
+		t.Fatalf("expected 3 migrations, got %d", count)
 	}
 
 	status, err := store.GetMigrationStatus(context.Background())
 	if err != nil {
 		t.Fatalf("get migration status: %v", err)
 	}
-	if status.CurrentVersion != "002_query_hardening.sql" {
+	if status.CurrentVersion != "003_sessions.sql" {
 		t.Fatalf("expected latest migration version, got %q", status.CurrentVersion)
 	}
 }
@@ -47,8 +47,8 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 
 	if count, err := countQuery(ctx, second.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 2 {
-		t.Fatalf("expected 2 migration records after rerun, got %d", count)
+	} else if count != 3 {
+		t.Fatalf("expected 3 migration records after rerun, got %d", count)
 	}
 }
 
@@ -207,6 +207,35 @@ func TestListAndCountMethodsReturnExpectedValues(t *testing.T) {
 	}
 	if lastIngestedAt != "2026-04-05T09:05:00Z" {
 		t.Fatalf("expected last ingested timestamp, got %q", lastIngestedAt)
+	}
+}
+
+func TestSessionsRepositoryReadsReturnCorrectOrderingAndCounts(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	sessions := []contracts.Session{
+		{ID: "s1", Date: "2026-04-05", StartTime: "2026-04-05T09:00:00Z", EndTime: "2026-04-05T09:10:00Z", DurationMinutes: 10, MachineID: "m1", ProjectName: "kairos", Language: "go", SourceEventCount: 3},
+		{ID: "s2", Date: "2026-04-06", StartTime: "2026-04-06T11:00:00Z", EndTime: "2026-04-06T11:30:00Z", DurationMinutes: 30, MachineID: "m1", ProjectName: "kairos", Language: "typescript", SourceEventCount: 5},
+	}
+	if err := store.InsertSessions(ctx, sessions, "2026-04-07T12:00:00Z"); err != nil {
+		t.Fatalf("insert sessions failed: %v", err)
+	}
+
+	recent, err := store.ListRecentSessions(ctx, 10)
+	if err != nil {
+		t.Fatalf("list recent sessions failed: %v", err)
+	}
+	if len(recent) != 2 || recent[0].ID != "s2" || recent[1].ID != "s1" {
+		t.Fatalf("unexpected recent sessions ordering: %+v", recent)
+	}
+
+	stats, err := store.GetSessionStatsForRange(ctx, "2026-04-05", "2026-04-06")
+	if err != nil {
+		t.Fatalf("get session stats failed: %v", err)
+	}
+	if stats.TotalSessions != 2 || stats.LongestSessionMinutes != 30 || stats.AverageSessionMinutes != 20 {
+		t.Fatalf("unexpected session stats: %+v", stats)
 	}
 }
 

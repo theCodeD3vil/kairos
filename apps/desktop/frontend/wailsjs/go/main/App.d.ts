@@ -19,6 +19,8 @@ export function GetOverviewData():Promise<contracts.OverviewData>;
 
 export function GetProjectsPageData(arg1:string):Promise<contracts.ProjectsPageData>;
 
+export function GetSessionStatsForRange(arg1:string,arg2:string):Promise<contracts.SessionStats>;
+
 export function GetSessionsPageData(arg1:string):Promise<contracts.SessionsPageData>;
 
 export function GetSettingsData():Promise<contracts.SettingsData>;
@@ -31,6 +33,18 @@ export function ListKnownMachines():Promise<Array<contracts.MachineInfo>>;
 
 export function ListRecentEvents(arg1:number):Promise<Array<contracts.ActivityEvent>>;
 
+export function ListRecentSessions(arg1:number):Promise<Array<contracts.Session>>;
+
+export function ListSessionsForDate(arg1:string):Promise<Array<contracts.Session>>;
+
+export function ListSessionsForRange(arg1:string,arg2:string):Promise<Array<contracts.Session>>;
+
 export function Ping():Promise<string>;
+
+export function RebuildAllSessions():Promise<contracts.SessionRebuildResult>;
+
+export function RebuildSessionsForDate(arg1:string):Promise<contracts.SessionRebuildResult>;
+
+export function RebuildSessionsForRange(arg1:string,arg2:string):Promise<contracts.SessionRebuildResult>;
 
 export function UpdateSettingsData(arg1:contracts.SettingsData):Promise<contracts.SettingsData>;

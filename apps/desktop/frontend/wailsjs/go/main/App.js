@@ -34,6 +34,10 @@ export function GetProjectsPageData(arg1) {
   return window['go']['main']['App']['GetProjectsPageData'](arg1);
 }
 
+export function GetSessionStatsForRange(arg1, arg2) {
+  return window['go']['main']['App']['GetSessionStatsForRange'](arg1, arg2);
+}
+
 export function GetSessionsPageData(arg1) {
   return window['go']['main']['App']['GetSessionsPageData'](arg1);
 }
@@ -58,8 +62,32 @@ export function ListRecentEvents(arg1) {
   return window['go']['main']['App']['ListRecentEvents'](arg1);
 }
 
+export function ListRecentSessions(arg1) {
+  return window['go']['main']['App']['ListRecentSessions'](arg1);
+}
+
+export function ListSessionsForDate(arg1) {
+  return window['go']['main']['App']['ListSessionsForDate'](arg1);
+}
+
+export function ListSessionsForRange(arg1, arg2) {
+  return window['go']['main']['App']['ListSessionsForRange'](arg1, arg2);
+}
+
 export function Ping() {
   return window['go']['main']['App']['Ping']();
+}
+
+export function RebuildAllSessions() {
+  return window['go']['main']['App']['RebuildAllSessions']();
+}
+
+export function RebuildSessionsForDate(arg1) {
+  return window['go']['main']['App']['RebuildSessionsForDate'](arg1);
+}
+
+export function RebuildSessionsForRange(arg1, arg2) {
+  return window['go']['main']['App']['RebuildSessionsForRange'](arg1, arg2);
 }
 
 export function UpdateSettingsData(arg1) {
