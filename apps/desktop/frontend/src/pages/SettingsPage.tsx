@@ -1,6 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { KairosFileIcon } from '@/components/file-icons/KairosFileIcon';
 import { useToast } from '@/components/toast/ToastProvider';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { Button } from '@/components/ui/button';
@@ -30,7 +32,7 @@ import {
   saveTrackingSettings,
   settingsSections,
 } from '@/lib/backend/settings';
-import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
+import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 export function SettingsPage() {
   const { error, info, success } = useToast();
@@ -46,7 +48,7 @@ export function SettingsPage() {
   const [about, setAbout] = useState(initialData.viewModel.about);
   const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const persistCountRef = useRef(0);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -61,42 +63,49 @@ export function SettingsPage() {
     setAppStatus(next.appStatus);
   }, []);
 
+  const {
+    data: settingsScreenData,
+    isInitialLoading,
+    loadError,
+    refresh: refreshSettings,
+  } = useDesktopResource({
+    cacheKey: desktopResourceKeys.settings(),
+    emptyValue: initialData,
+    errorMessage: 'Unable to load desktop settings.',
+    load: (options) => loadSettingsScreenData(options),
+  });
+
+  useEffect(() => {
+    if (persistCountRef.current > 0) {
+      return;
+    }
+    applyScreenData(settingsScreenData);
+  }, [applyScreenData, settingsScreenData]);
+
   const reloadSettings = useCallback(async (options?: { silent?: boolean }) => {
     try {
-      const next = await loadSettingsScreenData();
-      setLoadError(null);
-      applyScreenData(next);
+      await refreshSettings('manual');
+      return true;
     } catch (cause) {
-      setLoadError('Unable to load desktop settings.');
       if (!options?.silent) {
         error('Settings Load Failed', cause instanceof Error ? cause.message : 'Unable to load desktop settings.');
       }
+      return false;
     }
-  }, [applyScreenData, error]);
-
-  const { isWaitingForFirstPoll } = useRouteReadyPolling({
-    dependencies: [],
-    deferInitialLoad: true,
-    load: loadSettingsScreenData,
-    onSuccess: (next) => {
-      setLoadError(null);
-      applyScreenData(next);
-    },
-    onError: () => {
-      setLoadError('Unable to load desktop settings.');
-    },
-  });
+  }, [error, refreshSettings]);
 
   const persistSection = useCallback(
     async <T,>(next: T, save: (value: T) => Promise<T>, apply: (value: T) => void, label: string) => {
       apply(next);
+      persistCountRef.current += 1;
       try {
         const saved = await save(next);
-        setLoadError(null);
         apply(saved);
       } catch (cause) {
         error(label, cause instanceof Error ? cause.message : 'Unable to persist settings.');
         void reloadSettings({ silent: true });
+      } finally {
+        persistCountRef.current = Math.max(0, persistCountRef.current - 1);
       }
     },
     [error, reloadSettings],
@@ -295,6 +304,7 @@ export function SettingsPage() {
             label="Excluded folders"
             items={exclusions.folders}
             placeholder="Add folder path"
+            iconInput={(item) => item}
             onChange={(items) => updateExclusionsState({ ...exclusions, folders: items })}
           />
           <ExclusionEditor
@@ -313,6 +323,7 @@ export function SettingsPage() {
             label="Excluded file extensions"
             items={exclusions.fileExtensions}
             placeholder="Add file extension"
+            iconInput={(item) => `example${item.startsWith('.') ? item : `.${item}`}`}
             onChange={(items) => updateExclusionsState({ ...exclusions, fileExtensions: items })}
           />
           <ExclusionEditor
@@ -354,8 +365,11 @@ export function SettingsPage() {
                     size="sm"
                     className="rounded-full!"
                     onClick={() => {
-                      void reloadSettings();
-                      success('Extension Status', 'Desktop extension status refreshed.');
+                      void (async () => {
+                        if (await reloadSettings()) {
+                          success('Extension Status', 'Desktop extension status refreshed.');
+                        }
+                      })();
                     }}
                   >
                     Refresh Status
@@ -509,7 +523,12 @@ export function SettingsPage() {
           <SettingsSection title="Data & Storage">
             <SettingsInfoGrid
               items={[
-                { label: 'Local storage path', value: dataStorage.localStoragePath, mono: true },
+                {
+                  label: 'Local storage path',
+                  value: dataStorage.localStoragePath,
+                  mono: true,
+                  icon: <KairosFileIcon filename={dataStorage.localStoragePath} size={16} />,
+                },
                 { label: 'Database status', value: dataStorage.databaseStatus },
                 { label: 'Last processed time', value: dataStorage.lastProcessedTime, mono: true },
                 { label: 'Analytics cache', value: dataStorage.analyticsCacheStatus },
@@ -641,7 +660,7 @@ export function SettingsPage() {
             {loadError}
           </div>
         ) : null}
-        {isWaitingForFirstPoll && !loadError ? (
+        {isInitialLoading && !loadError ? (
           <div className="space-y-4">
             <div className="flex gap-2">
               <Skeleton className="h-9 w-24 rounded-full" />

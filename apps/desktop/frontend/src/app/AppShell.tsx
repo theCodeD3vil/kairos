@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AppPollingProvider } from '@/app/AppPollingContext';
 import {
   ROUTE_TRANSITION_DURATION_MS,
   ROUTE_TRANSITION_READY_DELAY_MS,
@@ -49,11 +48,9 @@ export function AppShell() {
                 }}
                 className="min-h-full will-change-transform"
               >
-                <AppPollingProvider>
-                  <RouteTransitionProvider ready={routeReady}>
-                    <Outlet />
-                  </RouteTransitionProvider>
-                </AppPollingProvider>
+                <RouteTransitionProvider ready={routeReady}>
+                  <Outlet />
+                </RouteTransitionProvider>
               </motion.div>
             </AnimatePresence>
           </div>

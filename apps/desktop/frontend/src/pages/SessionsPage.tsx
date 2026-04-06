@@ -4,13 +4,14 @@ import type { OverviewRange } from '@/components/overview/types';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import { Skeleton } from '@/components/ui/skeleton';
+import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import {
   emptySessionsScreenData,
   loadSessionsScreenData,
   type SessionsScreenData,
 } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
-import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
+import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -22,22 +23,16 @@ function formatMinutes(minutes: number) {
 export function SessionsPage() {
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
-  const [screenData, setScreenData] = useState<SessionsScreenData>(() => emptySessionsScreenData('week'));
-  const [loadError, setLoadError] = useState<string | null>(null);
   const emptyState = useMemo(() => emptySessionsScreenData(range), [range]);
-
-  const { isWaitingForFirstPoll } = useRouteReadyPolling({
-    dependencies: [customRange, emptyState, range],
-    deferInitialLoad: true,
-    load: () => loadSessionsScreenData(range, customRange),
-    onSuccess: (nextData) => {
-      setLoadError(null);
-      setScreenData(nextData);
-    },
-    onError: () => {
-      setLoadError('Unable to load persisted sessions from the desktop backend.');
-      setScreenData(emptyState);
-    },
+  const {
+    data: screenData,
+    isInitialLoading,
+    loadError,
+  } = useDesktopResource<SessionsScreenData>({
+    cacheKey: desktopResourceKeys.sessions(range, customRange),
+    emptyValue: emptyState,
+    errorMessage: 'Unable to load persisted sessions from the desktop backend.',
+    load: (options) => loadSessionsScreenData(range, customRange, options),
   });
 
   return (
@@ -71,7 +66,7 @@ export function SessionsPage() {
         </section>
       ) : null}
 
-      {isWaitingForFirstPoll && !loadError ? (
+      {isInitialLoading && !loadError ? (
         <>
           <section className="rounded-[18px] bg-[var(--surface)] p-4">
             <div className="grid gap-3 md:grid-cols-4">

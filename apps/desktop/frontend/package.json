@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@exuanbo/file-icons-js": "^3.3.0",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/dm-mono": "^5.2.7",
     "@fontsource/dm-sans": "^5.2.8",
@@ -25,7 +26,7 @@
     "radix-ui": "^1.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-files-icons": "^0.7.0",
+    "react-file-icon": "^1.6.0",
     "react-router-dom": "^7.14.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7"

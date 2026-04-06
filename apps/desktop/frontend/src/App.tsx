@@ -1,4 +1,6 @@
 import { BrowserRouter } from 'react-router-dom';
+import { DesktopBootstrapGate } from '@/app/DesktopBootstrapGate';
+import { DesktopDataProvider } from '@/app/DesktopDataContext';
 import { AppRoutes } from '@/app/routes';
 import { SyncStatusProvider } from '@/components/sync/SyncStatusProvider';
 import { ToastProvider } from '@/components/toast/ToastProvider';
@@ -8,7 +10,11 @@ export default function App() {
     <BrowserRouter>
       <ToastProvider>
         <SyncStatusProvider>
-          <AppRoutes />
+          <DesktopDataProvider>
+            <DesktopBootstrapGate>
+              <AppRoutes />
+            </DesktopBootstrapGate>
+          </DesktopDataProvider>
         </SyncStatusProvider>
       </ToastProvider>
     </BrowserRouter>

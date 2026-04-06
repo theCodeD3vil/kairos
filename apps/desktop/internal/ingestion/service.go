@@ -33,7 +33,8 @@ type ServiceImpl struct {
 	sessions interface {
 		RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error)
 	}
-	now func() time.Time
+	now    func() time.Time
+	notify func(kind string)
 
 	mu                 sync.Mutex
 	runtimeRejectCount int
@@ -44,12 +45,13 @@ func NewService(sqliteStore *storage.Store, settingsProvider interface {
 	GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
 }, sessionRebuilder interface {
 	RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error)
-}) *ServiceImpl {
+}, notifier func(kind string)) *ServiceImpl {
 	return &ServiceImpl{
 		store:    sqliteStore,
 		settings: settingsProvider,
 		sessions: sessionRebuilder,
 		now:      time.Now,
+		notify:   notifier,
 	}
 }
 
@@ -124,6 +126,7 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 			} else {
 				warnings = append(warnings, rebuildWarnings...)
 			}
+			s.emitDataChanged("activity")
 		}
 	} else {
 		if err := s.store.PersistEmptyIngestionHeartbeat(
@@ -135,6 +138,7 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 			log.Printf("ingestion: persist heartbeat metadata failed: %v", err)
 			return contracts.IngestEventsResponse{}, err
 		}
+		s.emitDataChanged("extension-status")
 	}
 
 	rejectedCount := len(request.Events) - len(persisted)
@@ -207,6 +211,7 @@ func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.
 		log.Printf("ingestion: extension handshake persist failed: %v", err)
 		return contracts.ExtensionHandshakeResponse{}, err
 	}
+	s.emitDataChanged("extension-status")
 
 	if s.settings == nil {
 		return contracts.ExtensionHandshakeResponse{}, fmt.Errorf("settings provider unavailable")
@@ -221,6 +226,13 @@ func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.
 		Settings:        settingsPayload,
 		ServerTimestamp: serverTime,
 	}, nil
+}
+
+func (s *ServiceImpl) emitDataChanged(kind string) {
+	if s.notify == nil {
+		return
+	}
+	s.notify(kind)
 }
 
 func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {

@@ -15,10 +15,11 @@ import { AnalyticsSessionsTable } from '@/components/analytics/AnalyticsSessions
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import type { AnalyticsFilters as Filters } from '@/data/mockAnalytics';
 import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
-import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
+import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 const analyticsDefaultFilters: Filters = {
   range: 'week',
@@ -31,21 +32,15 @@ const analyticsDefaultFilters: Filters = {
 export function AnalyticsPage() {
   const { info } = useToast();
   const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
-  const [snapshot, setSnapshot] = useState(() => emptyAnalyticsSnapshot(analyticsDefaultFilters));
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const { isWaitingForFirstPoll } = useRouteReadyPolling({
-    dependencies: [filters],
-    deferInitialLoad: true,
-    load: () => loadAnalyticsSnapshot(filters),
-    onSuccess: (nextSnapshot) => {
-      setLoadError(null);
-      setSnapshot(nextSnapshot);
-    },
-    onError: () => {
-      setLoadError('Unable to load analytics from persisted desktop data.');
-      setSnapshot(emptyAnalyticsSnapshot(filters));
-    },
+  const {
+    data: snapshot,
+    isInitialLoading,
+    loadError,
+  } = useDesktopResource({
+    cacheKey: desktopResourceKeys.analytics(filters),
+    emptyValue: emptyAnalyticsSnapshot(filters),
+    errorMessage: 'Unable to load analytics from persisted desktop data.',
+    load: (options) => loadAnalyticsSnapshot(filters, options),
   });
 
   const empty = snapshot.summary.totalMinutes === 0;
@@ -92,7 +87,7 @@ export function AnalyticsPage() {
         </section>
       ) : null}
 
-      {isWaitingForFirstPoll && !loadError ? (
+      {isInitialLoading && !loadError ? (
         <>
           <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
             <div className="grid gap-3 md:grid-cols-5">
@@ -121,7 +116,7 @@ export function AnalyticsPage() {
         </>
       ) : null}
 
-      {!isWaitingForFirstPoll ? (
+      {!isInitialLoading ? (
         <>
           <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Analytics summary</h2>

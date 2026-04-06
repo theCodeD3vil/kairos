@@ -11,32 +11,26 @@ import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceho
 import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import { emptyOverviewSnapshot, loadOverviewSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
-import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
+import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 export function OverviewPage() {
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [activeTab, setActiveTab] = useState('time');
   const emptySnapshot = useMemo(() => emptyOverviewSnapshot(range), [range]);
-  const [snapshot, setSnapshot] = useState<OverviewSnapshot>(emptySnapshot);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [refreshPulseKey, setRefreshPulseKey] = useState(0);
-
-  const { isWaitingForFirstPoll } = useRouteReadyPolling({
-    dependencies: [customRange, emptySnapshot, range],
-    deferInitialLoad: true,
-    load: () => loadOverviewSnapshot(range, customRange),
-    onSuccess: (nextSnapshot) => {
-      setLoadError(null);
-      setSnapshot(nextSnapshot);
-      setRefreshPulseKey((current) => current + 1);
-    },
-    onError: () => {
-      setLoadError('Unable to load desktop overview data.');
-      setSnapshot(emptySnapshot);
-    },
+  const {
+    data: snapshot,
+    isInitialLoading,
+    loadError,
+    refreshPulseKey,
+  } = useDesktopResource<OverviewSnapshot>({
+    cacheKey: desktopResourceKeys.overview(range, customRange),
+    emptyValue: emptySnapshot,
+    errorMessage: 'Unable to load desktop overview data.',
+    load: (options) => loadOverviewSnapshot(range, customRange, options),
   });
 
   const tabs = [
@@ -77,7 +71,7 @@ export function OverviewPage() {
             {loadError}
           </div>
         ) : null}
-        {isWaitingForFirstPoll && !loadError ? (
+        {isInitialLoading && !loadError ? (
           <div className="space-y-4">
             <div className="flex gap-2">
               <Skeleton className="h-9 w-20 rounded-full" />

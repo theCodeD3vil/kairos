@@ -385,7 +385,7 @@ func newTestServiceWithSettings(t *testing.T) (*ServiceImpl, *desktopsettings.Se
 	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
 	sessionService := sessionization.NewService(sqliteStore, settingsService)
 
-	service := NewService(sqliteStore, settingsService, sessionService)
+	service := NewService(sqliteStore, settingsService, sessionService, nil)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 5, 12, 45, 0, 0, time.UTC)
 	}

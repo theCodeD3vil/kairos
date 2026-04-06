@@ -140,15 +140,20 @@ export function SettingsActionRow({
   );
 }
 
-export function SettingsInfoGrid({ items }: { items: Array<{ label: string; value: string; mono?: boolean }> }) {
+export function SettingsInfoGrid({
+  items,
+}: {
+  items: Array<{ label: string; value: string; mono?: boolean; icon?: ReactNode }>;
+}) {
   return (
     <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
         <article key={item.label} className="rounded-xl bg-[var(--surface-subtle)] p-3 shadow-[var(--shadow-inset-soft)]">
           <p className="text-xs text-[var(--ink-muted)]">{item.label}</p>
-          <p className={cn('mt-1 text-sm font-medium text-[var(--ink-strong)]', item.mono ? 'font-numeric' : '')}>
-            {item.value}
-          </p>
+          <div className={cn('mt-1 inline-flex max-w-full items-center gap-2 text-sm font-medium text-[var(--ink-strong)]', item.mono ? 'font-numeric' : '')}>
+            {item.icon}
+            <span className="truncate">{item.value}</span>
+          </div>
         </article>
       ))}
     </div>

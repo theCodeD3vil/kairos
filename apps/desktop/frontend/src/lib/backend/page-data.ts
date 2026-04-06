@@ -23,6 +23,10 @@ import type { DateRange } from '@/components/ruixen/range-calendar';
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 import { trackSyncOperation } from '@/lib/sync-status';
 
+type LoadSnapshotOptions = {
+  quiet?: boolean;
+};
+
 const syncColorByStatus = {
   Healthy: syncUptimeColors.high,
   Degraded: syncUptimeColors.medium,
@@ -695,210 +699,242 @@ async function fetchAnalyticsSnapshot(filters: AnalyticsFilters): Promise<Analyt
   };
 }
 
-export async function loadAnalyticsSnapshot(filters: AnalyticsFilters): Promise<AnalyticsSnapshot> {
-  return trackSyncOperation(
-    () => fetchAnalyticsSnapshot(filters),
-    {
-      inProgressMessage: 'Syncing analytics',
-      successMessage: 'Analytics synced',
-      errorMessage: 'Analytics sync failed',
-    },
-  );
+export async function loadAnalyticsSnapshot(
+  filters: AnalyticsFilters,
+  options: LoadSnapshotOptions = {},
+): Promise<AnalyticsSnapshot> {
+  const operation = () => fetchAnalyticsSnapshot(filters);
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing analytics',
+    successMessage: 'Analytics synced',
+    errorMessage: 'Analytics sync failed',
+  });
 }
 
-export async function loadOverviewSnapshot(range: OverviewRange, customRange: DateRange | null): Promise<OverviewSnapshot> {
-  return trackSyncOperation(
-    async () => {
-      const analytics = await fetchAnalyticsSnapshot({
-        range,
-        customRange,
-        project: 'all',
-        language: 'all',
-        machine: 'all',
-      });
+export async function loadOverviewSnapshot(
+  range: OverviewRange,
+  customRange: DateRange | null,
+  options: LoadSnapshotOptions = {},
+): Promise<OverviewSnapshot> {
+  const operation = async () => {
+    const analytics = await fetchAnalyticsSnapshot({
+      range,
+      customRange,
+      project: 'all',
+      language: 'all',
+      machine: 'all',
+    });
 
-      const [overview, settings, machines] = await Promise.all([
-        GetOverviewData(),
-        GetSettingsData(),
-        ListKnownMachines(),
-      ]);
+    const [overview, settings, machines] = await Promise.all([
+      GetOverviewData(),
+      GetSettingsData(),
+      ListKnownMachines(),
+    ]);
 
-      const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
-      const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
-      const machineDistribution = analytics.machines.items.map((machine, index) => ({
-        machineName: machine.name,
-        minutes: machine.minutes,
-        share: Math.round(machine.share),
+    const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
+    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
+    const machineDistribution = analytics.machines.items.map((machine, index) => ({
+      machineName: machine.name,
+      minutes: machine.minutes,
+      share: Math.round(machine.share),
+      color: overviewChartPalette[index % overviewChartPalette.length],
+    }));
+    const trend = range === 'month'
+      ? buildTrend(analytics.time.weekly)
+      : buildTrend(analytics.time.daily);
+
+    return {
+      range,
+      todayMinutes: overview.todayMinutes,
+      weekMinutes: overview.weekMinutes,
+      sessionCount: analytics.summary.sessions,
+      averageSessionMinutes: analytics.summary.averageSessionMinutes,
+      codingDaysThisWeek: analytics.summary.activeDays,
+      lastActiveAt: overview.lastActiveAt ? formatDateTime(overview.lastActiveAt) : '—',
+      trackingEnabled: overview.trackingEnabled,
+      localOnlyMode: overview.localOnlyMode,
+      lastUpdatedAt: formatDateTime(overview.lastUpdatedAt),
+      currentMachine,
+      knownMachines,
+      appStatus: buildAppStatus(settings, overview.lastUpdatedAt),
+      lastActiveMachine: analytics.machines.lastActiveMachine ?? currentMachine.machineName,
+      weeklyTrend: trend,
+      topProjects: analytics.projects.items.slice(0, 5).map((project, index) => ({
+        project: project.name,
+        minutes: project.minutes,
+        recentActivityAt: project.recent,
         color: overviewChartPalette[index % overviewChartPalette.length],
-      }));
-      const trend = range === 'month'
-        ? buildTrend(analytics.time.weekly)
-        : buildTrend(analytics.time.daily);
+      })),
+      topLanguages: analytics.languages.items.slice(0, 5).map((language) => ({
+        language: language.name,
+        minutes: language.minutes,
+        share: Math.round(language.share),
+      })),
+      machineDistribution,
+      recentSessions: analytics.sessions.recent.map((session) => ({
+        project: session.project,
+        durationMinutes: session.durationMinutes,
+        startAt: formatDateTime(session.start),
+        machineName: session.machine,
+        osLabel: formatOsLabel(
+          machines.find((machine) => machine.machineName === session.machine) ?? { osPlatform: 'linux' },
+        ),
+      })),
+      activeHoursSummary: overview.activeHoursSummary,
+      syncHealth: buildSyncHealth(settings.extensionStatus, overview.lastUpdatedAt),
+    };
+  };
 
-      return {
-        range,
-        todayMinutes: overview.todayMinutes,
-        weekMinutes: overview.weekMinutes,
-        sessionCount: analytics.summary.sessions,
-        averageSessionMinutes: analytics.summary.averageSessionMinutes,
-        codingDaysThisWeek: analytics.summary.activeDays,
-        lastActiveAt: overview.lastActiveAt ? formatDateTime(overview.lastActiveAt) : '—',
-        trackingEnabled: overview.trackingEnabled,
-        localOnlyMode: overview.localOnlyMode,
-        lastUpdatedAt: formatDateTime(overview.lastUpdatedAt),
-        currentMachine,
-        knownMachines,
-        appStatus: buildAppStatus(settings, overview.lastUpdatedAt),
-        lastActiveMachine: analytics.machines.lastActiveMachine ?? currentMachine.machineName,
-        weeklyTrend: trend,
-        topProjects: analytics.projects.items.slice(0, 5).map((project, index) => ({
-          project: project.name,
-          minutes: project.minutes,
-          recentActivityAt: project.recent,
-          color: overviewChartPalette[index % overviewChartPalette.length],
-        })),
-        topLanguages: analytics.languages.items.slice(0, 5).map((language) => ({
-          language: language.name,
-          minutes: language.minutes,
-          share: Math.round(language.share),
-        })),
-        machineDistribution,
-        recentSessions: analytics.sessions.recent.map((session) => ({
-          project: session.project,
-          durationMinutes: session.durationMinutes,
-          startAt: formatDateTime(session.start),
-          machineName: session.machine,
-          osLabel: formatOsLabel(
-            machines.find((machine) => machine.machineName === session.machine) ?? { osPlatform: 'linux' },
-          ),
-        })),
-        activeHoursSummary: overview.activeHoursSummary,
-        syncHealth: buildSyncHealth(settings.extensionStatus, overview.lastUpdatedAt),
-      };
-    },
-    {
-      inProgressMessage: 'Syncing overview',
-      successMessage: 'Overview synced',
-      errorMessage: 'Overview sync failed',
-    },
-  );
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing overview',
+    successMessage: 'Overview synced',
+    errorMessage: 'Overview sync failed',
+  });
 }
 
-export async function loadSessionsScreenData(range: OverviewRange, customRange: DateRange | null): Promise<SessionsScreenData> {
-  return trackSyncOperation(
-    async () => {
-      const rangeWindow = resolveDateWindow(range, customRange);
-      const [data, settings, machines] = await Promise.all([
-        GetSessionsPageData(rangeWindow.rangeLabel),
-        GetSettingsData(),
-        ListKnownMachines(),
-      ]);
+export async function loadSessionsScreenData(
+  range: OverviewRange,
+  customRange: DateRange | null,
+  options: LoadSnapshotOptions = {},
+): Promise<SessionsScreenData> {
+  const operation = async () => {
+    const rangeWindow = resolveDateWindow(range, customRange);
+    const [data, settings, machines] = await Promise.all([
+      GetSessionsPageData(rangeWindow.rangeLabel),
+      GetSettingsData(),
+      ListKnownMachines(),
+    ]);
 
-      const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
-      const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
-      const machinesById = machineIndex(machines);
-      const sessions = data.sessions.map((session) => {
-        const machine = machinesById.get(session.machineId);
-        const machineName = session.machineName ?? machine?.machineName ?? session.machineId;
-        return {
-          id: session.id,
-          project: session.projectName,
-          language: session.language,
-          durationMinutes: session.durationMinutes,
-          startAt: formatDateTime(session.startTime),
-          machineName,
-          osLabel: formatOsLabel(machine ?? { osPlatform: 'linux' }),
-        };
-      });
-
+    const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
+    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
+    const machinesById = machineIndex(machines);
+    const sessions = data.sessions.map((session) => {
+      const machine = machinesById.get(session.machineId);
+      const machineName = session.machineName ?? machine?.machineName ?? session.machineId;
       return {
-        range,
-        totalSessions: data.totalSessions,
-        averageSessionMinutes: data.averageSessionMinutes,
-        longestSessionMinutes: data.longestSessionMinutes,
-        lastActiveAt: formatDateTime(data.sessions[0]?.endTime ?? data.sessions[0]?.startTime),
-        lastActiveMachine: sessions[0]?.machineName ?? currentMachine.machineName,
-        currentMachine,
-        knownMachines,
-        sessions,
+        id: session.id,
+        project: session.projectName,
+        language: session.language,
+        durationMinutes: session.durationMinutes,
+        startAt: formatDateTime(session.startTime),
+        machineName,
+        osLabel: formatOsLabel(machine ?? { osPlatform: 'linux' }),
       };
-    },
-    {
-      inProgressMessage: 'Syncing sessions',
-      successMessage: 'Sessions synced',
-      errorMessage: 'Sessions sync failed',
-    },
-  );
+    });
+
+    return {
+      range,
+      totalSessions: data.totalSessions,
+      averageSessionMinutes: data.averageSessionMinutes,
+      longestSessionMinutes: data.longestSessionMinutes,
+      lastActiveAt: formatDateTime(data.sessions[0]?.endTime ?? data.sessions[0]?.startTime),
+      lastActiveMachine: sessions[0]?.machineName ?? currentMachine.machineName,
+      currentMachine,
+      knownMachines,
+      sessions,
+    };
+  };
+
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing sessions',
+    successMessage: 'Sessions synced',
+    errorMessage: 'Sessions sync failed',
+  });
 }
 
-export async function loadCalendarMonth(year: number, month: number): Promise<{ monthLabel: string; days: CalendarDay[] }> {
-  return trackSyncOperation(
-    async () => {
-      const monthLabel = `${year}-${String(month + 1).padStart(2, '0')}`;
-      const data = await GetCalendarMonthData(monthLabel);
+export async function loadCalendarMonth(
+  year: number,
+  month: number,
+  options: LoadSnapshotOptions = {},
+): Promise<{ monthLabel: string; days: CalendarDay[] }> {
+  const operation = async () => {
+    const monthLabel = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const data = await GetCalendarMonthData(monthLabel);
 
-      return {
-        monthLabel: data.monthLabel,
-        days: data.days.map((day) => ({
-          date: day.date,
-          totalMinutes: day.totalMinutes,
-          sessionCount: day.sessionCount,
-          topProject: day.topProject ?? null,
-          topLanguage: day.topLanguage ?? null,
-          machineCount: day.machineCount,
-          hadActivity: day.hadActivity,
-        })),
-      };
-    },
-    {
-      inProgressMessage: 'Syncing calendar month',
-      successMessage: 'Calendar synced',
-      errorMessage: 'Calendar sync failed',
-    },
-  );
+    return {
+      monthLabel: data.monthLabel,
+      days: data.days.map((day) => ({
+        date: day.date,
+        totalMinutes: day.totalMinutes,
+        sessionCount: day.sessionCount,
+        topProject: day.topProject ?? null,
+        topLanguage: day.topLanguage ?? null,
+        machineCount: day.machineCount,
+        hadActivity: day.hadActivity,
+      })),
+    };
+  };
+
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing calendar month',
+    successMessage: 'Calendar synced',
+    errorMessage: 'Calendar sync failed',
+  });
 }
 
-export async function loadCalendarDay(date: string): Promise<CalendarDayDetail | null> {
-  return trackSyncOperation(
-    async () => {
-      const data = await GetCalendarDayData(date);
-      if (!data.hadActivity) {
-        return null;
-      }
+export async function loadCalendarDay(
+  date: string,
+  options: LoadSnapshotOptions = {},
+): Promise<CalendarDayDetail | null> {
+  const operation = async () => {
+    const data = await GetCalendarDayData(date);
+    if (!data.hadActivity) {
+      return null;
+    }
 
-      return {
-        date: data.date,
-        totalMinutes: data.totalMinutes,
-        sessionCount: data.sessionCount,
-        averageSessionMinutes: data.averageSessionMinutes,
-        firstActiveAt: formatTime(data.firstActiveAt),
-        lastActiveAt: formatTime(data.lastActiveAt),
-        topProject: data.topProject ?? null,
-        topLanguage: data.topLanguage ?? null,
-        machines: data.machineBreakdown.map((machine) => ({
-          name: machine.machineName,
-          os: formatOsLabel({ osPlatform: machine.osPlatform ?? '' }),
-          minutes: machine.totalMinutes,
-        })),
-        sessions: data.sessions.map((session) => ({
-          id: session.id,
-          start: formatTime(session.startTime) ?? session.startTime,
-          durationMinutes: session.durationMinutes,
-          project: session.projectName,
-          machine: session.machineName ?? session.machineId,
-          language: session.language,
-        })),
-        projectBreakdown: data.projectBreakdown.map((project) => ({
-          project: project.projectName,
-          minutes: project.totalMinutes,
-          sessionCount: project.sessionCount,
-        })),
-      };
-    },
-    {
-      inProgressMessage: 'Syncing calendar day',
-      successMessage: 'Day details synced',
-      errorMessage: 'Day sync failed',
-    },
-  );
+    return {
+      date: data.date,
+      totalMinutes: data.totalMinutes,
+      sessionCount: data.sessionCount,
+      averageSessionMinutes: data.averageSessionMinutes,
+      firstActiveAt: formatTime(data.firstActiveAt),
+      lastActiveAt: formatTime(data.lastActiveAt),
+      topProject: data.topProject ?? null,
+      topLanguage: data.topLanguage ?? null,
+      machines: data.machineBreakdown.map((machine) => ({
+        name: machine.machineName,
+        os: formatOsLabel({ osPlatform: machine.osPlatform ?? '' }),
+        minutes: machine.totalMinutes,
+      })),
+      sessions: data.sessions.map((session) => ({
+        id: session.id,
+        start: formatTime(session.startTime) ?? session.startTime,
+        durationMinutes: session.durationMinutes,
+        project: session.projectName,
+        machine: session.machineName ?? session.machineId,
+        language: session.language,
+      })),
+      projectBreakdown: data.projectBreakdown.map((project) => ({
+        project: project.projectName,
+        minutes: project.totalMinutes,
+        sessionCount: project.sessionCount,
+      })),
+    };
+  };
+
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing calendar day',
+    successMessage: 'Day details synced',
+    errorMessage: 'Day sync failed',
+  });
 }

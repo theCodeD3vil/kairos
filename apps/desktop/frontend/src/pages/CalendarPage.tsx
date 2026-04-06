@@ -8,9 +8,10 @@ import { DayMachines } from '@/components/calendar/DayMachines';
 import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
 import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
-import { useRouteReadyPolling } from '@/lib/hooks/useRouteReadyPolling';
+import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 function addMonths(base: Date, delta: number) {
   const next = new Date(base);
@@ -38,45 +39,33 @@ function findInitialSelection(monthDays: CalendarDay[], fallbackDate: string) {
 export function CalendarPage() {
   const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [monthData, setMonthData] = useState<CalendarDay[]>([]);
-  const [monthLabel, setMonthLabel] = useState(() => formatMonthLabel(monthRef));
-  const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [refreshPulseKey, setRefreshPulseKey] = useState(0);
+  const {
+    data: monthView,
+    isInitialLoading: isMonthLoading,
+    loadError: monthLoadError,
+    refreshPulseKey,
+  } = useDesktopResource<{ monthLabel: string; days: CalendarDay[] }>({
+    cacheKey: desktopResourceKeys.calendarMonth(monthRef.getFullYear(), monthRef.getMonth()),
+    emptyValue: { monthLabel: formatMonthLabel(monthRef), days: [] },
+    errorMessage: 'Unable to load calendar data from the desktop backend.',
+    load: (options) => loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth(), options),
+  });
+  const {
+    data: dayDetail,
+    isInitialLoading: isDayLoading,
+    loadError: dayLoadError,
+  } = useDesktopResource<CalendarDayDetail | null>({
+    cacheKey: desktopResourceKeys.calendarDay(selectedDate),
+    emptyValue: null,
+    errorMessage: 'Unable to load selected day activity.',
+    load: (options) => loadCalendarDay(selectedDate, options),
+  });
 
+  const monthData = monthView.days;
+  const monthLabel = monthView.monthLabel;
+  const loadError = monthLoadError ?? dayLoadError;
   const leading = leadingEmptyDays(monthRef);
   const selectedIsInMonth = monthData.some((day) => day.date === selectedDate);
-
-  const monthPolling = useRouteReadyPolling({
-    dependencies: [monthRef],
-    deferInitialLoad: true,
-    load: () => loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth()),
-    onSuccess: (result) => {
-      setLoadError(null);
-      setMonthData(result.days);
-      setMonthLabel(result.monthLabel);
-      setRefreshPulseKey((current) => current + 1);
-    },
-    onError: () => {
-      setLoadError('Unable to load calendar data from the desktop backend.');
-      setMonthData([]);
-      setMonthLabel(formatMonthLabel(monthRef));
-    },
-  });
-
-  const dayPolling = useRouteReadyPolling({
-    dependencies: [selectedDate],
-    deferInitialLoad: true,
-    load: () => loadCalendarDay(selectedDate),
-    onSuccess: (detail) => {
-      setLoadError(null);
-      setDayDetail(detail);
-    },
-    onError: () => {
-      setLoadError('Unable to load selected day activity.');
-      setDayDetail(null);
-    },
-  });
 
   useEffect(() => {
     if (!selectedIsInMonth && monthData.length > 0) {
@@ -119,7 +108,7 @@ export function CalendarPage() {
             {loadError}
           </div>
         ) : null}
-        {monthPolling.isWaitingForFirstPoll && !loadError ? (
+        {isMonthLoading && !loadError ? (
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 35 }, (_, index) => (
               <Skeleton key={`calendar-skeleton-${index + 1}`} className="h-24 rounded-2xl" />
@@ -140,7 +129,7 @@ export function CalendarPage() {
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">
           {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
         </h2>
-        {dayPolling.isWaitingForFirstPoll && !loadError ? (
+        {isDayLoading && !loadError ? (
           <>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <Skeleton className="h-20" />

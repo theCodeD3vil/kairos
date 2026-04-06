@@ -12,7 +12,10 @@ import (
 	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 	"github.com/michaelnji/kairos/apps/desktop/internal/views"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+const dataChangedEventName = "kairos:data-changed"
 
 // App is the root Wails binding for desktop lifecycle wiring.
 type App struct {
@@ -29,6 +32,9 @@ type App struct {
 // NewApp creates the app scaffold.
 func NewApp() *App {
 	settingsService := desktopsettings.NewService(nil)
+	app := &App{
+		settingsService: settingsService,
+	}
 	sqliteStore, err := storage.OpenDefault(context.Background())
 	if err != nil {
 		log.Printf("app: backend initialization failed: %v", err)
@@ -52,7 +58,9 @@ func NewApp() *App {
 			settingsService: settingsService,
 		}
 	}
-	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService)
+	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService, func(kind string) {
+		app.emitDataChanged(kind)
+	})
 	localServer, err := desktopserver.NewLocalServer(desktopserver.DefaultConfig(), ingestionService)
 	if err != nil {
 		log.Printf("app: local extension server initialization failed: %v", err)
@@ -65,14 +73,14 @@ func NewApp() *App {
 	}
 	localServer.Start()
 
-	return &App{
-		sqliteStore:      sqliteStore,
-		localServer:      localServer,
-		ingestionService: ingestionService,
-		sessionService:   sessionService,
-		viewService:      viewService,
-		settingsService:  settingsService,
-	}
+	app.sqliteStore = sqliteStore
+	app.localServer = localServer
+	app.ingestionService = ingestionService
+	app.sessionService = sessionService
+	app.viewService = viewService
+	app.settingsService = settingsService
+
+	return app
 }
 
 func ensureSessionsCurrent(ctx context.Context, sqliteStore *storage.Store, sessionService sessionization.Service) error {
@@ -201,56 +209,88 @@ func (a *App) UpdateSettingsData(data contracts.SettingsData) (contracts.Setting
 	if a.initErr != nil {
 		return contracts.SettingsData{}, a.initErr
 	}
-	return a.settingsService.UpdateSettingsData(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateSettingsData(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdateGeneralSettings(data contracts.GeneralSettings) (contracts.GeneralSettings, error) {
 	if a.initErr != nil {
 		return contracts.GeneralSettings{}, a.initErr
 	}
-	return a.settingsService.UpdateGeneralSettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateGeneralSettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdatePrivacySettings(data contracts.PrivacySettings) (contracts.PrivacySettings, error) {
 	if a.initErr != nil {
 		return contracts.PrivacySettings{}, a.initErr
 	}
-	return a.settingsService.UpdatePrivacySettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdatePrivacySettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdateTrackingSettings(data contracts.TrackingSettings) (contracts.TrackingSettings, error) {
 	if a.initErr != nil {
 		return contracts.TrackingSettings{}, a.initErr
 	}
-	return a.settingsService.UpdateTrackingSettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateTrackingSettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdateExclusionsSettings(data contracts.ExclusionsSettings) (contracts.ExclusionsSettings, error) {
 	if a.initErr != nil {
 		return contracts.ExclusionsSettings{}, a.initErr
 	}
-	return a.settingsService.UpdateExclusionsSettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateExclusionsSettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdateExtensionSettings(data contracts.ExtensionSettings) (contracts.ExtensionSettings, error) {
 	if a.initErr != nil {
 		return contracts.ExtensionSettings{}, a.initErr
 	}
-	return a.settingsService.UpdateExtensionSettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateExtensionSettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) UpdateAppBehaviorSettings(data contracts.AppBehaviorSettings) (contracts.AppBehaviorSettings, error) {
 	if a.initErr != nil {
 		return contracts.AppBehaviorSettings{}, a.initErr
 	}
-	return a.settingsService.UpdateAppBehaviorSettings(a.requestContext(), data)
+	updated, err := a.settingsService.UpdateAppBehaviorSettings(a.requestContext(), data)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {
 	if a.initErr != nil {
 		return contracts.SettingsData{}, a.initErr
 	}
-	return a.settingsService.ResetSettingsSection(a.requestContext(), section)
+	updated, err := a.settingsService.ResetSettingsSection(a.requestContext(), section)
+	if err == nil {
+		a.emitDataChanged("settings")
+	}
+	return updated, err
 }
 
 func (a *App) GetExtensionEffectiveSettings() (contracts.ExtensionEffectiveSettings, error) {
@@ -306,21 +346,33 @@ func (a *App) RebuildAllSessions() (contracts.SessionRebuildResult, error) {
 	if a.initErr != nil {
 		return contracts.SessionRebuildResult{}, a.initErr
 	}
-	return a.sessionService.RebuildAllSessions(a.requestContext())
+	result, err := a.sessionService.RebuildAllSessions(a.requestContext())
+	if err == nil {
+		a.emitDataChanged("sessions")
+	}
+	return result, err
 }
 
 func (a *App) RebuildSessionsForDate(date string) (contracts.SessionRebuildResult, error) {
 	if a.initErr != nil {
 		return contracts.SessionRebuildResult{}, a.initErr
 	}
-	return a.sessionService.RebuildSessionsForDate(a.requestContext(), date)
+	result, err := a.sessionService.RebuildSessionsForDate(a.requestContext(), date)
+	if err == nil {
+		a.emitDataChanged("sessions")
+	}
+	return result, err
 }
 
 func (a *App) RebuildSessionsForRange(startDate string, endDate string) (contracts.SessionRebuildResult, error) {
 	if a.initErr != nil {
 		return contracts.SessionRebuildResult{}, a.initErr
 	}
-	return a.sessionService.RebuildSessionsForRange(a.requestContext(), startDate, endDate)
+	result, err := a.sessionService.RebuildSessionsForRange(a.requestContext(), startDate, endDate)
+	if err == nil {
+		a.emitDataChanged("sessions")
+	}
+	return result, err
 }
 
 func (a *App) ListRecentSessions(limit int) ([]contracts.Session, error) {
@@ -357,4 +409,12 @@ func (a *App) requestContext() context.Context {
 	}
 
 	return context.Background()
+}
+
+func (a *App) emitDataChanged(kind string) {
+	if a.ctx == nil {
+		return
+	}
+
+	runtime.EventsEmit(a.ctx, dataChangedEventName, kind)
 }

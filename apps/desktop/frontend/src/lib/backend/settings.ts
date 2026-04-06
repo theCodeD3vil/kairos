@@ -23,6 +23,10 @@ import type {
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 import { trackSyncOperation } from '@/lib/sync-status';
 
+type LoadSettingsOptions = {
+  quiet?: boolean;
+};
+
 export const settingsSections = {
   general: 'general',
   privacy: 'privacy',
@@ -330,18 +334,21 @@ export function emptySettingsScreenData(): SettingsScreenData {
   };
 }
 
-export async function loadSettingsScreenData(): Promise<SettingsScreenData> {
-  return trackSyncOperation(
-    async () => {
-      const data = await GetSettingsData();
-      return adaptSettingsScreenData(data);
-    },
-    {
-      inProgressMessage: 'Syncing settings',
-      successMessage: 'Settings synced',
-      errorMessage: 'Settings sync failed',
-    },
-  );
+export async function loadSettingsScreenData(options: LoadSettingsOptions = {}): Promise<SettingsScreenData> {
+  const operation = async () => {
+    const data = await GetSettingsData();
+    return adaptSettingsScreenData(data);
+  };
+
+  if (options.quiet !== false) {
+    return operation();
+  }
+
+  return trackSyncOperation(operation, {
+    inProgressMessage: 'Syncing settings',
+    successMessage: 'Settings synced',
+    errorMessage: 'Settings sync failed',
+  });
 }
 
 export async function saveGeneralSettings(input: GeneralSettings): Promise<GeneralSettings> {

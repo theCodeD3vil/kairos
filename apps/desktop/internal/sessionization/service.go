@@ -46,6 +46,18 @@ type sessionCandidate struct {
 	events    []contracts.ActivityEvent
 }
 
+func (c sessionCandidate) dominantProject() string {
+	return dominantValue(c.events, func(event contracts.ActivityEvent) string {
+		return event.ProjectName
+	})
+}
+
+func (c sessionCandidate) dominantLanguage() string {
+	return dominantValue(c.events, func(event contracts.ActivityEvent) string {
+		return event.Language
+	})
+}
+
 func NewService(sqliteStore *storage.Store, settingsProvider interface {
 	GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
 }) *ServiceImpl {
@@ -138,6 +150,28 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThresh
 		return []contracts.Session{}, nil
 	}
 
+	initialSessions, err := s.buildInitialSessions(events, idleThreshold)
+	if err != nil {
+		return nil, err
+	}
+
+	merged := mergeAdjacentSessions(initialSessions, mergeThreshold)
+	sessions := make([]contracts.Session, 0, len(merged))
+	for _, candidate := range merged {
+		sessions = append(sessions, buildSession(candidate))
+	}
+
+	sort.SliceStable(sessions, func(i, j int) bool {
+		if sessions[i].StartTime == sessions[j].StartTime {
+			return sessions[i].ID < sessions[j].ID
+		}
+		return sessions[i].StartTime < sessions[j].StartTime
+	})
+
+	return sessions, nil
+}
+
+func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idleThreshold time.Duration) ([]sessionCandidate, error) {
 	candidates := make([]sessionCandidate, 0)
 	var current *sessionCandidate
 
@@ -170,20 +204,7 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThresh
 		candidates = append(candidates, *current)
 	}
 
-	merged := mergeAdjacentSessions(candidates, mergeThreshold)
-	sessions := make([]contracts.Session, 0, len(merged))
-	for _, candidate := range merged {
-		sessions = append(sessions, buildSession(candidate))
-	}
-
-	sort.SliceStable(sessions, func(i, j int) bool {
-		if sessions[i].StartTime == sessions[j].StartTime {
-			return sessions[i].ID < sessions[j].ID
-		}
-		return sessions[i].StartTime < sessions[j].StartTime
-	})
-
-	return sessions, nil
+	return candidates, nil
 }
 
 func (s *ServiceImpl) resolveThresholds(ctx context.Context) (time.Duration, time.Duration, error) {
@@ -223,6 +244,19 @@ func mergeAdjacentSessions(candidates []sessionCandidate, mergeThreshold time.Du
 		return candidates
 	}
 
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].date != candidates[j].date {
+			return candidates[i].date < candidates[j].date
+		}
+		if candidates[i].machineID != candidates[j].machineID {
+			return candidates[i].machineID < candidates[j].machineID
+		}
+		if !candidates[i].startAt.Equal(candidates[j].startAt) {
+			return candidates[i].startAt.Before(candidates[j].startAt)
+		}
+		return candidates[i].endAt.Before(candidates[j].endAt)
+	})
+
 	merged := make([]sessionCandidate, 0, len(candidates))
 	current := candidates[0]
 	for _, next := range candidates[1:] {
@@ -243,17 +277,16 @@ func canMergeSessions(left sessionCandidate, right sessionCandidate, mergeThresh
 	if left.machineID != right.machineID || left.date != right.date {
 		return false
 	}
+	if left.dominantProject() != right.dominantProject() {
+		return false
+	}
 	gap := right.startAt.Sub(left.endAt)
 	return gap > 0 && gap <= mergeThreshold
 }
 
 func buildSession(candidate sessionCandidate) contracts.Session {
-	projectName := dominantValue(candidate.events, func(event contracts.ActivityEvent) string {
-		return event.ProjectName
-	})
-	language := dominantValue(candidate.events, func(event contracts.ActivityEvent) string {
-		return event.Language
-	})
+	projectName := candidate.dominantProject()
+	language := candidate.dominantLanguage()
 	durationMinutes := int(math.Ceil(candidate.endAt.Sub(candidate.startAt).Minutes()))
 	if durationMinutes < 1 {
 		durationMinutes = 1

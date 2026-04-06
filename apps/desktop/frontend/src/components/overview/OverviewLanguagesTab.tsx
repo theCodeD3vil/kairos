@@ -1,31 +1,13 @@
 import { DonutChart } from '@lobehub/charts';
-import { FileIcon } from 'react-files-icons';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
+import { LanguageIcon } from '@/lib/languageIcons';
 
 type OverviewLanguagesTabProps = {
   snapshot: OverviewSnapshot;
 };
 
 const pieColors = [...overviewChartPalette];
-
-function toLanguageFileName(language: string) {
-  const normalized = language.trim().toLowerCase();
-  const extensionByLanguage: Record<string, string> = {
-    css: 'css',
-    go: 'go',
-    javascript: 'js',
-    json: 'json',
-    markdown: 'md',
-    python: 'py',
-    rust: 'rs',
-    sql: 'sql',
-    typescript: 'ts',
-    yaml: 'yml',
-  };
-  const ext = extensionByLanguage[normalized] ?? 'txt';
-  return `language.${ext}`;
-}
 
 export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
   const languages = snapshot.topLanguages;
@@ -57,7 +39,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
               <div key={language.language} className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2 font-medium text-[var(--ink-strong)]">
-                    <FileIcon name={toLanguageFileName(language.language)} width={18} height={18} />
+                    <LanguageIcon language={language.language} size={18} />
                     {language.language}
                   </span>
                   <span className="font-numeric text-sm text-[var(--ink-label)]">{Math.round(language.minutes / 60)}h</span>

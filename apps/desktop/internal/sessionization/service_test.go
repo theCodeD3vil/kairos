@@ -63,6 +63,24 @@ func TestMergeThresholdMergesNearbySessions(t *testing.T) {
 	}
 }
 
+func TestSessionsBeyondMergeThresholdDoNotMerge(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:04:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:20:00Z", "m1", "kairos", "go"),
+		event("e4", "2026-04-05T09:22:00Z", "m1", "kairos", "go"),
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 2 {
+		t.Fatalf("expected sessions beyond merge threshold to remain split, got %d", result.CreatedSessionCount)
+	}
+}
+
 func TestSessionsDoNotMergeAcrossMachines(t *testing.T) {
 	service, store := newTestService(t)
 	mustInsertEvents(t, store, []contracts.ActivityEvent{
@@ -76,6 +94,40 @@ func TestSessionsDoNotMergeAcrossMachines(t *testing.T) {
 	}
 	if result.CreatedSessionCount != 2 {
 		t.Fatalf("expected 2 sessions, got %d", result.CreatedSessionCount)
+	}
+}
+
+func TestSessionsDoNotMergeAcrossDates(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T23:58:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-06T00:02:00Z", "m1", "kairos", "go"),
+	})
+
+	result, err := service.RebuildSessionsForRange(context.Background(), "2026-04-05", "2026-04-06")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 2 {
+		t.Fatalf("expected 2 date-separated sessions, got %d", result.CreatedSessionCount)
+	}
+}
+
+func TestSessionsDoNotMergeAcrossProjects(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:04:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:12:00Z", "m1", "website", "go"),
+		event("e4", "2026-04-05T09:14:00Z", "m1", "website", "go"),
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 2 {
+		t.Fatalf("expected project-separated sessions to remain split, got %d", result.CreatedSessionCount)
 	}
 }
 
@@ -138,6 +190,33 @@ func TestDurationCalculationIsConsistent(t *testing.T) {
 	}
 }
 
+func TestMergedDurationAndSourceEventCountAreRecomputed(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:02:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:10:00Z", "m1", "kairos", "go"),
+		event("e4", "2026-04-05T09:12:00Z", "m1", "kairos", "go"),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	sessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list sessions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 merged session, got %d", len(sessions))
+	}
+	if sessions[0].DurationMinutes != 12 {
+		t.Fatalf("expected merged duration 12, got %d", sessions[0].DurationMinutes)
+	}
+	if sessions[0].SourceEventCount != 4 {
+		t.Fatalf("expected merged source event count 4, got %d", sessions[0].SourceEventCount)
+	}
+}
+
 func TestRebuildRangeDeletesAndRecreatesSessions(t *testing.T) {
 	service, store := newTestService(t)
 	mustInsertEvents(t, store, []contracts.ActivityEvent{
@@ -170,6 +249,28 @@ func TestRebuildRangeDeletesAndRecreatesSessions(t *testing.T) {
 	}
 	if sessions[0].SourceEventCount != 2 {
 		t.Fatalf("expected rebuilt day session to include 2 events, got %d", sessions[0].SourceEventCount)
+	}
+}
+
+func TestRebuildPersistsMergedSessionsNotFragments(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:03:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:12:00Z", "m1", "kairos", "go"),
+		event("e4", "2026-04-05T09:14:00Z", "m1", "kairos", "go"),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+
+	sessions, err := store.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list persisted sessions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected persisted merged session only, got %d", len(sessions))
 	}
 }
 
@@ -228,6 +329,65 @@ func TestTrackingThresholdSettingsAreApplied(t *testing.T) {
 	}
 	if result.CreatedSessionCount != 1 {
 		t.Fatalf("expected one session with expanded idle threshold, got %d", result.CreatedSessionCount)
+	}
+}
+
+func TestLanguageSelectionAfterMergeIsDeterministic(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:02:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:10:00Z", "m1", "kairos", "typescript"),
+		event("e4", "2026-04-05T09:12:00Z", "m1", "kairos", "typescript"),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	sessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list sessions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected merged session, got %d", len(sessions))
+	}
+	if sessions[0].Language != "go" {
+		t.Fatalf("expected lexical tie-break to keep deterministic merged language 'go', got %q", sessions[0].Language)
+	}
+}
+
+func TestRunningRebuildTwiceIsDeterministic(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:04:00Z", "m1", "kairos", "go"),
+		event("e3", "2026-04-05T09:12:00Z", "m1", "kairos", "typescript"),
+		event("e4", "2026-04-05T09:14:00Z", "m1", "kairos", "typescript"),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("first rebuild failed: %v", err)
+	}
+	firstSessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list first rebuild sessions failed: %v", err)
+	}
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("second rebuild failed: %v", err)
+	}
+	secondSessions, err := store.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list second rebuild sessions failed: %v", err)
+	}
+
+	if len(firstSessions) != len(secondSessions) {
+		t.Fatalf("expected same session count across rebuilds, got %d and %d", len(firstSessions), len(secondSessions))
+	}
+	for index := range firstSessions {
+		if firstSessions[index] != secondSessions[index] {
+			t.Fatalf("expected deterministic rebuild output, got %+v and %+v", firstSessions[index], secondSessions[index])
+		}
 	}
 }
 
