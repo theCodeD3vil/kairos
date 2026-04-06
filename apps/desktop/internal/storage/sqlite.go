@@ -12,6 +12,7 @@ import (
 )
 
 const defaultDatabaseFileName = "kairos.sqlite3"
+const databasePathEnvVar = "KAIROS_DATABASE_PATH"
 
 type Store struct {
 	db   *sql.DB
@@ -28,6 +29,10 @@ func OpenDefault(ctx context.Context) (*Store, error) {
 }
 
 func DefaultDatabasePath() (string, error) {
+	if override := os.Getenv(databasePathEnvVar); override != "" {
+		return override, nil
+	}
+
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve user config dir: %w", err)

@@ -5,7 +5,7 @@ import { DaySummary } from '@/components/calendar/DaySummary';
 import { DaySessions } from '@/components/calendar/DaySessions';
 import { DayProjects } from '@/components/calendar/DayProjects';
 import { DayMachines } from '@/components/calendar/DayMachines';
-import { getMonthActivity, getDayDetail, type CalendarDay } from '@/data/mockCalendar';
+import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
 
 function addMonths(base: Date, delta: number) {
@@ -34,9 +34,10 @@ function findInitialSelection(monthDays: CalendarDay[], fallbackDate: string) {
 export function CalendarPage() {
   const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [monthData, setMonthData] = useState<CalendarDay[]>(() => getMonthActivity(monthRef.getFullYear(), monthRef.getMonth()));
+  const [monthData, setMonthData] = useState<CalendarDay[]>([]);
   const [monthLabel, setMonthLabel] = useState(() => formatMonthLabel(monthRef));
-  const [dayDetail, setDayDetail] = useState(() => getDayDetail(selectedDate));
+  const [dayDetail, setDayDetail] = useState<CalendarDayDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const leading = leadingEmptyDays(monthRef);
   const selectedIsInMonth = monthData.some((day) => day.date === selectedDate);
@@ -47,13 +48,15 @@ export function CalendarPage() {
     loadCalendarMonth(monthRef.getFullYear(), monthRef.getMonth())
       .then((result) => {
         if (!cancelled) {
+          setLoadError(null);
           setMonthData(result.days);
           setMonthLabel(result.monthLabel);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setMonthData(getMonthActivity(monthRef.getFullYear(), monthRef.getMonth()));
+          setLoadError('Unable to load calendar data from the desktop backend.');
+          setMonthData([]);
           setMonthLabel(formatMonthLabel(monthRef));
         }
       });
@@ -69,12 +72,14 @@ export function CalendarPage() {
     loadCalendarDay(selectedDate)
       .then((detail) => {
         if (!cancelled) {
+          setLoadError(null);
           setDayDetail(detail);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setDayDetail(getDayDetail(selectedDate));
+          setLoadError('Unable to load selected day activity.');
+          setDayDetail(null);
         }
       });
 
@@ -118,6 +123,11 @@ export function CalendarPage() {
       </section>
 
       <section className="rounded-[16px] bg-[var(--surface)] p-3">
+        {loadError ? (
+          <div className="mb-3 rounded-[14px] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--ink-tertiary)]">
+            {loadError}
+          </div>
+        ) : null}
         <CalendarMonthGrid
           monthLabel={monthLabel}
           days={monthData}

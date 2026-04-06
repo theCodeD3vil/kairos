@@ -1,4 +1,4 @@
-import type { OsPlatform } from '../ingestion/types';
+import type { ExtensionInfo, MachineInfo, OsPlatform } from '../ingestion/types';
 
 export type GeneralSettings = {
   machineDisplayName: string;
@@ -73,6 +73,16 @@ export type ExtensionEffectiveSettings = {
   trackFileOpenEvents: boolean;
   trackSaveEvents: boolean;
   trackEditEvents: boolean;
+};
+
+export type ExtensionHandshakeRequest = {
+  machine: MachineInfo;
+  extension: ExtensionInfo;
+};
+
+export type ExtensionHandshakeResponse = {
+  settings: ExtensionEffectiveSettings;
+  serverTimestamp: string;
 };
 
 export type ExtensionStatus = {

@@ -1,5 +1,4 @@
 import type { OverviewRange } from '@/components/overview/types';
-import { overviewRanges } from '@/components/overview/mock-data';
 import { type DateRange } from '@/components/ruixen/range-calendar';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import SegmentedButton from '@/components/ui/segmented-button';
@@ -11,18 +10,22 @@ type OverviewRangeSelectorProps = {
   onCustomRangeChange: (range: DateRange | null) => void;
 };
 
+const overviewRangeOptions: Array<{ label: string; value: Exclude<OverviewRange, 'custom'> }> = [
+  { label: 'Today', value: 'today' },
+  { label: 'Week', value: 'week' },
+  { label: 'Month', value: 'month' },
+];
+
 export function OverviewRangeSelector({
   value,
   onChange,
   customRange,
   onCustomRangeChange,
 }: OverviewRangeSelectorProps) {
-  const presetButtons = overviewRanges
-    .filter((range) => range.value !== 'custom')
-    .map((range) => ({
+  const presetButtons = overviewRangeOptions.map((range) => ({
     id: range.value,
     label: range.label,
-    }));
+  }));
 
   return (
     <div className="flex items-center gap-2">

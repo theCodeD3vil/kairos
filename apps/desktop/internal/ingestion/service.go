@@ -17,6 +17,7 @@ import (
 
 type Service interface {
 	IngestEvents(ctx context.Context, request contracts.IngestEventsRequest) (contracts.IngestEventsResponse, error)
+	HandshakeExtension(ctx context.Context, request contracts.ExtensionHandshakeRequest) (contracts.ExtensionHandshakeResponse, error)
 	GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error)
 	ListKnownMachines(ctx context.Context) ([]contracts.MachineInfo, error)
 	ListRecentEvents(ctx context.Context, limit int) ([]contracts.ActivityEvent, error)
@@ -27,6 +28,7 @@ type ServiceImpl struct {
 	store    *storage.Store
 	settings interface {
 		GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
+		GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
 	}
 	now func() time.Time
 
@@ -36,6 +38,7 @@ type ServiceImpl struct {
 
 func NewService(sqliteStore *storage.Store, settingsProvider interface {
 	GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
+	GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
 }) *ServiceImpl {
 	return &ServiceImpl{
 		store:    sqliteStore,
@@ -137,6 +140,42 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 	}
 
 	return response, nil
+}
+
+func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.ExtensionHandshakeRequest) (contracts.ExtensionHandshakeResponse, error) {
+	serverTime := s.now().UTC().Format(time.RFC3339)
+	machine, _, err := sanitizeMachine(request.Machine)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+	extension, _, err := sanitizeExtension(request.Extension)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+
+	if err := s.store.PersistEmptyIngestionHeartbeat(
+		ctx,
+		machine,
+		buildExtensionStatus(extension, nil, serverTime),
+		serverTime,
+	); err != nil {
+		log.Printf("ingestion: extension handshake persist failed: %v", err)
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+
+	if s.settings == nil {
+		return contracts.ExtensionHandshakeResponse{}, fmt.Errorf("settings provider unavailable")
+	}
+
+	settingsPayload, err := s.settings.GetExtensionEffectiveSettings(ctx)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+
+	return contracts.ExtensionHandshakeResponse{
+		Settings:        settingsPayload,
+		ServerTimestamp: serverTime,
+	}, nil
 }
 
 func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {

@@ -4,6 +4,8 @@ export type {
   DataStorageInfo,
   ExclusionsSettings,
   ExtensionEffectiveSettings,
+  ExtensionHandshakeRequest,
+  ExtensionHandshakeResponse,
   ExtensionSettings,
   ExtensionStatus,
   GeneralSettings,

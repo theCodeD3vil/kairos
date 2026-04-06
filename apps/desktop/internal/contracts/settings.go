@@ -75,6 +75,16 @@ type ExtensionEffectiveSettings struct {
 	TrackEditEvents              bool               `json:"trackEditEvents"`
 }
 
+type ExtensionHandshakeRequest struct {
+	Machine   MachineInfo   `json:"machine"`
+	Extension ExtensionInfo `json:"extension"`
+}
+
+type ExtensionHandshakeResponse struct {
+	Settings        ExtensionEffectiveSettings `json:"settings"`
+	ServerTimestamp string                     `json:"serverTimestamp"`
+}
+
 type ExtensionStatus struct {
 	Installed        bool   `json:"installed"`
 	Connected        bool   `json:"connected"`

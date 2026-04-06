@@ -37,6 +37,96 @@ export type SettingsScreenData = {
   appStatus: AppStatus;
 };
 
+function emptyViewModel(): SettingsDefaults {
+  return {
+    general: {
+      machineDisplayName: 'Kairos',
+      defaultDateRange: 'week',
+      timeFormat: '24h',
+      weekStartDay: 'Monday',
+      landingPage: 'overview',
+    },
+    privacy: {
+      localOnlyMode: true,
+      cloudSyncEnabled: false,
+      filePathVisibility: 'masked',
+      showMachineNames: true,
+      showHostname: false,
+      obfuscateSensitiveProjects: false,
+      minimizeExtensionMetadata: false,
+    },
+    tracking: {
+      trackingEnabled: true,
+      idleDetectionEnabled: true,
+      trackProjectActivity: true,
+      trackLanguageActivity: true,
+      trackMachineAttribution: true,
+      trackSessionBoundaries: true,
+      idleTimeoutMinutes: '5',
+      sessionMergeThresholdMinutes: '10',
+      detectActiveCodingWindow: false,
+      backgroundActivityCapture: false,
+    },
+    exclusions: {
+      folders: [],
+      projectNames: [],
+      workspacePatterns: [],
+      fileExtensions: [],
+      machineNames: [],
+    },
+    vscodeExtension: {
+      extensionInstalled: false,
+      extensionConnected: false,
+      extensionVersion: '—',
+      editorDetected: 'VS Code',
+      autoConnectToDesktop: true,
+      sendHeartbeatEvents: true,
+      heartbeatIntervalSeconds: '30',
+      sendProjectMetadata: true,
+      sendLanguageMetadata: true,
+      sendMachineAttribution: true,
+      respectDesktopExclusions: true,
+      bufferEventsWhenOffline: true,
+      retryConnectionAutomatically: true,
+      trackFocusedWindowOnly: false,
+      trackFileOpenEvents: true,
+      trackSaveEvents: true,
+      trackEditActivity: true,
+      sessionizationOwner: 'desktop',
+      lastExtensionSync: '—',
+      lastExtensionEvent: '—',
+    },
+    appBehavior: {
+      launchOnStartup: false,
+      startMinimized: false,
+      minimizeToTray: true,
+      openOnSystemLogin: false,
+      rememberLastSelectedPage: true,
+      restoreLastSelectedDateRange: true,
+      reopenLastViewedContext: false,
+    },
+    dataStorage: {
+      localStoragePath: '—',
+      databaseStatus: 'Needs attention',
+      lastProcessedTime: '—',
+      analyticsCacheStatus: 'Derived on demand',
+      extensionQueueStatus: 'Unknown',
+      pendingEventCount: 0,
+    },
+    about: {
+      appName: 'Kairos',
+      version: '0.0.0',
+      environment: 'desktop',
+      buildChannel: 'local',
+      desktopAppVersion: '0.0.0',
+      extensionVersion: '—',
+      licenseSummary: 'Unspecified',
+      repositoryLabel: 'Not configured',
+      releaseNotesLabel: 'Not configured',
+    },
+  };
+}
+
 function formatDateTime(value?: string) {
   if (!value) {
     return '—';
@@ -148,13 +238,15 @@ function toDataStorage(input: contracts.SettingsData): DataStorageInfo {
     localStoragePath: input.dataStorage.localDataPath,
     databaseStatus: toDatabaseStatus(input.dataStorage.databaseStatus),
     lastProcessedTime: formatDateTime(input.dataStorage.lastProcessedAt),
-    analyticsCacheStatus: 'Not implemented',
-    extensionQueueStatus: input.extensionStatus.connected ? 'Connected' : 'Idle',
+    analyticsCacheStatus: 'Derived on demand',
+    extensionQueueStatus: input.extensionStatus.connected ? 'Connected' : 'No desktop-side queue',
     pendingEventCount: input.dataStorage.pendingEventCount ?? 0,
   };
 }
 
 function toAbout(input: contracts.SettingsData): AboutInfo {
+  const releaseNotes = input.about.repositoryUrl ? `${input.about.repositoryUrl.replace(/\/$/, '')}/releases` : 'Not configured';
+
   return {
     appName: input.about.appName,
     version: input.about.appVersion,
@@ -164,7 +256,7 @@ function toAbout(input: contracts.SettingsData): AboutInfo {
     extensionVersion: input.about.extensionVersion ?? '—',
     licenseSummary: input.about.licenseSummary,
     repositoryLabel: input.about.repositoryUrl ?? 'Not configured',
-    releaseNotesLabel: 'Not wired yet',
+    releaseNotesLabel: releaseNotes,
   };
 }
 
@@ -210,6 +302,30 @@ function adaptSettingsScreenData(input: contracts.SettingsData): SettingsScreenD
     viewModel: adaptSettingsData(input),
     currentMachine: toCurrentMachine(input),
     appStatus: toAppStatus(input),
+  };
+}
+
+export function emptySettingsScreenData(): SettingsScreenData {
+  return {
+    viewModel: emptyViewModel(),
+    currentMachine: {
+      machineName: 'Kairos',
+      machineId: 'unknown-machine',
+      hostname: '—',
+      os: 'Unknown OS',
+      osVersion: '—',
+      architecture: '—',
+      editorName: 'VS Code',
+      editorVersion: '—',
+      extensionVersion: '—',
+      lastSeenAt: '—',
+    },
+    appStatus: {
+      appVersion: '0.0.0',
+      trackingEnabled: true,
+      localOnlyMode: true,
+      lastUpdatedAt: '—',
+    },
   };
 }
 

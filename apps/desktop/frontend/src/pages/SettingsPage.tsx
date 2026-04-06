@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { useToast } from '@/components/toast/ToastProvider';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,8 @@ import {
   SettingsStatusPanel,
   SettingsToggle,
 } from '@/components/settings/SettingsPrimitives';
-import { settingsDefaults, settingsTabOrder } from '@/data/mockSettings';
-import { systemInfoSnapshot } from '@/mocks/system-info';
 import {
+  emptySettingsScreenData,
   loadSettingsScreenData,
   resetSettingsSectionViewModel,
   saveAppBehaviorSettings,
@@ -33,16 +33,17 @@ import {
 export function SettingsPage() {
   const { error, info, success } = useToast();
   const [activeTab, setActiveTab] = useState('general');
-  const [general, setGeneral] = useState(settingsDefaults.general);
-  const [privacy, setPrivacy] = useState(settingsDefaults.privacy);
-  const [tracking, setTracking] = useState(settingsDefaults.tracking);
-  const [exclusions, setExclusions] = useState(settingsDefaults.exclusions);
-  const [vscodeExtension, setVscodeExtension] = useState(settingsDefaults.vscodeExtension);
-  const [appBehavior, setAppBehavior] = useState(settingsDefaults.appBehavior);
-  const [dataStorage, setDataStorage] = useState(settingsDefaults.dataStorage);
-  const [about, setAbout] = useState(settingsDefaults.about);
-  const [currentMachine, setCurrentMachine] = useState(systemInfoSnapshot.currentMachine);
-  const [appStatus, setAppStatus] = useState(systemInfoSnapshot.appStatus);
+  const initialData = emptySettingsScreenData();
+  const [general, setGeneral] = useState(initialData.viewModel.general);
+  const [privacy, setPrivacy] = useState(initialData.viewModel.privacy);
+  const [tracking, setTracking] = useState(initialData.viewModel.tracking);
+  const [exclusions, setExclusions] = useState(initialData.viewModel.exclusions);
+  const [vscodeExtension, setVscodeExtension] = useState(initialData.viewModel.vscodeExtension);
+  const [appBehavior, setAppBehavior] = useState(initialData.viewModel.appBehavior);
+  const [dataStorage, setDataStorage] = useState(initialData.viewModel.dataStorage);
+  const [about, setAbout] = useState(initialData.viewModel.about);
+  const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
+  const [appStatus, setAppStatus] = useState(initialData.appStatus);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -185,7 +186,10 @@ export function SettingsPage() {
             <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => updatePrivacyState({ ...privacy, localOnlyMode: next })} />
           </SettingsRow>
           <SettingsRow label="Cloud sync" helper="Placeholder only">
-            <SettingsToggle checked={privacy.cloudSyncEnabled} onChange={(next) => setPrivacy({ ...privacy, cloudSyncEnabled: next })} />
+            <SettingsToggle
+              checked={privacy.cloudSyncEnabled}
+              onChange={() => placeholderAction('Cloud Sync', 'Cloud sync is intentionally out of scope for the local-first v1 release.')}
+            />
           </SettingsRow>
           <SettingsRow label="File path visibility">
             <SettingsSelect
@@ -249,10 +253,16 @@ export function SettingsPage() {
             />
           </SettingsRow>
           <SettingsRow label="Detect active coding window">
-            <SettingsToggle checked={tracking.detectActiveCodingWindow} onChange={(next) => setTracking({ ...tracking, detectActiveCodingWindow: next })} />
+            <SettingsToggle
+              checked={tracking.detectActiveCodingWindow}
+              onChange={() => placeholderAction('Active Coding Window', 'This desktop-only toggle is not implemented in v1.')}
+            />
           </SettingsRow>
           <SettingsRow label="Background activity capture" helper="Placeholder only">
-            <SettingsToggle checked={tracking.backgroundActivityCapture} onChange={(next) => setTracking({ ...tracking, backgroundActivityCapture: next })} />
+            <SettingsToggle
+              checked={tracking.backgroundActivityCapture}
+              onChange={() => placeholderAction('Background Activity Capture', 'Background activity capture is intentionally deferred.')}
+            />
           </SettingsRow>
         </SettingsSection>
       ),
@@ -325,16 +335,17 @@ export function SettingsPage() {
                     size="sm"
                     className="rounded-full!"
                     onClick={() => {
-                      placeholderAction('Extension Connection', 'Desktop-owned extension settings are ready; transport verification is still pending.');
+                      void reloadSettings();
+                      success('Extension Status', 'Desktop extension status refreshed.');
                     }}
                   >
-                    Test Connection
+                    Refresh Status
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     className="rounded-full! border-black/10"
-                    onClick={() => placeholderAction('Reconnect Extension', 'Reconnect is a frontend placeholder.')}
+                    onClick={() => placeholderAction('Reconnect Extension', 'Reconnect is controlled by the VS Code extension runtime and desktop local server.')}
                   >
                     Reconnect
                   </Button>
@@ -394,7 +405,7 @@ export function SettingsPage() {
             <SettingsRow label="Sessionization handled by">
               <SettingsSelect
                 value={vscodeExtension.sessionizationOwner}
-                onChange={(event) => setVscodeExtension({ ...vscodeExtension, sessionizationOwner: event.target.value as typeof vscodeExtension.sessionizationOwner })}
+                onChange={() => placeholderAction('Sessionization Owner', 'Sessionization remains desktop-owned in the v1 release.')}
                 options={[
                   { label: 'Desktop app', value: 'desktop' },
                   { label: 'Extension', value: 'extension' },
@@ -462,7 +473,10 @@ export function SettingsPage() {
             <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => updateAppBehaviorState({ ...appBehavior, restoreLastSelectedDateRange: next })} />
           </SettingsRow>
           <SettingsRow label="Reopen last viewed calendar month or analytics filters">
-            <SettingsToggle checked={appBehavior.reopenLastViewedContext} onChange={(next) => setAppBehavior({ ...appBehavior, reopenLastViewedContext: next })} />
+            <SettingsToggle
+              checked={appBehavior.reopenLastViewedContext}
+              onChange={() => placeholderAction('Reopen Last Context', 'Restoring page-specific context is not implemented in v1.')}
+            />
           </SettingsRow>
         </SettingsSection>
       ),
@@ -537,10 +551,32 @@ export function SettingsPage() {
             label="Placeholder actions"
             actions={
               <>
-                <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={() => placeholderAction('Repository', 'Repository linking is not wired yet.')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full! border-black/10"
+                  onClick={() => {
+                    if (about.repositoryLabel.startsWith('http')) {
+                      BrowserOpenURL(about.repositoryLabel);
+                      return;
+                    }
+                    placeholderAction('Repository', 'Repository URL is not configured in this build.');
+                  }}
+                >
                   Open Repository
                 </Button>
-                <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={() => placeholderAction('Release Notes', 'Release notes are not wired yet.')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full! border-black/10"
+                  onClick={() => {
+                    if (about.releaseNotesLabel.startsWith('http')) {
+                      BrowserOpenURL(about.releaseNotesLabel);
+                      return;
+                    }
+                    placeholderAction('Release Notes', 'Release notes URL is not configured in this build.');
+                  }}
+                >
                   View Release Notes
                 </Button>
               </>

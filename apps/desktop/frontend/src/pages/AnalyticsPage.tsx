@@ -1,23 +1,57 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart } from '@lobehub/charts';
+import { useToast } from '@/components/toast/ToastProvider';
 import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
 import {
   AnalyticsBreakdownList,
+  AnalyticsDonut,
   AnalyticsKpiCard,
   AnalyticsMachineList,
   AnalyticsTimeBreakdown,
   formatMinutes,
 } from '@/components/analytics/AnalyticsCards';
-import { AnalyticsDonut } from '@/components/analytics/AnalyticsCards';
 import { AnalyticsComparison } from '@/components/analytics/AnalyticsComparison';
 import { AnalyticsSessionsTable } from '@/components/analytics/AnalyticsSessions';
-import { Button } from '@/components/ui/button';
-import { getAnalyticsSnapshot, analyticsDefaultFilters, type AnalyticsFilters as Filters } from '@/data/mockAnalytics';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
+import { Button } from '@/components/ui/button';
+import type { AnalyticsFilters as Filters } from '@/data/mockAnalytics';
+import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
+
+const analyticsDefaultFilters: Filters = {
+  range: 'week',
+  customRange: null,
+  project: 'all',
+  language: 'all',
+  machine: 'all',
+};
 
 export function AnalyticsPage() {
+  const { info } = useToast();
   const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
-  const snapshot = useMemo(() => getAnalyticsSnapshot(filters), [filters]);
+  const [snapshot, setSnapshot] = useState(() => emptyAnalyticsSnapshot(analyticsDefaultFilters));
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadAnalyticsSnapshot(filters)
+      .then((nextSnapshot) => {
+        if (!cancelled) {
+          setLoadError(null);
+          setSnapshot(nextSnapshot);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError('Unable to load analytics from persisted desktop data.');
+          setSnapshot(emptyAnalyticsSnapshot(filters));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters]);
 
   const empty = snapshot.summary.totalMinutes === 0;
 
@@ -26,10 +60,20 @@ export function AnalyticsPage() {
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[var(--surface-strong)] p-3">
         <h1 className="text-2xl font-semibold text-[var(--ink-strong)]">Analytics</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="rounded-full! border-black/10">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full! border-black/10"
+            onClick={() => info('Export CSV', 'Export is deferred for a later desktop release.')}
+          >
             Export CSV
           </Button>
-          <Button variant="secondary" size="sm" className="rounded-full!">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-full!"
+            onClick={() => info('Share', 'Sharing is not part of the local-first v1 desktop release.')}
+          >
             Share
           </Button>
         </div>
@@ -45,7 +89,15 @@ export function AnalyticsPage() {
         />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      {loadError ? (
+        <section className="rounded-[16px] bg-[var(--surface)] p-3">
+          <div className="rounded-[14px] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--ink-tertiary)]">
+            {loadError}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Analytics summary</h2>
         {empty ? (
           <div className="rounded-[14px] bg-[var(--surface-muted)] p-4 text-[var(--ink-tertiary)]">
@@ -66,7 +118,7 @@ export function AnalyticsPage() {
         )}
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Time breakdown</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <AnalyticsKpiCard
@@ -83,7 +135,7 @@ export function AnalyticsPage() {
         <AnalyticsTimeBreakdown daily={snapshot.time.daily} weekly={snapshot.time.weekly} />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Projects</h2>
         <div className="grid gap-3 lg:grid-cols-3">
           <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)] lg:col-span-2">
@@ -113,7 +165,7 @@ export function AnalyticsPage() {
         <AnalyticsBreakdownList title="Top projects" items={snapshot.projects.items} emptyMessage="No project time yet." />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Languages</h2>
         <div className="grid gap-3 lg:grid-cols-3">
           <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)] lg:col-span-2">
@@ -148,7 +200,7 @@ export function AnalyticsPage() {
         />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Sessions</h2>
         <div className="grid gap-3 md:grid-cols-3">
           <AnalyticsKpiCard label="Total sessions" value={`${snapshot.sessions.totalSessions}`} />
@@ -158,12 +210,12 @@ export function AnalyticsPage() {
         <AnalyticsSessionsTable sessions={snapshot.sessions.recent} />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Machines</h2>
         <AnalyticsMachineList items={snapshot.machines.items} />
       </section>
 
-      <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
+      <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Patterns</h2>
         <div className="grid gap-3 md:grid-cols-3">
           <AnalyticsKpiCard label="Most active day" value={snapshot.patterns.mostActiveDay ?? '—'} />
@@ -194,7 +246,7 @@ export function AnalyticsPage() {
         </article>
       </section>
 
-      <section className="rounded-[18px] bg-[var(--surface)] p-4 space-y-3">
+      <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-4">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Period comparison</h2>
         <AnalyticsComparison snapshot={snapshot} />
       </section>

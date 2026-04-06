@@ -7,6 +7,7 @@ import (
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/ingestion"
+	desktopserver "github.com/michaelnji/kairos/apps/desktop/internal/server"
 	"github.com/michaelnji/kairos/apps/desktop/internal/sessionization"
 	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
@@ -18,6 +19,7 @@ type App struct {
 	ctx              context.Context
 	initErr          error
 	sqliteStore      *storage.Store
+	localServer      *desktopserver.LocalServer
 	ingestionService ingestion.Service
 	sessionService   sessionization.Service
 	viewService      views.Service
@@ -40,11 +42,25 @@ func NewApp() *App {
 	settingsService = desktopsettings.NewService(sqliteStore)
 	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
 	viewService := views.NewService(sqliteStore, settingsService)
+	ingestionService := ingestion.NewService(sqliteStore, settingsService)
+	sessionService := sessionization.NewService(sqliteStore, settingsService)
+	localServer, err := desktopserver.NewLocalServer(desktopserver.DefaultConfig(), ingestionService)
+	if err != nil {
+		log.Printf("app: local extension server initialization failed: %v", err)
+		_ = sqliteStore.Close()
+		return &App{
+			initErr:         fmt.Errorf("initialize local extension server: %w", err),
+			viewService:     views.NewStubService(),
+			settingsService: settingsService,
+		}
+	}
+	localServer.Start()
 
 	return &App{
 		sqliteStore:      sqliteStore,
-		ingestionService: ingestion.NewService(sqliteStore, settingsService),
-		sessionService:   sessionization.NewService(sqliteStore, settingsService),
+		localServer:      localServer,
+		ingestionService: ingestionService,
+		sessionService:   sessionService,
 		viewService:      viewService,
 		settingsService:  settingsService,
 	}
@@ -56,6 +72,11 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(_ context.Context) {
+	if a.localServer != nil {
+		if err := a.localServer.Close(context.Background()); err != nil {
+			log.Printf("app: local server shutdown error: %v", err)
+		}
+	}
 	if a.sqliteStore != nil {
 		if err := a.sqliteStore.Close(); err != nil {
 			log.Printf("app: sqlite shutdown error: %v", err)

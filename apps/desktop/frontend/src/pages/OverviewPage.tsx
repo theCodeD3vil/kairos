@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { OverviewLanguagesTab } from '@/components/overview/OverviewLanguagesTab';
-import { getOverviewSnapshot } from '@/components/overview/mock-data';
 import { OverviewProjectsTab } from '@/components/overview/OverviewProjectsTab';
 import { OverviewRangeSelector } from '@/components/overview/OverviewRangeSelector';
 import { OverviewSessionsTab } from '@/components/overview/OverviewSessionsTab';
@@ -10,23 +9,15 @@ import { OverviewTimeTab } from '@/components/overview/OverviewTimeTab';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
-import { loadOverviewSnapshot } from '@/lib/backend/page-data';
+import { emptyOverviewSnapshot, loadOverviewSnapshot } from '@/lib/backend/page-data';
 
 export function OverviewPage() {
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [activeTab, setActiveTab] = useState('time');
-  const fallbackSnapshot = useMemo(() => {
-    if (range !== 'custom' || !customRange) return getOverviewSnapshot(range);
-
-    const days = Math.max(
-      1,
-      Math.ceil((customRange.end.getTime() - customRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-    );
-    const mappedRange: OverviewRange = days <= 1 ? 'today' : days <= 7 ? 'week' : 'month';
-    return getOverviewSnapshot(mappedRange);
-  }, [range, customRange]);
-  const [snapshot, setSnapshot] = useState<OverviewSnapshot>(fallbackSnapshot);
+  const emptySnapshot = useMemo(() => emptyOverviewSnapshot(range), [range]);
+  const [snapshot, setSnapshot] = useState<OverviewSnapshot>(emptySnapshot);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,19 +25,21 @@ export function OverviewPage() {
     loadOverviewSnapshot(range, customRange)
       .then((nextSnapshot) => {
         if (!cancelled) {
+          setLoadError(null);
           setSnapshot(nextSnapshot);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setSnapshot(fallbackSnapshot);
+          setLoadError('Unable to load desktop overview data.');
+          setSnapshot(emptySnapshot);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [customRange, fallbackSnapshot, range]);
+  }, [customRange, emptySnapshot, range]);
 
   const tabs = [
     { label: 'Time', value: 'time', content: <OverviewTimeTab snapshot={snapshot} /> },
@@ -78,6 +71,11 @@ export function OverviewPage() {
       </section>
 
       <section className="rounded-[18px] bg-[var(--surface)] p-4">
+        {loadError ? (
+          <div className="mb-4 rounded-xl bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--ink-tertiary)]">
+            {loadError}
+          </div>
+        ) : null}
         <VercelTabs
           tabs={tabs}
           defaultTab="time"

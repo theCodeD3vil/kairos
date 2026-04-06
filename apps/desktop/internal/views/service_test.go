@@ -149,6 +149,76 @@ func TestGetAnalyticsDataSummarizesCurrentAndPreviousPeriod(t *testing.T) {
 	}
 }
 
+func TestViewMethodsReturnCoherentEmptyStates(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "kairos-empty.sqlite3")
+	sqliteStore, err := storage.Open(context.Background(), dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite store: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = sqliteStore.Close()
+	})
+
+	settingsService := desktopsettings.NewService(sqliteStore)
+	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
+
+	service := NewService(sqliteStore, settingsService)
+	service.now = func() time.Time {
+		return time.Date(2026, time.April, 8, 12, 0, 0, 0, time.UTC)
+	}
+
+	overview, err := service.GetOverviewData(context.Background())
+	if err != nil {
+		t.Fatalf("GetOverviewData failed: %v", err)
+	}
+	if overview.TodayMinutes != 0 || overview.WeekMinutes != 0 || len(overview.RecentSessions) != 0 {
+		t.Fatalf("expected empty overview payload, got %+v", overview)
+	}
+
+	analytics, err := service.GetAnalyticsData(context.Background(), "last-7-days")
+	if err != nil {
+		t.Fatalf("GetAnalyticsData failed: %v", err)
+	}
+	if analytics.TotalMinutes != 0 || analytics.SessionCount != 0 {
+		t.Fatalf("expected empty analytics payload, got %+v", analytics)
+	}
+	if len(analytics.DailyTotals) != 7 {
+		t.Fatalf("expected zero-filled daily totals, got %+v", analytics.DailyTotals)
+	}
+	for _, total := range analytics.DailyTotals {
+		if total.TotalMinutes != 0 {
+			t.Fatalf("expected zero-minute daily total, got %+v", total)
+		}
+	}
+
+	sessions, err := service.GetSessionsPageData(context.Background(), "week")
+	if err != nil {
+		t.Fatalf("GetSessionsPageData failed: %v", err)
+	}
+	if sessions.TotalSessions != 0 || len(sessions.Sessions) != 0 {
+		t.Fatalf("expected empty sessions payload, got %+v", sessions)
+	}
+
+	month, err := service.GetCalendarMonthData(context.Background(), "2026-04")
+	if err != nil {
+		t.Fatalf("GetCalendarMonthData failed: %v", err)
+	}
+	if len(month.Days) != 30 {
+		t.Fatalf("expected full month grid for empty calendar, got %d days", len(month.Days))
+	}
+	if month.Days[0].HadActivity {
+		t.Fatalf("expected first day to be inactive, got %+v", month.Days[0])
+	}
+
+	day, err := service.GetCalendarDayData(context.Background(), "2026-04-08")
+	if err != nil {
+		t.Fatalf("GetCalendarDayData failed: %v", err)
+	}
+	if day.HadActivity || day.TotalMinutes != 0 || len(day.Sessions) != 0 {
+		t.Fatalf("expected empty day payload, got %+v", day)
+	}
+}
+
 func newTestViewService(t *testing.T) (*ServiceImpl, *storage.Store) {
 	t.Helper()
 

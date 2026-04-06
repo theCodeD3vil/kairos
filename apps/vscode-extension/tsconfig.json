@@ -6,6 +6,11 @@
     "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@kairos/shared/ingestion": ["../../packages/shared/dist/ingestion/index.d.ts"],
+      "@kairos/shared/settings": ["../../packages/shared/dist/settings/index.d.ts"]
+    },
     "types": ["node", "vscode"],
     "sourceMap": true,
     "noEmit": true

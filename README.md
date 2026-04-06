@@ -1,105 +1,109 @@
 # Kairos
 
-Kairos is a monorepo scaffold for a desktop productivity platform and companion developer tooling.
+Kairos is a local-first coding activity tracker made of a Wails desktop app, a VS Code extension, and a shared contract package.
 
-This repository is currently in setup/scaffold phase.
+The current v1 scope is implemented around:
 
-No tracking, ingestion, storage, or analytics features are implemented yet.
+- raw activity ingestion from the VS Code extension
+- SQLite persistence for events, machines, extension status, settings, and sessions
+- deterministic sessionization from persisted raw events
+- backend-backed page assembly for Overview, Sessions, Analytics, Calendar, and Settings
+- desktop-owned settings authority with extension settings synchronization
+- local-only extension transport over a loopback desktop server
 
 ## Workspace Layout
 
-- `apps/desktop`: Go + Wails-oriented desktop scaffold
-- `apps/desktop/frontend`: React + TypeScript + Vite + Tailwind placeholder UI
-- `apps/vscode-extension`: TypeScript VS Code extension scaffold
-- `packages/shared`: shared TypeScript types package (`@kairos/shared`)
-- `docs`: project documentation
+- `apps/desktop`: Go + Wails desktop host, backend services, SQLite storage, and packaged frontend
+- `apps/desktop/frontend`: React + TypeScript desktop UI
+- `apps/vscode-extension`: VS Code extension runtime and packaging surface
+- `packages/shared`: canonical shared TypeScript contracts published as `@kairos/shared`
+- `docs`: technical notes, hardening docs, and release checklists
 
 ## Prerequisites
 
 - Node.js
 - pnpm
 - Go
-- Optional: Wails CLI (`wails`) for running the desktop host workflow
+- Wails CLI for desktop dev or packaged desktop builds
+
+Install Wails when needed:
+
+```bash
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
 
 ## Install
 
 ```bash
 pnpm install
+cd apps/desktop && go mod tidy
 ```
 
-## New Machine Setup
+## Development
 
-Use one command based on your machine:
-
-- macOS: `./scripts/setup-macos.sh`
-- Ubuntu: `./scripts/setup-ubuntu.sh`
-- If Go + Node are already installed: `./scripts/bootstrap.sh` (or `make setup`)
-
-What these scripts do:
-
-- `setup-macos.sh` / `setup-ubuntu.sh`: machine provisioning (install/verify Go, Node, pnpm path, Wails), then run repo bootstrap.
-- `bootstrap.sh`: repo bootstrap only (checks Go + Node, enables pnpm via Corepack when available, installs Wails if missing, then runs `pnpm install`).
-
-Notes:
-
-- `bootstrap.sh` does not install Go or Node by itself.
-- Wails install command used: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- pnpm may be enabled via Corepack (`corepack enable pnpm`), which is an official pnpm path.
-
-## Scaffold Commands
-
-Run desktop frontend placeholder:
+Run the desktop frontend only:
 
 ```bash
 pnpm dev:desktop
 ```
 
-Build all workspace packages:
+Run the full desktop host in Wails dev mode:
 
 ```bash
-pnpm build
+make desktop-dev
 ```
 
-Typecheck all workspace packages:
+Useful checks:
 
 ```bash
-pnpm typecheck
+make doctor
+make typecheck
+make desktop-release-check
 ```
 
-Build VS Code extension bundle:
+## Build
+
+Build the shared package, desktop frontend, extension, and Go desktop host:
 
 ```bash
-pnpm --filter kairos-vscode build
+make build
 ```
 
-## Developer Automation
-
-Use the root `Makefile` for common scaffold workflows:
-
-- `make doctor` - verify required tools and report optional Wails status
-- `make install` - install workspace dependencies
-- `make typecheck` - run workspace type checks
-- `make build` - build shared package, desktop frontend, extension, and Go desktop scaffold
-- `make desktop-frontend` - start the desktop frontend dev server
-- `make desktop-dev` - run `wails dev` from `apps/desktop` (with a friendly message if Wails is missing)
-- `make dev` - start the scaffold dev environment in background (`wails dev` when available)
-- `make dev-down` - stop background dev processes started by `make dev`
-
-## Desktop Host (Wails) Notes
-
-If Wails CLI is installed, run from `apps/desktop`:
+Build a packaged desktop app:
 
 ```bash
-wails dev
+make desktop-release-build
 ```
 
-If Wails CLI is not installed, install it later and keep using the frontend scaffold for now.
+Build and package the VS Code extension:
 
-## Intentionally Not Implemented Yet
+```bash
+pnpm --filter kairos-vscode verify:release
+pnpm --filter kairos-vscode package:vsix
+```
 
-- Tracking/session capture
-- Ingestion endpoints
-- Storage logic and persistence
-- Analytics logic
-- Dashboard data flow
-- Real extension telemetry/network behavior
+## Data Flow
+
+1. The VS Code extension fetches effective desktop-owned settings from the local desktop server.
+2. The extension emits raw activity events to the desktop app over loopback transport.
+3. The desktop app validates and persists raw events, machines, and extension status in SQLite.
+4. Session rebuilds derive first-class coding sessions from persisted raw events.
+5. View assembly services build Overview, Sessions, Analytics, Calendar, and Settings payloads from persisted state.
+6. The desktop frontend consumes those page-ready payloads through Wails bindings.
+
+## Storage
+
+- Default desktop database path: user config directory under `Kairos/kairos.sqlite3`
+- Override for development/tests: `KAIROS_DATABASE_PATH`
+- Local extension server host override: `KAIROS_LOCAL_SERVER_HOST`
+- Local extension server port override: `KAIROS_LOCAL_SERVER_PORT`
+
+## V1 Limitations
+
+- no cloud sync
+- no multi-user or profile support
+- no reports/export flows
+- no dedicated projects page
+- no advanced summary tables beyond sessions and page assembly
+
+See [`apps/desktop/README.md`](apps/desktop/README.md), [`docs/settings-system.md`](docs/settings-system.md), and [`docs/desktop-release-checklist.md`](docs/desktop-release-checklist.md) for release and runtime details.

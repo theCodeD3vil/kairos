@@ -1,0 +1,6 @@
+UNLICENSED
+
+All rights reserved.
+
+This extension is not currently licensed for public open-source redistribution.
+Replace this file if the project adopts a final release license.

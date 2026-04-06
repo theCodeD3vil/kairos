@@ -1,30 +1,64 @@
 {
   "name": "kairos-vscode",
-  "displayName": "Kairos VS Code",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Kairos VS Code extension scaffold",
+  "displayName": "Kairos",
+  "version": "0.1.0",
+  "publisher": "kairos-dev",
+  "description": "Local-first activity tracking for Kairos Desktop from inside VS Code.",
+  "license": "UNLICENSED",
   "engines": {
     "vscode": "^1.98.0"
   },
-  "categories": ["Other"],
+  "categories": ["Other", "Productivity"],
+  "keywords": [
+    "kairos",
+    "desktop",
+    "productivity",
+    "activity-tracking",
+    "local-first",
+    "time-awareness"
+  ],
+  "homepage": "https://github.com/theCodeD3vil/kairos/tree/main/apps/vscode-extension",
+  "bugs": {
+    "url": "https://github.com/theCodeD3vil/kairos/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theCodeD3vil/kairos.git",
+    "directory": "apps/vscode-extension"
+  },
   "main": "./dist/extension.js",
-  "activationEvents": ["onCommand:kairos.hello"],
+  "extensionKind": ["workspace"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:kairos.refreshSettings"
+  ],
   "contributes": {
     "commands": [
       {
-        "command": "kairos.hello",
-        "title": "Kairos: Hello"
+        "command": "kairos.refreshSettings",
+        "title": "Refresh Desktop Settings",
+        "category": "Kairos"
       }
     ]
   },
   "scripts": {
-    "build": "node esbuild.mjs",
+    "clean": "node ./scripts/clean.mjs",
+    "pretypecheck": "pnpm --filter @kairos/shared build",
+    "pretest": "pnpm --filter @kairos/shared build",
+    "build": "pnpm run build:release",
+    "build:dev": "pnpm --filter @kairos/shared build && node esbuild.mjs",
+    "build:release": "pnpm run clean && pnpm --filter @kairos/shared build && node esbuild.mjs --release",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test .test-dist/test/**/*.test.js",
+    "package:vsix": "pnpm run build:release && vsce package --no-dependencies --out dist/kairos-vscode-${npm_package_version}.vsix",
+    "verify:release": "pnpm run typecheck && pnpm run test && pnpm run build:release",
     "lint": "echo \"No lint rules configured yet for kairos-vscode\""
   },
+  "dependencies": {},
   "devDependencies": {
+    "@kairos/shared": "workspace:*",
+    "@vscode/vsce": "^3.6.2",
     "@types/node": "^22.10.2",
     "@types/vscode": "^1.98.0",
     "esbuild": "^0.24.0",

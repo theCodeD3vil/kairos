@@ -1,6 +1,6 @@
 .PHONY: help doctor install typecheck build lint format clean \
 	shared-build frontend-build extension-build desktop-build \
-	desktop-frontend desktop-dev dev dev-down setup
+	desktop-release-build desktop-release-check desktop-frontend desktop-dev dev dev-down setup
 
 DEV_DIR := .dev
 FRONTEND_PID := $(DEV_DIR)/frontend.pid
@@ -66,6 +66,22 @@ extension-build: ## Build VS Code extension bundle
 
 desktop-build: ## Build Go desktop scaffold
 	cd apps/desktop && go mod tidy && go build ./...
+
+desktop-release-build: ## Build the packaged desktop app with Wails
+	@if command -v wails >/dev/null 2>&1; then \
+		cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 wails build; \
+	elif [ -x "$$HOME/go/bin/wails" ]; then \
+		cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 "$$HOME/go/bin/wails" build; \
+	else \
+		echo "wails CLI is not installed."; \
+		echo "Install with: go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
+		exit 1; \
+	fi
+
+desktop-release-check: ## Verify desktop release inputs before packaging
+	pnpm --filter @kairos/desktop-frontend typecheck
+	pnpm --filter @kairos/desktop-frontend build
+	cd apps/desktop && go test ./...
 
 build: shared-build frontend-build extension-build desktop-build ## Build scaffold components
 
