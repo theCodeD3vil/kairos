@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/toast/ToastProvider';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
@@ -18,9 +18,20 @@ import {
 } from '@/components/settings/SettingsPrimitives';
 import { settingsDefaults, settingsTabOrder } from '@/data/mockSettings';
 import { systemInfoSnapshot } from '@/mocks/system-info';
+import {
+  loadSettingsScreenData,
+  resetSettingsSectionViewModel,
+  saveAppBehaviorSettings,
+  saveExclusionsSettings,
+  saveExtensionSettings,
+  saveGeneralSettings,
+  savePrivacySettings,
+  saveTrackingSettings,
+  settingsSections,
+} from '@/lib/backend/settings';
 
 export function SettingsPage() {
-  const { info, success } = useToast();
+  const { error, info, success } = useToast();
   const [activeTab, setActiveTab] = useState('general');
   const [general, setGeneral] = useState(settingsDefaults.general);
   const [privacy, setPrivacy] = useState(settingsDefaults.privacy);
@@ -28,10 +39,79 @@ export function SettingsPage() {
   const [exclusions, setExclusions] = useState(settingsDefaults.exclusions);
   const [vscodeExtension, setVscodeExtension] = useState(settingsDefaults.vscodeExtension);
   const [appBehavior, setAppBehavior] = useState(settingsDefaults.appBehavior);
-  const [dataStorage] = useState(settingsDefaults.dataStorage);
-  const [about] = useState(settingsDefaults.about);
+  const [dataStorage, setDataStorage] = useState(settingsDefaults.dataStorage);
+  const [about, setAbout] = useState(settingsDefaults.about);
+  const [currentMachine, setCurrentMachine] = useState(systemInfoSnapshot.currentMachine);
+  const [appStatus, setAppStatus] = useState(systemInfoSnapshot.appStatus);
 
-  const { currentMachine, appStatus } = systemInfoSnapshot;
+  const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
+    setGeneral(next.viewModel.general);
+    setPrivacy(next.viewModel.privacy);
+    setTracking(next.viewModel.tracking);
+    setExclusions(next.viewModel.exclusions);
+    setVscodeExtension(next.viewModel.vscodeExtension);
+    setAppBehavior(next.viewModel.appBehavior);
+    setDataStorage(next.viewModel.dataStorage);
+    setAbout(next.viewModel.about);
+    setCurrentMachine(next.currentMachine);
+    setAppStatus(next.appStatus);
+  }, []);
+
+  const reloadSettings = useCallback(async () => {
+    try {
+      const next = await loadSettingsScreenData();
+      applyScreenData(next);
+    } catch (cause) {
+      error('Settings Load Failed', cause instanceof Error ? cause.message : 'Unable to load desktop settings.');
+    }
+  }, [applyScreenData, error]);
+
+  useEffect(() => {
+    void reloadSettings();
+  }, [reloadSettings]);
+
+  const persistSection = useCallback(
+    async <T,>(next: T, save: (value: T) => Promise<T>, apply: (value: T) => void, label: string) => {
+      apply(next);
+      try {
+        const saved = await save(next);
+        apply(saved);
+      } catch (cause) {
+        error(label, cause instanceof Error ? cause.message : 'Unable to persist settings.');
+        void reloadSettings();
+      }
+    },
+    [error, reloadSettings],
+  );
+
+  const updateGeneralState = useCallback((next: typeof general) => {
+    void persistSection(next, saveGeneralSettings, setGeneral, 'General Settings');
+  }, [persistSection]);
+  const updatePrivacyState = useCallback((next: typeof privacy) => {
+    void persistSection(next, savePrivacySettings, setPrivacy, 'Privacy Settings');
+  }, [persistSection]);
+  const updateTrackingState = useCallback((next: typeof tracking) => {
+    void persistSection(next, saveTrackingSettings, setTracking, 'Tracking Settings');
+  }, [persistSection]);
+  const updateExclusionsState = useCallback((next: typeof exclusions) => {
+    void persistSection(next, saveExclusionsSettings, setExclusions, 'Exclusions Settings');
+  }, [persistSection]);
+  const updateExtensionState = useCallback((next: typeof vscodeExtension) => {
+    void persistSection(next, saveExtensionSettings, setVscodeExtension, 'VS Code Extension Settings');
+  }, [persistSection]);
+  const updateAppBehaviorState = useCallback((next: typeof appBehavior) => {
+    void persistSection(next, saveAppBehaviorSettings, setAppBehavior, 'App Behavior Settings');
+  }, [persistSection]);
+
+  const handleResetSection = useCallback(async (section: string, title: string) => {
+    try {
+      const next = await resetSettingsSectionViewModel(section);
+      applyScreenData(next);
+      success(title, 'Section reset to desktop defaults.');
+    } catch (cause) {
+      error(title, cause instanceof Error ? cause.message : 'Unable to reset section.');
+    }
+  }, [applyScreenData, error, success]);
 
   const placeholderAction = (title: string, body: string) => {
     info(title, body);
@@ -42,17 +122,17 @@ export function SettingsPage() {
       label: 'General',
       value: 'general',
       content: (
-        <SettingsSection title="General" action={<ResetButton onClick={() => setGeneral(settingsDefaults.general)} />}>
+        <SettingsSection title="General" action={<ResetButton onClick={() => void handleResetSection(settingsSections.general, 'General Settings')} />}>
           <SettingsRow label="Machine display name">
             <SettingsInput
               value={general.machineDisplayName}
-              onChange={(event) => setGeneral({ ...general, machineDisplayName: event.target.value })}
+              onChange={(event) => updateGeneralState({ ...general, machineDisplayName: event.target.value })}
             />
           </SettingsRow>
           <SettingsRow label="Default date range">
             <SettingsSelect
               value={general.defaultDateRange}
-              onChange={(event) => setGeneral({ ...general, defaultDateRange: event.target.value as typeof general.defaultDateRange })}
+              onChange={(event) => updateGeneralState({ ...general, defaultDateRange: event.target.value as typeof general.defaultDateRange })}
               options={[
                 { label: 'Today', value: 'today' },
                 { label: 'Last 7 days', value: 'week' },
@@ -64,7 +144,7 @@ export function SettingsPage() {
           <SettingsRow label="Time format">
             <SettingsSelect
               value={general.timeFormat}
-              onChange={(event) => setGeneral({ ...general, timeFormat: event.target.value as typeof general.timeFormat })}
+              onChange={(event) => updateGeneralState({ ...general, timeFormat: event.target.value as typeof general.timeFormat })}
               options={[
                 { label: '24 hour', value: '24h' },
                 { label: '12 hour', value: '12h' },
@@ -74,7 +154,7 @@ export function SettingsPage() {
           <SettingsRow label="Week start day">
             <SettingsSelect
               value={general.weekStartDay}
-              onChange={(event) => setGeneral({ ...general, weekStartDay: event.target.value as typeof general.weekStartDay })}
+              onChange={(event) => updateGeneralState({ ...general, weekStartDay: event.target.value as typeof general.weekStartDay })}
               options={[
                 { label: 'Monday', value: 'Monday' },
                 { label: 'Sunday', value: 'Sunday' },
@@ -84,7 +164,7 @@ export function SettingsPage() {
           <SettingsRow label="Preferred landing page">
             <SettingsSelect
               value={general.landingPage}
-              onChange={(event) => setGeneral({ ...general, landingPage: event.target.value as typeof general.landingPage })}
+              onChange={(event) => updateGeneralState({ ...general, landingPage: event.target.value as typeof general.landingPage })}
               options={[
                 { label: 'Overview', value: 'overview' },
                 { label: 'Analytics', value: 'analytics' },
@@ -100,9 +180,9 @@ export function SettingsPage() {
       label: 'Privacy',
       value: 'privacy',
       content: (
-        <SettingsSection title="Privacy" action={<ResetButton onClick={() => setPrivacy(settingsDefaults.privacy)} />}>
+        <SettingsSection title="Privacy" action={<ResetButton onClick={() => void handleResetSection(settingsSections.privacy, 'Privacy Settings')} />}>
           <SettingsRow label="Local-only mode">
-            <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => setPrivacy({ ...privacy, localOnlyMode: next })} />
+            <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => updatePrivacyState({ ...privacy, localOnlyMode: next })} />
           </SettingsRow>
           <SettingsRow label="Cloud sync" helper="Placeholder only">
             <SettingsToggle checked={privacy.cloudSyncEnabled} onChange={(next) => setPrivacy({ ...privacy, cloudSyncEnabled: next })} />
@@ -110,7 +190,7 @@ export function SettingsPage() {
           <SettingsRow label="File path visibility">
             <SettingsSelect
               value={privacy.filePathVisibility}
-              onChange={(event) => setPrivacy({ ...privacy, filePathVisibility: event.target.value as typeof privacy.filePathVisibility })}
+              onChange={(event) => updatePrivacyState({ ...privacy, filePathVisibility: event.target.value as typeof privacy.filePathVisibility })}
               options={[
                 { label: 'Masked', value: 'masked' },
                 { label: 'Full path', value: 'full' },
@@ -119,16 +199,16 @@ export function SettingsPage() {
             />
           </SettingsRow>
           <SettingsRow label="Show machine names">
-            <SettingsToggle checked={privacy.showMachineNames} onChange={(next) => setPrivacy({ ...privacy, showMachineNames: next })} />
+            <SettingsToggle checked={privacy.showMachineNames} onChange={(next) => updatePrivacyState({ ...privacy, showMachineNames: next })} />
           </SettingsRow>
           <SettingsRow label="Show hostname">
-            <SettingsToggle checked={privacy.showHostname} onChange={(next) => setPrivacy({ ...privacy, showHostname: next })} />
+            <SettingsToggle checked={privacy.showHostname} onChange={(next) => updatePrivacyState({ ...privacy, showHostname: next })} />
           </SettingsRow>
           <SettingsRow label="Obfuscate sensitive project names">
-            <SettingsToggle checked={privacy.obfuscateSensitiveProjects} onChange={(next) => setPrivacy({ ...privacy, obfuscateSensitiveProjects: next })} />
+            <SettingsToggle checked={privacy.obfuscateSensitiveProjects} onChange={(next) => updatePrivacyState({ ...privacy, obfuscateSensitiveProjects: next })} />
           </SettingsRow>
           <SettingsRow label="Minimize extension metadata">
-            <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => setPrivacy({ ...privacy, minimizeExtensionMetadata: next })} />
+            <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => updatePrivacyState({ ...privacy, minimizeExtensionMetadata: next })} />
           </SettingsRow>
         </SettingsSection>
       ),
@@ -137,35 +217,35 @@ export function SettingsPage() {
       label: 'Tracking',
       value: 'tracking',
       content: (
-        <SettingsSection title="Tracking" action={<ResetButton onClick={() => setTracking(settingsDefaults.tracking)} />}>
+        <SettingsSection title="Tracking" action={<ResetButton onClick={() => void handleResetSection(settingsSections.tracking, 'Tracking Settings')} />}>
           <SettingsRow label="Tracking enabled">
-            <SettingsToggle checked={tracking.trackingEnabled} onChange={(next) => setTracking({ ...tracking, trackingEnabled: next })} />
+            <SettingsToggle checked={tracking.trackingEnabled} onChange={(next) => updateTrackingState({ ...tracking, trackingEnabled: next })} />
           </SettingsRow>
           <SettingsRow label="Idle detection">
-            <SettingsToggle checked={tracking.idleDetectionEnabled} onChange={(next) => setTracking({ ...tracking, idleDetectionEnabled: next })} />
+            <SettingsToggle checked={tracking.idleDetectionEnabled} onChange={(next) => updateTrackingState({ ...tracking, idleDetectionEnabled: next })} />
           </SettingsRow>
           <SettingsRow label="Track project activity">
-            <SettingsToggle checked={tracking.trackProjectActivity} onChange={(next) => setTracking({ ...tracking, trackProjectActivity: next })} />
+            <SettingsToggle checked={tracking.trackProjectActivity} onChange={(next) => updateTrackingState({ ...tracking, trackProjectActivity: next })} />
           </SettingsRow>
           <SettingsRow label="Track language activity">
-            <SettingsToggle checked={tracking.trackLanguageActivity} onChange={(next) => setTracking({ ...tracking, trackLanguageActivity: next })} />
+            <SettingsToggle checked={tracking.trackLanguageActivity} onChange={(next) => updateTrackingState({ ...tracking, trackLanguageActivity: next })} />
           </SettingsRow>
           <SettingsRow label="Track machine attribution">
-            <SettingsToggle checked={tracking.trackMachineAttribution} onChange={(next) => setTracking({ ...tracking, trackMachineAttribution: next })} />
+            <SettingsToggle checked={tracking.trackMachineAttribution} onChange={(next) => updateTrackingState({ ...tracking, trackMachineAttribution: next })} />
           </SettingsRow>
           <SettingsRow label="Track session boundaries">
-            <SettingsToggle checked={tracking.trackSessionBoundaries} onChange={(next) => setTracking({ ...tracking, trackSessionBoundaries: next })} />
+            <SettingsToggle checked={tracking.trackSessionBoundaries} onChange={(next) => updateTrackingState({ ...tracking, trackSessionBoundaries: next })} />
           </SettingsRow>
           <SettingsRow label="Idle timeout threshold">
             <SettingsInput
               value={tracking.idleTimeoutMinutes}
-              onChange={(event) => setTracking({ ...tracking, idleTimeoutMinutes: event.target.value })}
+              onChange={(event) => updateTrackingState({ ...tracking, idleTimeoutMinutes: event.target.value })}
             />
           </SettingsRow>
           <SettingsRow label="Session merge threshold">
             <SettingsInput
               value={tracking.sessionMergeThresholdMinutes}
-              onChange={(event) => setTracking({ ...tracking, sessionMergeThresholdMinutes: event.target.value })}
+              onChange={(event) => updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: event.target.value })}
             />
           </SettingsRow>
           <SettingsRow label="Detect active coding window">
@@ -181,36 +261,36 @@ export function SettingsPage() {
       label: 'Exclusions',
       value: 'exclusions',
       content: (
-        <SettingsSection title="Exclusions" action={<ResetButton onClick={() => setExclusions(settingsDefaults.exclusions)} />}>
+        <SettingsSection title="Exclusions" action={<ResetButton onClick={() => void handleResetSection(settingsSections.exclusions, 'Exclusions Settings')} />}>
           <ExclusionEditor
             label="Excluded folders"
             items={exclusions.folders}
             placeholder="Add folder path"
-            onChange={(items) => setExclusions({ ...exclusions, folders: items })}
+            onChange={(items) => updateExclusionsState({ ...exclusions, folders: items })}
           />
           <ExclusionEditor
             label="Excluded project names"
             items={exclusions.projectNames}
             placeholder="Add project name"
-            onChange={(items) => setExclusions({ ...exclusions, projectNames: items })}
+            onChange={(items) => updateExclusionsState({ ...exclusions, projectNames: items })}
           />
           <ExclusionEditor
             label="Excluded workspace patterns"
             items={exclusions.workspacePatterns}
             placeholder="Add workspace pattern"
-            onChange={(items) => setExclusions({ ...exclusions, workspacePatterns: items })}
+            onChange={(items) => updateExclusionsState({ ...exclusions, workspacePatterns: items })}
           />
           <ExclusionEditor
             label="Excluded file extensions"
             items={exclusions.fileExtensions}
             placeholder="Add file extension"
-            onChange={(items) => setExclusions({ ...exclusions, fileExtensions: items })}
+            onChange={(items) => updateExclusionsState({ ...exclusions, fileExtensions: items })}
           />
           <ExclusionEditor
             label="Excluded machines"
             items={exclusions.machineNames}
             placeholder="Add machine name"
-            onChange={(items) => setExclusions({ ...exclusions, machineNames: items })}
+            onChange={(items) => updateExclusionsState({ ...exclusions, machineNames: items })}
           />
         </SettingsSection>
       ),
@@ -220,7 +300,7 @@ export function SettingsPage() {
       value: 'extension',
       content: (
         <div className="space-y-3">
-          <SettingsSection title="VS Code Extension" action={<ResetButton onClick={() => setVscodeExtension(settingsDefaults.vscodeExtension)} />}>
+          <SettingsSection title="VS Code Extension" action={<ResetButton onClick={() => void handleResetSection(settingsSections.extension, 'VS Code Extension Settings')} />}>
             <SettingsStatusPanel
               title="Extension status"
               status={
@@ -245,8 +325,7 @@ export function SettingsPage() {
                     size="sm"
                     className="rounded-full!"
                     onClick={() => {
-                      setVscodeExtension({ ...vscodeExtension, extensionConnected: true, lastExtensionSync: 'Just now' });
-                      success('Extension Connection', 'Mock connection established.');
+                      placeholderAction('Extension Connection', 'Desktop-owned extension settings are ready; transport verification is still pending.');
                     }}
                   >
                     Test Connection
@@ -271,46 +350,46 @@ export function SettingsPage() {
               }
             />
             <SettingsRow label="Auto-connect to desktop app">
-              <SettingsToggle checked={vscodeExtension.autoConnectToDesktop} onChange={(next) => setVscodeExtension({ ...vscodeExtension, autoConnectToDesktop: next })} />
+              <SettingsToggle checked={vscodeExtension.autoConnectToDesktop} onChange={(next) => updateExtensionState({ ...vscodeExtension, autoConnectToDesktop: next })} />
             </SettingsRow>
             <SettingsRow label="Send heartbeat events">
-              <SettingsToggle checked={vscodeExtension.sendHeartbeatEvents} onChange={(next) => setVscodeExtension({ ...vscodeExtension, sendHeartbeatEvents: next })} />
+              <SettingsToggle checked={vscodeExtension.sendHeartbeatEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendHeartbeatEvents: next })} />
             </SettingsRow>
             <SettingsRow label="Heartbeat interval">
               <SettingsInput
                 value={vscodeExtension.heartbeatIntervalSeconds}
-                onChange={(event) => setVscodeExtension({ ...vscodeExtension, heartbeatIntervalSeconds: event.target.value })}
+                onChange={(event) => updateExtensionState({ ...vscodeExtension, heartbeatIntervalSeconds: event.target.value })}
               />
             </SettingsRow>
             <SettingsRow label="Send project metadata">
-              <SettingsToggle checked={vscodeExtension.sendProjectMetadata} onChange={(next) => setVscodeExtension({ ...vscodeExtension, sendProjectMetadata: next })} />
+              <SettingsToggle checked={vscodeExtension.sendProjectMetadata} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendProjectMetadata: next })} />
             </SettingsRow>
             <SettingsRow label="Send language metadata">
-              <SettingsToggle checked={vscodeExtension.sendLanguageMetadata} onChange={(next) => setVscodeExtension({ ...vscodeExtension, sendLanguageMetadata: next })} />
+              <SettingsToggle checked={vscodeExtension.sendLanguageMetadata} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendLanguageMetadata: next })} />
             </SettingsRow>
             <SettingsRow label="Send machine attribution">
-              <SettingsToggle checked={vscodeExtension.sendMachineAttribution} onChange={(next) => setVscodeExtension({ ...vscodeExtension, sendMachineAttribution: next })} />
+              <SettingsToggle checked={vscodeExtension.sendMachineAttribution} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendMachineAttribution: next })} />
             </SettingsRow>
             <SettingsRow label="Respect desktop exclusions">
-              <SettingsToggle checked={vscodeExtension.respectDesktopExclusions} onChange={(next) => setVscodeExtension({ ...vscodeExtension, respectDesktopExclusions: next })} />
+              <SettingsToggle checked={vscodeExtension.respectDesktopExclusions} onChange={(next) => updateExtensionState({ ...vscodeExtension, respectDesktopExclusions: next })} />
             </SettingsRow>
             <SettingsRow label="Buffer events when desktop is unavailable">
-              <SettingsToggle checked={vscodeExtension.bufferEventsWhenOffline} onChange={(next) => setVscodeExtension({ ...vscodeExtension, bufferEventsWhenOffline: next })} />
+              <SettingsToggle checked={vscodeExtension.bufferEventsWhenOffline} onChange={(next) => updateExtensionState({ ...vscodeExtension, bufferEventsWhenOffline: next })} />
             </SettingsRow>
             <SettingsRow label="Retry connection automatically">
-              <SettingsToggle checked={vscodeExtension.retryConnectionAutomatically} onChange={(next) => setVscodeExtension({ ...vscodeExtension, retryConnectionAutomatically: next })} />
+              <SettingsToggle checked={vscodeExtension.retryConnectionAutomatically} onChange={(next) => updateExtensionState({ ...vscodeExtension, retryConnectionAutomatically: next })} />
             </SettingsRow>
             <SettingsRow label="Track only focused VS Code window">
-              <SettingsToggle checked={vscodeExtension.trackFocusedWindowOnly} onChange={(next) => setVscodeExtension({ ...vscodeExtension, trackFocusedWindowOnly: next })} />
+              <SettingsToggle checked={vscodeExtension.trackFocusedWindowOnly} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackFocusedWindowOnly: next })} />
             </SettingsRow>
             <SettingsRow label="Track file open events">
-              <SettingsToggle checked={vscodeExtension.trackFileOpenEvents} onChange={(next) => setVscodeExtension({ ...vscodeExtension, trackFileOpenEvents: next })} />
+              <SettingsToggle checked={vscodeExtension.trackFileOpenEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackFileOpenEvents: next })} />
             </SettingsRow>
             <SettingsRow label="Track save events">
-              <SettingsToggle checked={vscodeExtension.trackSaveEvents} onChange={(next) => setVscodeExtension({ ...vscodeExtension, trackSaveEvents: next })} />
+              <SettingsToggle checked={vscodeExtension.trackSaveEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackSaveEvents: next })} />
             </SettingsRow>
             <SettingsRow label="Track edit activity">
-              <SettingsToggle checked={vscodeExtension.trackEditActivity} onChange={(next) => setVscodeExtension({ ...vscodeExtension, trackEditActivity: next })} />
+              <SettingsToggle checked={vscodeExtension.trackEditActivity} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackEditActivity: next })} />
             </SettingsRow>
             <SettingsRow label="Sessionization handled by">
               <SettingsSelect
@@ -363,24 +442,24 @@ export function SettingsPage() {
       label: 'App Behavior',
       value: 'behavior',
       content: (
-        <SettingsSection title="App Behavior" action={<ResetButton onClick={() => setAppBehavior(settingsDefaults.appBehavior)} />}>
+        <SettingsSection title="App Behavior" action={<ResetButton onClick={() => void handleResetSection(settingsSections.appBehavior, 'App Behavior Settings')} />}>
           <SettingsRow label="Launch on startup">
-            <SettingsToggle checked={appBehavior.launchOnStartup} onChange={(next) => setAppBehavior({ ...appBehavior, launchOnStartup: next })} />
+            <SettingsToggle checked={appBehavior.launchOnStartup} onChange={(next) => updateAppBehaviorState({ ...appBehavior, launchOnStartup: next })} />
           </SettingsRow>
           <SettingsRow label="Start minimized">
-            <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => setAppBehavior({ ...appBehavior, startMinimized: next })} />
+            <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
           </SettingsRow>
           <SettingsRow label="Minimize to tray">
-            <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => setAppBehavior({ ...appBehavior, minimizeToTray: next })} />
+            <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
           </SettingsRow>
           <SettingsRow label="Open on system login">
-            <SettingsToggle checked={appBehavior.openOnSystemLogin} onChange={(next) => setAppBehavior({ ...appBehavior, openOnSystemLogin: next })} />
+            <SettingsToggle checked={appBehavior.openOnSystemLogin} onChange={(next) => updateAppBehaviorState({ ...appBehavior, openOnSystemLogin: next })} />
           </SettingsRow>
           <SettingsRow label="Remember last selected page">
-            <SettingsToggle checked={appBehavior.rememberLastSelectedPage} onChange={(next) => setAppBehavior({ ...appBehavior, rememberLastSelectedPage: next })} />
+            <SettingsToggle checked={appBehavior.rememberLastSelectedPage} onChange={(next) => updateAppBehaviorState({ ...appBehavior, rememberLastSelectedPage: next })} />
           </SettingsRow>
           <SettingsRow label="Restore last selected date range">
-            <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => setAppBehavior({ ...appBehavior, restoreLastSelectedDateRange: next })} />
+            <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => updateAppBehaviorState({ ...appBehavior, restoreLastSelectedDateRange: next })} />
           </SettingsRow>
           <SettingsRow label="Reopen last viewed calendar month or analytics filters">
             <SettingsToggle checked={appBehavior.reopenLastViewedContext} onChange={(next) => setAppBehavior({ ...appBehavior, reopenLastViewedContext: next })} />
@@ -481,14 +560,18 @@ export function SettingsPage() {
           size="sm"
           className="rounded-full! border-black/10"
           onClick={() => {
-            setGeneral(settingsDefaults.general);
-            setPrivacy(settingsDefaults.privacy);
-            setTracking(settingsDefaults.tracking);
-            setExclusions(settingsDefaults.exclusions);
-            setVscodeExtension(settingsDefaults.vscodeExtension);
-            setAppBehavior(settingsDefaults.appBehavior);
-            setActiveTab('general');
-            success('Settings Reset', 'All frontend-only settings returned to defaults.');
+            void (async () => {
+              try {
+                for (const section of Object.values(settingsSections)) {
+                  await resetSettingsSectionViewModel(section);
+                }
+                await reloadSettings();
+                setActiveTab('general');
+                success('Settings Reset', 'All persisted settings returned to desktop defaults.');
+              } catch (cause) {
+                error('Settings Reset Failed', cause instanceof Error ? cause.message : 'Unable to reset settings.');
+              }
+            })();
           }}
         >
           <RotateCcw size={14} />

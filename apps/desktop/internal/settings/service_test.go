@@ -9,15 +9,163 @@ import (
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
 
-func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "kairos-settings.sqlite3")
-	store, err := storage.Open(context.Background(), dbPath)
+func TestDefaultsLoadCorrectlyOnEmptyDB(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	data, err := service.GetSettingsData(context.Background())
 	if err != nil {
-		t.Fatalf("open sqlite store: %v", err)
+		t.Fatalf("GetSettingsData failed: %v", err)
 	}
-	t.Cleanup(func() {
-		_ = store.Close()
+
+	if !data.Tracking.TrackingEnabled {
+		t.Fatal("expected tracking enabled by default")
+	}
+	if !data.Privacy.LocalOnlyMode {
+		t.Fatal("expected local only mode enabled by default")
+	}
+	if data.Extension.HeartbeatIntervalSeconds != 30 {
+		t.Fatalf("expected default heartbeat interval 30, got %d", data.Extension.HeartbeatIntervalSeconds)
+	}
+	if data.DataStorage.LocalDataPath != store.Path() {
+		t.Fatalf("expected local data path %q, got %q", store.Path(), data.DataStorage.LocalDataPath)
+	}
+}
+
+func TestPersistedSettingsOverrideDefaultsAndMissingSectionsFallback(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	updatedGeneral, err := service.UpdateGeneralSettings(context.Background(), contracts.GeneralSettings{
+		MachineDisplayName:   "Focused Machine",
+		DefaultDateRange:     "today",
+		TimeFormat:           "12h",
+		WeekStartsOn:         "sunday",
+		PreferredLandingPage: "analytics",
 	})
+	if err != nil {
+		t.Fatalf("UpdateGeneralSettings failed: %v", err)
+	}
+	if updatedGeneral.MachineDisplayName != "Focused Machine" {
+		t.Fatalf("unexpected updated general section: %+v", updatedGeneral)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if data.General.MachineDisplayName != "Focused Machine" {
+		t.Fatalf("expected persisted general override, got %+v", data.General)
+	}
+	if data.Extension.HeartbeatIntervalSeconds != 30 {
+		t.Fatalf("expected missing extension section to fall back to default, got %+v", data.Extension)
+	}
+}
+
+func TestInvalidPersistedValuesFailSafely(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.SetSettingsSection(context.Background(), SectionTracking, `{"idleTimeoutMinutes":0,"sessionMergeThresholdMinutes":10}`, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("seed invalid tracking section failed: %v", err)
+	}
+	if err := store.SetSettingsSection(context.Background(), SectionPrivacy, `{"filePathMode":"explode"}`, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("seed invalid privacy section failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if data.Tracking.IdleTimeoutMinutes != 5 {
+		t.Fatalf("expected invalid tracking section to fall back to defaults, got %+v", data.Tracking)
+	}
+	if data.Privacy.FilePathMode != "masked" {
+		t.Fatalf("expected invalid privacy section to fall back to defaults, got %+v", data.Privacy)
+	}
+}
+
+func TestUpdateAndResetSettingsSectionPersistCorrectly(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	if _, err := service.UpdateExtensionSettings(context.Background(), contracts.ExtensionSettings{
+		AutoConnect:                  true,
+		SendHeartbeatEvents:          true,
+		HeartbeatIntervalSeconds:     45,
+		SendProjectMetadata:          true,
+		SendLanguageMetadata:         true,
+		SendMachineAttribution:       true,
+		RespectDesktopExclusions:     false,
+		BufferEventsWhenOffline:      true,
+		RetryConnectionAutomatically: true,
+		TrackOnlyWhenFocused:         false,
+		TrackFileOpenEvents:          true,
+		TrackSaveEvents:              false,
+		TrackEditEvents:              true,
+	}); err != nil {
+		t.Fatalf("UpdateExtensionSettings failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+	if data.Extension.HeartbeatIntervalSeconds != 45 || data.Extension.TrackSaveEvents {
+		t.Fatalf("expected persisted extension settings, got %+v", data.Extension)
+	}
+
+	reset, err := service.ResetSettingsSection(context.Background(), SectionExtension)
+	if err != nil {
+		t.Fatalf("ResetSettingsSection failed: %v", err)
+	}
+	if reset.Extension.HeartbeatIntervalSeconds != 30 || !reset.Extension.TrackSaveEvents {
+		t.Fatalf("expected extension section reset to defaults, got %+v", reset.Extension)
+	}
+}
+
+func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	if _, err := service.UpdateTrackingSettings(context.Background(), contracts.TrackingSettings{
+		TrackingEnabled:              false,
+		IdleDetectionEnabled:         true,
+		TrackProjectActivity:         true,
+		TrackLanguageActivity:        true,
+		TrackMachineAttribution:      true,
+		TrackSessionBoundaries:       true,
+		IdleTimeoutMinutes:           9,
+		SessionMergeThresholdMinutes: 14,
+	}); err != nil {
+		t.Fatalf("UpdateTrackingSettings failed: %v", err)
+	}
+	if _, err := service.UpdatePrivacySettings(context.Background(), contracts.PrivacySettings{
+		LocalOnlyMode:             true,
+		FilePathMode:              "hidden",
+		ShowMachineNames:          false,
+		ShowHostname:              false,
+		ObfuscateProjectNames:     false,
+		MinimizeExtensionMetadata: true,
+	}); err != nil {
+		t.Fatalf("UpdatePrivacySettings failed: %v", err)
+	}
+
+	payload, err := service.GetExtensionEffectiveSettings(context.Background())
+	if err != nil {
+		t.Fatalf("GetExtensionEffectiveSettings failed: %v", err)
+	}
+
+	if payload.TrackingEnabled {
+		t.Fatal("expected tracking disabled in extension-effective payload")
+	}
+	if payload.FilePathMode != "hidden" {
+		t.Fatalf("expected hidden file path mode, got %q", payload.FilePathMode)
+	}
+	if payload.IdleTimeoutMinutes != 9 || payload.SessionMergeThresholdMinutes != 14 {
+		t.Fatalf("unexpected threshold payload: %+v", payload)
+	}
+}
+
+func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
+	service, store := newTestSettingsService(t)
 
 	recordedAt := "2026-04-08T12:00:00Z"
 	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
@@ -47,9 +195,6 @@ func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 		t.Fatalf("unexpected warnings: %+v", warnings)
 	}
 
-	service := NewService(store)
-	service.SetDataStorageInfo(store.Path(), "ready")
-
 	data, err := service.GetSettingsData(context.Background())
 	if err != nil {
 		t.Fatalf("GetSettingsData failed: %v", err)
@@ -67,4 +212,22 @@ func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 	if data.System.MachineID == "" || data.System.MachineName == "" {
 		t.Fatalf("expected system machine identity, got %+v", data.System)
 	}
+}
+
+func newTestSettingsService(t *testing.T) (*ServiceImpl, *storage.Store) {
+	t.Helper()
+
+	dbPath := filepath.Join(t.TempDir(), "kairos-settings.sqlite3")
+	store, err := storage.Open(context.Background(), dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite store: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = store.Close()
+	})
+
+	service := NewService(store)
+	service.SetDataStorageInfo(store.Path(), "ready")
+
+	return service, store
 }

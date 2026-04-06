@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
+	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
 
@@ -197,6 +198,39 @@ func TestSessionRepositoryReadsReturnCorrectStats(t *testing.T) {
 	}
 }
 
+func TestTrackingThresholdSettingsAreApplied(t *testing.T) {
+	service, store := newTestService(t)
+	settingsService, ok := service.settings.(*desktopsettings.ServiceImpl)
+	if !ok {
+		t.Fatal("expected concrete settings service")
+	}
+	if _, err := settingsService.UpdateTrackingSettings(context.Background(), contracts.TrackingSettings{
+		TrackingEnabled:              true,
+		IdleDetectionEnabled:         true,
+		TrackProjectActivity:         true,
+		TrackLanguageActivity:        true,
+		TrackMachineAttribution:      true,
+		TrackSessionBoundaries:       true,
+		IdleTimeoutMinutes:           20,
+		SessionMergeThresholdMinutes: 0,
+	}); err != nil {
+		t.Fatalf("update tracking settings failed: %v", err)
+	}
+
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		event("e1", "2026-04-05T09:00:00Z", "m1", "kairos", "go"),
+		event("e2", "2026-04-05T09:12:00Z", "m1", "kairos", "go"),
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 1 {
+		t.Fatalf("expected one session with expanded idle threshold, got %d", result.CreatedSessionCount)
+	}
+}
+
 func newTestService(t *testing.T) (*ServiceImpl, *storage.Store) {
 	t.Helper()
 
@@ -209,7 +243,10 @@ func newTestService(t *testing.T) (*ServiceImpl, *storage.Store) {
 		_ = sqliteStore.Close()
 	})
 
-	service := NewService(sqliteStore)
+	settingsService := desktopsettings.NewService(sqliteStore)
+	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
+
+	service := NewService(sqliteStore, settingsService)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 7, 12, 0, 0, 0, time.UTC)
 	}

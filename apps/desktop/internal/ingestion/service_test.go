@@ -10,6 +10,7 @@ import (
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
+	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
 )
 
@@ -260,6 +261,78 @@ func TestOptionalFieldLengthLimitsAreTruncated(t *testing.T) {
 	}
 }
 
+func TestTrackingDisabledRejectsProcessing(t *testing.T) {
+	service, settingsService := newTestServiceWithSettings(t)
+	if _, err := settingsService.UpdateTrackingSettings(context.Background(), contracts.TrackingSettings{
+		TrackingEnabled:              false,
+		IdleDetectionEnabled:         true,
+		TrackProjectActivity:         true,
+		TrackLanguageActivity:        true,
+		TrackMachineAttribution:      true,
+		TrackSessionBoundaries:       true,
+		IdleTimeoutMinutes:           5,
+		SessionMergeThresholdMinutes: 10,
+	}); err != nil {
+		t.Fatalf("update tracking settings failed: %v", err)
+	}
+
+	response, err := service.IngestEvents(context.Background(), validRequest())
+	if err != nil {
+		t.Fatalf("expected no fatal error, got %v", err)
+	}
+	if response.AcceptedCount != 0 || response.RejectedCount != 2 {
+		t.Fatalf("expected tracking-disabled batch to reject processing, got %+v", response)
+	}
+
+	stats, err := service.GetIngestionStats(context.Background())
+	if err != nil {
+		t.Fatalf("stats failed: %v", err)
+	}
+	if stats.TotalAcceptedEvents != 0 {
+		t.Fatalf("expected no accepted persisted events, got %d", stats.TotalAcceptedEvents)
+	}
+}
+
+func TestFilePathPrivacyAndExclusionsAreApplied(t *testing.T) {
+	service, settingsService := newTestServiceWithSettings(t)
+	if _, err := settingsService.UpdatePrivacySettings(context.Background(), contracts.PrivacySettings{
+		LocalOnlyMode:             true,
+		FilePathMode:              "hidden",
+		ShowMachineNames:          true,
+		ShowHostname:              false,
+		ObfuscateProjectNames:     false,
+		MinimizeExtensionMetadata: true,
+	}); err != nil {
+		t.Fatalf("update privacy settings failed: %v", err)
+	}
+	if _, err := settingsService.UpdateExclusionsSettings(context.Background(), contracts.ExclusionsSettings{
+		ProjectNames: []string{"ignore-me"},
+	}); err != nil {
+		t.Fatalf("update exclusions failed: %v", err)
+	}
+
+	request := validRequest()
+	request.Events[0].FilePath = "/Users/me/Projects/kairos/main.go"
+	request.Events[0].ProjectName = "ignore-me"
+	request.Events[1].FilePath = "/Users/me/Projects/kairos/service.go"
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected no fatal error, got %v", err)
+	}
+	if response.AcceptedCount != 1 || response.RejectedCount != 1 {
+		t.Fatalf("expected excluded event to be dropped, got %+v", response)
+	}
+
+	events, err := service.ListRecentEvents(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("list recent events failed: %v", err)
+	}
+	if len(events) != 1 || events[0].FilePath != "" {
+		t.Fatalf("expected hidden file path persisted, got %+v", events)
+	}
+}
+
 func TestRequiredFieldLengthLimitIsRejected(t *testing.T) {
 	service := newTestService(t)
 	request := validRequest()
@@ -275,6 +348,11 @@ func TestRequiredFieldLengthLimitIsRejected(t *testing.T) {
 }
 
 func newTestService(t *testing.T) *ServiceImpl {
+	service, _ := newTestServiceWithSettings(t)
+	return service
+}
+
+func newTestServiceWithSettings(t *testing.T) (*ServiceImpl, *desktopsettings.ServiceImpl) {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "kairos-test.sqlite3")
@@ -286,11 +364,14 @@ func newTestService(t *testing.T) *ServiceImpl {
 		_ = sqliteStore.Close()
 	})
 
-	service := NewService(sqliteStore)
+	settingsService := desktopsettings.NewService(sqliteStore)
+	settingsService.SetDataStorageInfo(sqliteStore.Path(), "ready")
+
+	service := NewService(sqliteStore, settingsService)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 5, 12, 45, 0, 0, time.UTC)
 	}
-	return service
+	return service, settingsService
 }
 
 func validRequest() contracts.IngestEventsRequest {

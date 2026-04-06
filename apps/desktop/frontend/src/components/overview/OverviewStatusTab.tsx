@@ -18,7 +18,7 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
     <div className="space-y-4">
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">System Status</h3>
-        <div className="mt-2 grid gap-2 md:grid-cols-7">
+        <div className="mt-2 grid gap-2 md:grid-cols-4">
           <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
             <p className="text-xs text-[var(--ink-muted)]">Current Machine</p>
             <p className="mt-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>

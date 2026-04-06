@@ -52,6 +52,29 @@ type ExtensionSettings struct {
 	TrackEditEvents              bool `json:"trackEditEvents"`
 }
 
+type ExtensionEffectiveSettings struct {
+	TrackingEnabled              bool               `json:"trackingEnabled"`
+	IdleDetectionEnabled         bool               `json:"idleDetectionEnabled"`
+	IdleTimeoutMinutes           int                `json:"idleTimeoutMinutes"`
+	SessionMergeThresholdMinutes int                `json:"sessionMergeThresholdMinutes"`
+	LocalOnlyMode                bool               `json:"localOnlyMode"`
+	FilePathMode                 string             `json:"filePathMode"`
+	Exclusions                   ExclusionsSettings `json:"exclusions"`
+	AutoConnect                  bool               `json:"autoConnect"`
+	SendHeartbeatEvents          bool               `json:"sendHeartbeatEvents"`
+	HeartbeatIntervalSeconds     int                `json:"heartbeatIntervalSeconds"`
+	SendProjectMetadata          bool               `json:"sendProjectMetadata"`
+	SendLanguageMetadata         bool               `json:"sendLanguageMetadata"`
+	SendMachineAttribution       bool               `json:"sendMachineAttribution"`
+	RespectDesktopExclusions     bool               `json:"respectDesktopExclusions"`
+	BufferEventsWhenOffline      bool               `json:"bufferEventsWhenOffline"`
+	RetryConnectionAutomatically bool               `json:"retryConnectionAutomatically"`
+	TrackOnlyWhenFocused         bool               `json:"trackOnlyWhenFocused"`
+	TrackFileOpenEvents          bool               `json:"trackFileOpenEvents"`
+	TrackSaveEvents              bool               `json:"trackSaveEvents"`
+	TrackEditEvents              bool               `json:"trackEditEvents"`
+}
+
 type ExtensionStatus struct {
 	Installed        bool   `json:"installed"`
 	Connected        bool   `json:"connected"`

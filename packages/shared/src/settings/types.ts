@@ -52,6 +52,29 @@ export type ExtensionSettings = {
   trackEditEvents: boolean;
 };
 
+export type ExtensionEffectiveSettings = {
+  trackingEnabled: boolean;
+  idleDetectionEnabled: boolean;
+  idleTimeoutMinutes: number;
+  sessionMergeThresholdMinutes: number;
+  localOnlyMode: boolean;
+  filePathMode: 'full' | 'masked' | 'hidden';
+  exclusions: ExclusionsSettings;
+  autoConnect: boolean;
+  sendHeartbeatEvents: boolean;
+  heartbeatIntervalSeconds: number;
+  sendProjectMetadata: boolean;
+  sendLanguageMetadata: boolean;
+  sendMachineAttribution: boolean;
+  respectDesktopExclusions: boolean;
+  bufferEventsWhenOffline: boolean;
+  retryConnectionAutomatically: boolean;
+  trackOnlyWhenFocused: boolean;
+  trackFileOpenEvents: boolean;
+  trackSaveEvents: boolean;
+  trackEditEvents: boolean;
+};
+
 export type ExtensionStatus = {
   installed: boolean;
   connected: boolean;

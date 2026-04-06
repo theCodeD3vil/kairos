@@ -9,6 +9,8 @@ export function GetCalendarDayData(arg1:string):Promise<contracts.CalendarDayDat
 
 export function GetCalendarMonthData(arg1:string):Promise<contracts.CalendarMonthData>;
 
+export function GetExtensionEffectiveSettings():Promise<contracts.ExtensionEffectiveSettings>;
+
 export function GetExtensionStatus():Promise<contracts.ExtensionStatus>;
 
 export function GetIngestionStats():Promise<contracts.IngestionStats>;
@@ -47,4 +49,18 @@ export function RebuildSessionsForDate(arg1:string):Promise<contracts.SessionReb
 
 export function RebuildSessionsForRange(arg1:string,arg2:string):Promise<contracts.SessionRebuildResult>;
 
+export function ResetSettingsSection(arg1:string):Promise<contracts.SettingsData>;
+
+export function UpdateAppBehaviorSettings(arg1:contracts.AppBehaviorSettings):Promise<contracts.AppBehaviorSettings>;
+
+export function UpdateExclusionsSettings(arg1:contracts.ExclusionsSettings):Promise<contracts.ExclusionsSettings>;
+
+export function UpdateExtensionSettings(arg1:contracts.ExtensionSettings):Promise<contracts.ExtensionSettings>;
+
+export function UpdateGeneralSettings(arg1:contracts.GeneralSettings):Promise<contracts.GeneralSettings>;
+
+export function UpdatePrivacySettings(arg1:contracts.PrivacySettings):Promise<contracts.PrivacySettings>;
+
 export function UpdateSettingsData(arg1:contracts.SettingsData):Promise<contracts.SettingsData>;
+
+export function UpdateTrackingSettings(arg1:contracts.TrackingSettings):Promise<contracts.TrackingSettings>;

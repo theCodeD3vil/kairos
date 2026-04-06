@@ -43,8 +43,8 @@ func NewApp() *App {
 
 	return &App{
 		sqliteStore:      sqliteStore,
-		ingestionService: ingestion.NewService(sqliteStore),
-		sessionService:   sessionization.NewService(sqliteStore),
+		ingestionService: ingestion.NewService(sqliteStore, settingsService),
+		sessionService:   sessionization.NewService(sqliteStore, settingsService),
 		viewService:      viewService,
 		settingsService:  settingsService,
 	}
@@ -129,6 +129,62 @@ func (a *App) UpdateSettingsData(data contracts.SettingsData) (contracts.Setting
 		return contracts.SettingsData{}, a.initErr
 	}
 	return a.settingsService.UpdateSettingsData(a.requestContext(), data)
+}
+
+func (a *App) UpdateGeneralSettings(data contracts.GeneralSettings) (contracts.GeneralSettings, error) {
+	if a.initErr != nil {
+		return contracts.GeneralSettings{}, a.initErr
+	}
+	return a.settingsService.UpdateGeneralSettings(a.requestContext(), data)
+}
+
+func (a *App) UpdatePrivacySettings(data contracts.PrivacySettings) (contracts.PrivacySettings, error) {
+	if a.initErr != nil {
+		return contracts.PrivacySettings{}, a.initErr
+	}
+	return a.settingsService.UpdatePrivacySettings(a.requestContext(), data)
+}
+
+func (a *App) UpdateTrackingSettings(data contracts.TrackingSettings) (contracts.TrackingSettings, error) {
+	if a.initErr != nil {
+		return contracts.TrackingSettings{}, a.initErr
+	}
+	return a.settingsService.UpdateTrackingSettings(a.requestContext(), data)
+}
+
+func (a *App) UpdateExclusionsSettings(data contracts.ExclusionsSettings) (contracts.ExclusionsSettings, error) {
+	if a.initErr != nil {
+		return contracts.ExclusionsSettings{}, a.initErr
+	}
+	return a.settingsService.UpdateExclusionsSettings(a.requestContext(), data)
+}
+
+func (a *App) UpdateExtensionSettings(data contracts.ExtensionSettings) (contracts.ExtensionSettings, error) {
+	if a.initErr != nil {
+		return contracts.ExtensionSettings{}, a.initErr
+	}
+	return a.settingsService.UpdateExtensionSettings(a.requestContext(), data)
+}
+
+func (a *App) UpdateAppBehaviorSettings(data contracts.AppBehaviorSettings) (contracts.AppBehaviorSettings, error) {
+	if a.initErr != nil {
+		return contracts.AppBehaviorSettings{}, a.initErr
+	}
+	return a.settingsService.UpdateAppBehaviorSettings(a.requestContext(), data)
+}
+
+func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {
+	if a.initErr != nil {
+		return contracts.SettingsData{}, a.initErr
+	}
+	return a.settingsService.ResetSettingsSection(a.requestContext(), section)
+}
+
+func (a *App) GetExtensionEffectiveSettings() (contracts.ExtensionEffectiveSettings, error) {
+	if a.initErr != nil {
+		return contracts.ExtensionEffectiveSettings{}, a.initErr
+	}
+	return a.settingsService.GetExtensionEffectiveSettings(a.requestContext())
 }
 
 func (a *App) GetExtensionStatus() (contracts.ExtensionStatus, error) {

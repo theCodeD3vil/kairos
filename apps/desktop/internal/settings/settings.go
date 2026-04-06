@@ -1,4 +1,10 @@
 package settings
 
-// Settings is a placeholder for future persisted configuration.
-type Settings struct{}
+const (
+	SectionGeneral     = "general"
+	SectionPrivacy     = "privacy"
+	SectionTracking    = "tracking"
+	SectionExclusions  = "exclusions"
+	SectionExtension   = "extension"
+	SectionAppBehavior = "appBehavior"
+)

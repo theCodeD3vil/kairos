@@ -14,15 +14,15 @@ func TestMigrationsRunOnFreshDatabase(t *testing.T) {
 
 	if count, err := countQuery(context.Background(), store.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 3 {
-		t.Fatalf("expected 3 migrations, got %d", count)
+	} else if count != 4 {
+		t.Fatalf("expected 4 migrations, got %d", count)
 	}
 
 	status, err := store.GetMigrationStatus(context.Background())
 	if err != nil {
 		t.Fatalf("get migration status: %v", err)
 	}
-	if status.CurrentVersion != "003_sessions.sql" {
+	if status.CurrentVersion != "004_settings.sql" {
 		t.Fatalf("expected latest migration version, got %q", status.CurrentVersion)
 	}
 }
@@ -47,8 +47,8 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 
 	if count, err := countQuery(ctx, second.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 3 {
-		t.Fatalf("expected 3 migration records after rerun, got %d", count)
+	} else if count != 4 {
+		t.Fatalf("expected 4 migration records after rerun, got %d", count)
 	}
 }
 
@@ -236,6 +236,40 @@ func TestSessionsRepositoryReadsReturnCorrectOrderingAndCounts(t *testing.T) {
 	}
 	if stats.TotalSessions != 2 || stats.LongestSessionMinutes != 30 || stats.AverageSessionMinutes != 20 {
 		t.Fatalf("unexpected session stats: %+v", stats)
+	}
+}
+
+func TestSettingsRepositoryCRUDWorks(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	if err := store.SetSettingsSection(ctx, "general", `{"machineDisplayName":"Kairos"}`, "2026-04-07T12:00:00Z"); err != nil {
+		t.Fatalf("set settings section failed: %v", err)
+	}
+
+	payload, found, err := store.GetSettingsSection(ctx, "general")
+	if err != nil {
+		t.Fatalf("get settings section failed: %v", err)
+	}
+	if !found || payload == "" {
+		t.Fatalf("expected stored section payload, got found=%v payload=%q", found, payload)
+	}
+
+	sections, err := store.ListSettingsSections(ctx)
+	if err != nil {
+		t.Fatalf("list settings sections failed: %v", err)
+	}
+	if len(sections) != 1 || sections[0] != "general" {
+		t.Fatalf("unexpected settings sections: %+v", sections)
+	}
+
+	if err := store.DeleteSettingsSection(ctx, "general"); err != nil {
+		t.Fatalf("delete settings section failed: %v", err)
+	}
+	if _, found, err := store.GetSettingsSection(ctx, "general"); err != nil {
+		t.Fatalf("get deleted section failed: %v", err)
+	} else if found {
+		t.Fatal("expected deleted section to be absent")
 	}
 }
 

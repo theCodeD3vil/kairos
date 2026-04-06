@@ -29,7 +29,10 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	store          *storage.Store
+	store    *storage.Store
+	settings interface {
+		GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
+	}
 	now            func() time.Time
 	idleThreshold  time.Duration
 	mergeThreshold time.Duration
@@ -43,9 +46,12 @@ type sessionCandidate struct {
 	events    []contracts.ActivityEvent
 }
 
-func NewService(sqliteStore *storage.Store) *ServiceImpl {
+func NewService(sqliteStore *storage.Store, settingsProvider interface {
+	GetSettingsData(ctx context.Context) (contracts.SettingsData, error)
+}) *ServiceImpl {
 	return &ServiceImpl{
 		store:          sqliteStore,
+		settings:       settingsProvider,
 		now:            time.Now,
 		idleThreshold:  defaultIdleThresholdMinutes * time.Minute,
 		mergeThreshold: defaultMergeThresholdMinutes * time.Minute,
@@ -82,12 +88,17 @@ func (s *ServiceImpl) RebuildSessionsForDate(ctx context.Context, date string) (
 }
 
 func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error) {
+	idleThreshold, mergeThreshold, err := s.resolveThresholds(ctx)
+	if err != nil {
+		return contracts.SessionRebuildResult{}, err
+	}
+
 	events, err := s.store.ListEventsForDateRange(ctx, startDate, endDate)
 	if err != nil {
 		return contracts.SessionRebuildResult{}, err
 	}
 
-	sessions, err := s.buildSessions(events)
+	sessions, err := s.buildSessions(events, idleThreshold, mergeThreshold)
 	if err != nil {
 		return contracts.SessionRebuildResult{}, err
 	}
@@ -122,7 +133,7 @@ func (s *ServiceImpl) GetSessionStatsForRange(ctx context.Context, startDate str
 	return s.store.GetSessionStatsForRange(ctx, startDate, endDate)
 }
 
-func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent) ([]contracts.Session, error) {
+func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThreshold time.Duration, mergeThreshold time.Duration) ([]contracts.Session, error) {
 	if len(events) == 0 {
 		return []contracts.Session{}, nil
 	}
@@ -137,7 +148,7 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent) ([]contrac
 		}
 		eventDate := eventTime.Format("2006-01-02")
 
-		if current == nil || shouldSplitSession(*current, event, eventTime, eventDate, s.idleThreshold) {
+		if current == nil || shouldSplitSession(*current, event, eventTime, eventDate, idleThreshold) {
 			if current != nil {
 				candidates = append(candidates, *current)
 			}
@@ -159,7 +170,7 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent) ([]contrac
 		candidates = append(candidates, *current)
 	}
 
-	merged := mergeAdjacentSessions(candidates, s.mergeThreshold)
+	merged := mergeAdjacentSessions(candidates, mergeThreshold)
 	sessions := make([]contracts.Session, 0, len(merged))
 	for _, candidate := range merged {
 		sessions = append(sessions, buildSession(candidate))
@@ -173,6 +184,28 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent) ([]contrac
 	})
 
 	return sessions, nil
+}
+
+func (s *ServiceImpl) resolveThresholds(ctx context.Context) (time.Duration, time.Duration, error) {
+	if s.settings == nil {
+		return s.idleThreshold, s.mergeThreshold, nil
+	}
+
+	data, err := s.settings.GetSettingsData(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	idleThreshold := time.Duration(data.Tracking.IdleTimeoutMinutes) * time.Minute
+	mergeThreshold := time.Duration(data.Tracking.SessionMergeThresholdMinutes) * time.Minute
+	if idleThreshold <= 0 {
+		idleThreshold = s.idleThreshold
+	}
+	if mergeThreshold < 0 {
+		mergeThreshold = s.mergeThreshold
+	}
+
+	return idleThreshold, mergeThreshold, nil
 }
 
 func shouldSplitSession(current sessionCandidate, event contracts.ActivityEvent, eventTime time.Time, eventDate string, idleThreshold time.Duration) bool {

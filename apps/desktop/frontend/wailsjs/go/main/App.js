@@ -14,6 +14,10 @@ export function GetCalendarMonthData(arg1) {
   return window['go']['main']['App']['GetCalendarMonthData'](arg1);
 }
 
+export function GetExtensionEffectiveSettings() {
+  return window['go']['main']['App']['GetExtensionEffectiveSettings']();
+}
+
 export function GetExtensionStatus() {
   return window['go']['main']['App']['GetExtensionStatus']();
 }
@@ -90,6 +94,34 @@ export function RebuildSessionsForRange(arg1, arg2) {
   return window['go']['main']['App']['RebuildSessionsForRange'](arg1, arg2);
 }
 
+export function ResetSettingsSection(arg1) {
+  return window['go']['main']['App']['ResetSettingsSection'](arg1);
+}
+
+export function UpdateAppBehaviorSettings(arg1) {
+  return window['go']['main']['App']['UpdateAppBehaviorSettings'](arg1);
+}
+
+export function UpdateExclusionsSettings(arg1) {
+  return window['go']['main']['App']['UpdateExclusionsSettings'](arg1);
+}
+
+export function UpdateExtensionSettings(arg1) {
+  return window['go']['main']['App']['UpdateExtensionSettings'](arg1);
+}
+
+export function UpdateGeneralSettings(arg1) {
+  return window['go']['main']['App']['UpdateGeneralSettings'](arg1);
+}
+
+export function UpdatePrivacySettings(arg1) {
+  return window['go']['main']['App']['UpdatePrivacySettings'](arg1);
+}
+
 export function UpdateSettingsData(arg1) {
   return window['go']['main']['App']['UpdateSettingsData'](arg1);
+}
+
+export function UpdateTrackingSettings(arg1) {
+  return window['go']['main']['App']['UpdateTrackingSettings'](arg1);
 }

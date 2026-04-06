@@ -3,6 +3,7 @@ export type {
   AppBehaviorSettings,
   DataStorageInfo,
   ExclusionsSettings,
+  ExtensionEffectiveSettings,
   ExtensionSettings,
   ExtensionStatus,
   GeneralSettings,
