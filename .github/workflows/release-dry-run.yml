@@ -90,6 +90,50 @@ jobs:
           export KAIROS_GO_LDFLAGS="-X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.DesktopVersion=${VERSION} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildChannel=${KAIROS_BUILD_CHANNEL} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.GitCommit=${COMMIT} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildDate=${BUILD_DATE}"
           make desktop-release-build
 
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS' && secrets.APPLE_DEVELOPER_CERT_BASE64 != '' && secrets.APPLE_DEVELOPER_CERT_PASSWORD != ''
+        shell: bash
+        env:
+          APPLE_DEVELOPER_CERT_BASE64: ${{ secrets.APPLE_DEVELOPER_CERT_BASE64 }}
+          APPLE_DEVELOPER_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERT_PASSWORD }}
+        run: |
+          CERT_PATH="${RUNNER_TEMP}/developer-id.p12"
+          KEYCHAIN_PATH="${RUNNER_TEMP}/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "$APPLE_DEVELOPER_CERT_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_DEVELOPER_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "MACOS_SIGNING_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign and notarize macOS app (optional)
+        if: runner.os == 'macOS' && secrets.APPLE_DEVELOPER_CERT_BASE64 != '' && secrets.APPLE_DEVELOPER_CERT_PASSWORD != '' && secrets.APPLE_DEVELOPER_IDENTITY != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != ''
+        shell: bash
+        env:
+          APPLE_DEVELOPER_IDENTITY: ${{ secrets.APPLE_DEVELOPER_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          APP_PATH="$(find apps/desktop/build/bin -maxdepth 1 -name '*.app' | head -n1)"
+          if [[ -z "$APP_PATH" ]]; then
+            echo "macOS app bundle not found for signing" >&2
+            exit 1
+          fi
+
+          codesign --force --deep --options runtime --sign "$APPLE_DEVELOPER_IDENTITY" "$APP_PATH"
+          ZIP_PATH="${RUNNER_TEMP}/Kairos-dry-run-notarize.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+          xcrun stapler staple "$APP_PATH"
+
       - name: Collect dry-run desktop artifacts
         shell: bash
         run: |

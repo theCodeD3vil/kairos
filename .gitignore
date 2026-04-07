@@ -21,6 +21,13 @@ bin/
 
 # Wails
 apps/desktop/build/
+!apps/desktop/build/
+apps/desktop/build/*
+!apps/desktop/build/appicon.png
+!apps/desktop/build/darwin/
+apps/desktop/build/darwin/*
+!apps/desktop/build/darwin/Info.plist
+!apps/desktop/build/darwin/Info.dev.plist
 apps/desktop/frontend/dist/
 
 # OS

@@ -13,10 +13,11 @@ Checks:
 - workspace install
 - shared package build
 - desktop frontend typecheck/tests
+- desktop frontend production build (for embed-backed Go tests)
 - desktop Go tests
 - extension release verification
 - extension `.vsix` package sanity
-- desktop release-build sanity (macOS)
+- desktop release-build sanity (`macOS`, `linux`)
 
 ### Desktop release
 File: `.github/workflows/desktop-release.yml`
@@ -27,6 +28,7 @@ Triggers:
 
 Does:
 - builds desktop package per platform matrix (`macos`, `linux`, `windows`)
+- on macOS, optionally signs/notarizes/staples app bundles when Apple credentials are configured
 - collects release artifacts into `dist/release/desktop/<version>/<platform>`
 - generates SHA-256 checksums
 - publishes assets to GitHub Release
@@ -55,12 +57,21 @@ Triggers:
 Does:
 - version sync validation
 - desktop build + artifact collection/validation
+- optional macOS sign/notarize validation path (runs only when Apple credentials are configured)
 - extension verify/package + `.vsix` validation
 - dry-run artifact upload (desktop + extension)
 
 ## Required secrets
 - `VSCE_PAT`: VS Code Marketplace publishing token (optional but required for publish step)
 - `GITHUB_TOKEN`: provided by Actions for release upload
+- `APPLE_DEVELOPER_CERT_BASE64`: base64-encoded Developer ID Application `.p12` (optional; required for macOS trusted distribution)
+- `APPLE_DEVELOPER_CERT_PASSWORD`: password for `APPLE_DEVELOPER_CERT_BASE64`
+- `APPLE_DEVELOPER_IDENTITY`: signing identity name, for example `Developer ID Application: Your Name (TEAMID)`
+- `APPLE_ID`: Apple ID used for notarization submissions
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+- `APPLE_APP_SPECIFIC_PASSWORD`: app-specific password for notarization
+
+Without Apple signing secrets, macOS builds still succeed but remain unsigned/unnotarized. Gatekeeper can warn that the app cannot be verified.
 
 ## Release artifact naming
 

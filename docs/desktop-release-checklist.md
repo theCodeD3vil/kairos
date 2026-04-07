@@ -38,6 +38,9 @@
 ## Release publication
 - verify desktop assets + checksums are attached to GitHub Release
 - verify prerelease flag is correct for prerelease tags
+- for macOS trusted distribution: verify signature + notarization + stapling
+  - `codesign --verify --deep --strict --verbose=2 <Kairos.app>`
+  - `spctl --assess --type execute --verbose <Kairos.app>`
 
 ## Rollback/backout
 - if packaging fails before publish: stop release and fix, do not retag
