@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/michaelnji/kairos/apps/desktop/internal/buildinfo"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 )
 
@@ -91,17 +92,18 @@ func defaultSystemInfo() contracts.SystemInfo {
 		OSVersion:   "",
 		Arch:        runtime.GOARCH,
 		Editor:      "vscode",
+		AppVersion:  buildinfo.DesktopVersion,
 	}
 }
 
 func defaultAboutInfo() contracts.AboutInfo {
 	return contracts.AboutInfo{
 		AppName:        "Kairos",
-		AppVersion:     "0.0.0",
+		AppVersion:     buildinfo.DesktopVersion,
 		Environment:    "desktop",
-		BuildChannel:   "local",
-		DesktopVersion: "0.0.0",
+		BuildChannel:   buildinfo.BuildChannel,
+		DesktopVersion: buildinfo.DesktopVersion,
 		LicenseSummary: "License metadata pending",
-		RepositoryURL:  "https://github.com/michaelnji/kairos",
+		RepositoryURL:  buildinfo.RepositoryURL,
 	}
 }

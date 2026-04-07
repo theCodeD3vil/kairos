@@ -1,0 +1,88 @@
+name: Extension Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (for example v0.1.1)"
+        required: true
+        type: string
+      publish_marketplace:
+        description: "Publish to VS Code Marketplace when VSCE_PAT is configured"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  release-extension:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.9.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify version sync
+        run: |
+          ./scripts/release/verify-version-sync.sh
+          TAG_VERSION="${RELEASE_TAG#v}"
+          FILE_VERSION="$(cat VERSION)"
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "release tag version ($TAG_VERSION) does not match VERSION file ($FILE_VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Verify extension release build
+        run: pnpm --filter kairos-vscode verify:release
+
+      - name: Build VSIX
+        run: pnpm --filter kairos-vscode package:vsix
+
+      - name: Validate VSIX package contents
+        shell: bash
+        run: |
+          VSIX_PATH="$(ls -1 apps/vscode-extension/dist/*.vsix | head -n1)"
+          ./scripts/release/validate-extension-vsix.sh "$VSIX_PATH"
+
+      - name: Generate VSIX checksums
+        run: ./scripts/release/write-checksums.sh apps/vscode-extension/dist apps/vscode-extension/dist/SHA256SUMS-vsix.txt
+
+      - name: Publish to VS Code Marketplace
+        if: ${{ secrets.VSCE_PAT != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_marketplace) }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: pnpm --filter kairos-vscode publish:marketplace
+
+      - name: Upload VSIX artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension-vsix
+          path: |
+            apps/vscode-extension/dist/*.vsix
+            apps/vscode-extension/dist/SHA256SUMS-vsix.txt
+
+      - name: Attach VSIX to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          files: |
+            apps/vscode-extension/dist/*.vsix
+            apps/vscode-extension/dist/SHA256SUMS-vsix.txt

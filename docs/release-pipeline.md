@@ -1,0 +1,81 @@
+# Kairos Release Pipeline
+
+## Workflows
+
+### CI
+File: `.github/workflows/ci.yml`
+
+Runs on:
+- pull requests
+- pushes to `main`
+
+Checks:
+- workspace install
+- shared package build
+- desktop frontend typecheck/tests
+- desktop Go tests
+- extension release verification
+- extension `.vsix` package sanity
+- desktop release-build sanity (macOS)
+
+### Desktop release
+File: `.github/workflows/desktop-release.yml`
+
+Triggers:
+- push tag `v*`
+- manual `workflow_dispatch`
+
+Does:
+- builds desktop package per platform matrix (`macos`, `linux`, `windows`)
+- collects release artifacts into `dist/release/desktop/<version>/<platform>`
+- generates SHA-256 checksums
+- publishes assets to GitHub Release
+
+### Extension release
+File: `.github/workflows/extension-release.yml`
+
+Triggers:
+- push tag `v*`
+- manual `workflow_dispatch`
+
+Does:
+- extension release verification/build
+- `.vsix` packaging
+- checksum generation
+- optional VS Code Marketplace publish (if `VSCE_PAT` exists)
+- attaches `.vsix` + checksum file to GitHub Release
+
+### Release dry run
+File: `.github/workflows/release-dry-run.yml`
+
+Triggers:
+- manual `workflow_dispatch`
+- pull requests touching release/build workflow paths
+
+Does:
+- version sync validation
+- desktop build + artifact collection/validation
+- extension verify/package + `.vsix` validation
+- dry-run artifact upload (desktop + extension)
+
+## Required secrets
+- `VSCE_PAT`: VS Code Marketplace publishing token (optional but required for publish step)
+- `GITHUB_TOKEN`: provided by Actions for release upload
+
+## Release artifact naming
+
+Desktop artifacts:
+- `<binary-or-app>-<platform>-v<version>.<ext|zip>`
+- `SHA256SUMS-<platform>.txt`
+
+Extension artifacts:
+- `kairos-vscode-<version>.vsix`
+- `SHA256SUMS-vsix.txt`
+
+## Operator flow
+1. Bump versions (see `docs/release-strategy.md`).
+2. Run dry run (`scripts/release/run-dry-run-local.sh` or `Release Dry Run` workflow).
+3. Create and push tag `vX.Y.Z`.
+4. Monitor desktop + extension release workflows.
+5. Verify GitHub Release assets/checksums.
+6. Validate update-check in desktop app.

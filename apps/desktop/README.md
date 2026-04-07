@@ -61,6 +61,7 @@ Repo root:
 ```bash
 make desktop-release-check
 make desktop-release-build
+make desktop-release-artifacts KAIROS_VERSION=$(cat VERSION)
 ```
 
 `make desktop-release-build` isolates packaging from live local state by overriding:
@@ -73,6 +74,16 @@ Direct Wails build:
 ```bash
 wails build
 ```
+
+Release metadata for desktop builds is injected with `-ldflags` in release workflows and exposed in Settings → About.
+
+Update behavior in v1:
+
+- checks GitHub Releases metadata
+- compares current vs latest version
+- surfaces availability in Settings → About
+- opens release download page for manual install
+- does not auto-replace binaries in-place
 
 ## V1 Implemented
 

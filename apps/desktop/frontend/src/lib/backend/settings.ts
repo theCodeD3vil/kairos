@@ -35,6 +35,18 @@ export type AutostartRegistrationStatus = {
   location: string;
 };
 
+export type DesktopUpdateStatus = {
+  checkedAt: string;
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseUrl: string;
+  assetUrl: string;
+  releaseNotes: string;
+  preRelease: boolean;
+  error?: string;
+};
+
 function callAppBridgeMethod<T>(methodName: 'RefreshVSCodeExtensionStatus' | 'ReconnectVSCodeExtension'): Promise<T> {
   const candidate = (window as unknown as {
     go?: { main?: { App?: Record<string, unknown> } };
@@ -57,6 +69,18 @@ function callAutostartStatusMethod(): Promise<AutostartRegistrationStatus> {
   }
 
   return (candidate as () => Promise<AutostartRegistrationStatus>)();
+}
+
+function callDesktopUpdateCheckMethod(): Promise<DesktopUpdateStatus> {
+  const candidate = (window as unknown as {
+    go?: { main?: { App?: Record<string, unknown> } };
+  }).go?.main?.App?.CheckForDesktopUpdate;
+
+  if (typeof candidate !== 'function') {
+    throw new Error('Desktop bridge "CheckForDesktopUpdate" is unavailable. Restart Kairos Desktop and try again.');
+  }
+
+  return (candidate as () => Promise<DesktopUpdateStatus>)();
 }
 
 function callBridgeHealthMethod(): Promise<boolean> {
@@ -595,6 +619,14 @@ export async function getVSCodeBridgeReachability(): Promise<boolean> {
 export async function getAutostartRegistrationStatus(): Promise<AutostartRegistrationStatus | null> {
   try {
     return await callAutostartStatusMethod();
+  } catch {
+    return null;
+  }
+}
+
+export async function checkDesktopUpdate(): Promise<DesktopUpdateStatus | null> {
+  try {
+    return await callDesktopUpdateCheckMethod();
   } catch {
     return null;
   }

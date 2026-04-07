@@ -18,12 +18,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/michaelnji/kairos/apps/desktop/internal/buildinfo"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/ingestion"
 	desktopserver "github.com/michaelnji/kairos/apps/desktop/internal/server"
 	"github.com/michaelnji/kairos/apps/desktop/internal/sessionization"
 	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
+	"github.com/michaelnji/kairos/apps/desktop/internal/updates"
 	"github.com/michaelnji/kairos/apps/desktop/internal/views"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -44,6 +46,7 @@ type App struct {
 	sessionService   sessionization.Service
 	viewService      views.Service
 	settingsService  desktopsettings.Service
+	updateService    *updates.Service
 }
 
 type launchBehaviorOptions struct {
@@ -65,6 +68,7 @@ func NewApp() *App {
 	settingsService := desktopsettings.NewService(nil)
 	app := &App{
 		settingsService: settingsService,
+		updateService:   updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel),
 	}
 	sqliteStore, err := storage.OpenDefault(context.Background())
 	if err != nil {
@@ -73,6 +77,7 @@ func NewApp() *App {
 			initErr:         fmt.Errorf("initialize sqlite store: %w", err),
 			viewService:     views.NewStubService(),
 			settingsService: settingsService,
+			updateService:   updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel),
 		}
 	}
 
@@ -87,6 +92,7 @@ func NewApp() *App {
 			initErr:         fmt.Errorf("initialize session state: %w", err),
 			viewService:     views.NewStubService(),
 			settingsService: settingsService,
+			updateService:   updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel),
 		}
 	}
 	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService, func(kind string) {
@@ -100,6 +106,7 @@ func NewApp() *App {
 			initErr:         fmt.Errorf("initialize local extension server: %w", err),
 			viewService:     views.NewStubService(),
 			settingsService: settingsService,
+			updateService:   updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel),
 		}
 	}
 	localServer.Start()
@@ -110,6 +117,7 @@ func NewApp() *App {
 	app.sessionService = sessionService
 	app.viewService = viewService
 	app.settingsService = settingsService
+	app.updateService = updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel)
 
 	return app
 }
@@ -323,6 +331,16 @@ func (a *App) GetAutostartRegistrationStatus() (autostartRegistrationStatus, err
 		return autostartRegistrationStatus{}, a.initErr
 	}
 	return currentAutostartRegistrationStatus()
+}
+
+func (a *App) CheckForDesktopUpdate() (updates.CheckResult, error) {
+	if a.initErr != nil {
+		return updates.CheckResult{}, a.initErr
+	}
+	if a.updateService == nil {
+		return updates.CheckResult{}, nil
+	}
+	return a.updateService.CheckForUpdate(a.requestContext()), nil
 }
 
 func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {

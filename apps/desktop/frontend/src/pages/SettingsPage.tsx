@@ -21,6 +21,7 @@ import {
   SettingsToggle,
 } from '@/components/settings/SettingsPrimitives';
 import {
+  checkDesktopUpdate,
   emptySettingsScreenData,
   getAutostartRegistrationStatus,
   getVSCodeBridgeReachability,
@@ -60,6 +61,10 @@ export function SettingsPage() {
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
   const [bridgeReachable, setBridgeReachable] = useState<boolean | null>(null);
   const [autostartRegistrationLabel, setAutostartRegistrationLabel] = useState('Checking…');
+  const [updateStatusLabel, setUpdateStatusLabel] = useState('Checking…');
+  const [latestVersionLabel, setLatestVersionLabel] = useState('—');
+  const [updateReleaseUrl, setUpdateReleaseUrl] = useState('');
+  const [updateCheckedAtLabel, setUpdateCheckedAtLabel] = useState('—');
   const [idleTimeoutDraft, setIdleTimeoutDraft] = useState(initialData.viewModel.tracking.idleTimeoutMinutes);
   const [idleTimeoutWarning, setIdleTimeoutWarning] = useState<string | null>(null);
   const [sessionMergeDraft, setSessionMergeDraft] = useState(initialData.viewModel.tracking.sessionMergeThresholdMinutes);
@@ -108,6 +113,44 @@ export function SettingsPage() {
         setBridgeReachable(reachable);
       }
     })();
+    return () => {
+      active = false;
+    };
+  }, [settingsScreenData]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const status = await checkDesktopUpdate();
+      if (!active) {
+        return;
+      }
+
+      if (!status) {
+        setUpdateStatusLabel('Unavailable');
+        setLatestVersionLabel('—');
+        setUpdateReleaseUrl('');
+        setUpdateCheckedAtLabel('—');
+        return;
+      }
+
+      const checkedAt = status.checkedAt ? new Date(status.checkedAt) : null;
+      setUpdateCheckedAtLabel(
+        checkedAt && !Number.isNaN(checkedAt.getTime())
+          ? checkedAt.toLocaleString()
+          : '—',
+      );
+      setLatestVersionLabel(status.latestVersion || '—');
+      setUpdateReleaseUrl(status.releaseUrl || status.assetUrl || '');
+
+      if (status.error) {
+        setUpdateStatusLabel('Check failed');
+        return;
+      }
+
+      setUpdateStatusLabel(status.updateAvailable ? 'Update available' : 'Up to date');
+    })();
+
     return () => {
       active = false;
     };
@@ -876,9 +919,62 @@ export function SettingsPage() {
                 { label: 'License', value: about.licenseSummary },
                 { label: 'Repository', value: about.repositoryLabel },
                 { label: 'Release notes', value: about.releaseNotesLabel },
+                { label: 'Update status', value: updateStatusLabel },
+                { label: 'Latest version', value: latestVersionLabel },
+                { label: 'Last update check', value: updateCheckedAtLabel, mono: true },
               ]}
             />
           </SettingsSection>
+          <SettingsActionRow
+            label="Update"
+            actions={
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full!"
+                  onClick={() => {
+                    void (async () => {
+                      const status = await checkDesktopUpdate();
+                      if (!status) {
+                        setUpdateStatusLabel('Unavailable');
+                        return;
+                      }
+
+                      const checkedAt = status.checkedAt ? new Date(status.checkedAt) : null;
+                      setUpdateCheckedAtLabel(
+                        checkedAt && !Number.isNaN(checkedAt.getTime())
+                          ? checkedAt.toLocaleString()
+                          : '—',
+                      );
+                      setLatestVersionLabel(status.latestVersion || '—');
+                      setUpdateReleaseUrl(status.releaseUrl || status.assetUrl || '');
+                      if (status.error) {
+                        setUpdateStatusLabel('Check failed');
+                        error('Update Check', status.error);
+                        return;
+                      }
+                      setUpdateStatusLabel(status.updateAvailable ? 'Update available' : 'Up to date');
+                      success('Update Check', status.updateAvailable ? 'A newer Kairos release is available.' : 'You are on the latest release.');
+                    })();
+                  }}
+                >
+                  Check Updates
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full! border-black/10"
+                  onClick={() => {
+                    BrowserOpenURL(updateReleaseUrl);
+                  }}
+                  disabled={updateReleaseUrl.length === 0}
+                >
+                  Download Update
+                </Button>
+              </>
+            }
+          />
           <SettingsActionRow
             label="Links"
             actions={

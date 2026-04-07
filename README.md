@@ -73,6 +73,7 @@ Build a packaged desktop app:
 
 ```bash
 make desktop-release-build
+make desktop-release-artifacts KAIROS_VERSION=$(cat VERSION)
 ```
 
 Build and package the VS Code extension:
@@ -81,6 +82,13 @@ Build and package the VS Code extension:
 pnpm --filter kairos-vscode verify:release
 pnpm --filter kairos-vscode package:vsix
 ```
+
+Version/release foundations:
+
+- product version marker: [`VERSION`](VERSION)
+- release strategy: [`docs/release-strategy.md`](docs/release-strategy.md)
+- release pipelines: [`docs/release-pipeline.md`](docs/release-pipeline.md)
+- desktop update model: [`docs/desktop-updates.md`](docs/desktop-updates.md)
 
 ## Data Flow
 

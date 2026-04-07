@@ -1,11 +1,14 @@
 .PHONY: help doctor install typecheck build lint format clean \
 	shared-build frontend-build extension-build desktop-build \
-	desktop-release-build desktop-release-check desktop-frontend desktop-dev dev dev-down setup
+	desktop-release-build desktop-release-check desktop-release-artifacts desktop-release-checksums \
+	extension-release-package extension-release-publish \
+	desktop-frontend desktop-dev dev dev-down setup
 
 DEV_DIR := .dev
 FRONTEND_PID := $(DEV_DIR)/frontend.pid
 WAILS_PID := $(DEV_DIR)/wails.pid
 ROOT_DIR := $(CURDIR)
+KAIROS_VERSION ?= $(shell cat VERSION)
 
 help: ## Show available commands
 	@echo "Kairos developer automation"
@@ -64,6 +67,12 @@ frontend-build: ## Build desktop frontend
 extension-build: ## Build VS Code extension bundle
 	pnpm --filter kairos-vscode build
 
+extension-release-package: ## Build and package VS Code extension .vsix
+	pnpm --filter kairos-vscode package:vsix
+
+extension-release-publish: ## Publish VS Code extension to Marketplace using VSCE_PAT
+	pnpm --filter kairos-vscode publish:marketplace
+
 desktop-build: ## Build Go desktop scaffold
 	cd apps/desktop && go mod tidy && go build ./...
 
@@ -77,6 +86,16 @@ desktop-release-build: ## Build the packaged desktop app with Wails
 		echo "Install with: go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \
 		exit 1; \
 	fi
+
+desktop-release-artifacts: desktop-release-build ## Collect desktop release artifacts into dist/release/desktop/<version>/<platform>
+	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')"; \
+	output_dir="$(ROOT_DIR)/dist/release/desktop/$(KAIROS_VERSION)/$$platform"; \
+	./scripts/release/collect-desktop-artifacts.sh "$(KAIROS_VERSION)" "$$platform" "$$output_dir"
+
+desktop-release-checksums: ## Recompute checksums for existing desktop release artifacts
+	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')"; \
+	output_dir="$(ROOT_DIR)/dist/release/desktop/$(KAIROS_VERSION)/$$platform"; \
+	./scripts/release/write-checksums.sh "$$output_dir" "$$output_dir/SHA256SUMS-$$platform.txt"
 
 desktop-release-check: ## Verify desktop release inputs before packaging
 	pnpm --filter @kairos/desktop-frontend typecheck
