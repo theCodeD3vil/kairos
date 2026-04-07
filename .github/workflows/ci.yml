@@ -43,6 +43,9 @@ jobs:
       - name: Frontend tests
         run: pnpm --filter @kairos/desktop-frontend test
 
+      - name: Build desktop frontend assets
+        run: pnpm --filter @kairos/desktop-frontend build
+
       - name: Desktop backend tests
         run: cd apps/desktop && go test ./...
 

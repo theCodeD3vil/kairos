@@ -17,6 +17,11 @@
     "local-first",
     "time-awareness"
   ],
+  "icon": "media/kairos-logo.png",
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
   "homepage": "https://github.com/michaelnji/kairos/tree/main/apps/vscode-extension",
   "bugs": {
     "url": "https://github.com/michaelnji/kairos/issues"
