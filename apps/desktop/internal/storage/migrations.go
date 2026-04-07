@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"path/filepath"
+	"path"
 	"sort"
 )
 
@@ -169,7 +169,7 @@ func loadMigrations(migrationsFS fs.ReadFileFS) ([]migrationDefinition, error) {
 
 	migrations := make([]migrationDefinition, 0, len(names))
 	for _, name := range names {
-		contents, err := migrationsFS.ReadFile(filepath.Join("migrations", name))
+		contents, err := migrationsFS.ReadFile(path.Join("migrations", name))
 		if err != nil {
 			return nil, fmt.Errorf("read migration %s: %w", name, err)
 		}

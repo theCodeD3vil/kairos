@@ -1011,3 +1011,36 @@ export namespace storage {
 
 }
 
+export namespace updates {
+	
+	export class CheckResult {
+	    checkedAt: string;
+	    currentVersion: string;
+	    latestVersion: string;
+	    updateAvailable: boolean;
+	    releaseUrl: string;
+	    assetUrl: string;
+	    releaseNotes: string;
+	    preRelease: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.checkedAt = source["checkedAt"];
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.updateAvailable = source["updateAvailable"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.assetUrl = source["assetUrl"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.preRelease = source["preRelease"];
+	        this.error = source["error"];
+	    }
+	}
+
+}
+
