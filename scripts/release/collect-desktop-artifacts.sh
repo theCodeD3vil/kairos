@@ -11,13 +11,12 @@ PLATFORM="$2"
 OUTPUT_DIR="$3"
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN_DIR="$ROOT_DIR/apps/desktop/build/bin"
+OUTPUT_DIR_ABS="$(mkdir -p "$OUTPUT_DIR" && cd "$OUTPUT_DIR" && pwd)"
 
 if [[ ! -d "$BIN_DIR" ]]; then
   echo "desktop build output not found: $BIN_DIR" >&2
   exit 1
 fi
-
-mkdir -p "$OUTPUT_DIR"
 
 shopt -s nullglob
 for item in "$BIN_DIR"/*; do
@@ -27,7 +26,7 @@ for item in "$BIN_DIR"/*; do
     artifact_name="${base_name%.*}-${PLATFORM}-v${VERSION}.zip"
     (
       cd "$BIN_DIR"
-      zip -qry "$OUTPUT_DIR/$artifact_name" "$base_name"
+      zip -qry "$OUTPUT_DIR_ABS/$artifact_name" "$base_name"
     )
     continue
   fi
@@ -38,9 +37,9 @@ for item in "$BIN_DIR"/*; do
     ext=".${base_name##*.}"
   fi
   artifact_name="${name_without_ext}-${PLATFORM}-v${VERSION}${ext}"
-  cp "$item" "$OUTPUT_DIR/$artifact_name"
+  cp "$item" "$OUTPUT_DIR_ABS/$artifact_name"
 done
 
-"$ROOT_DIR/scripts/release/write-checksums.sh" "$OUTPUT_DIR" "$OUTPUT_DIR/SHA256SUMS-${PLATFORM}.txt"
+"$ROOT_DIR/scripts/release/write-checksums.sh" "$OUTPUT_DIR_ABS" "$OUTPUT_DIR_ABS/SHA256SUMS-${PLATFORM}.txt"
 
-echo "desktop release artifacts prepared in: $OUTPUT_DIR"
+echo "desktop release artifacts prepared in: $OUTPUT_DIR_ABS"

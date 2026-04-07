@@ -52,9 +52,10 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libglib2.0-dev pkg-config zip
-          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update -y -o Acquire::Retries=3 -o Dpkg::Use-Pty=0
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 libgtk-3-dev libglib2.0-dev pkg-config zip
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 libwebkit2gtk-4.1-dev || sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 libwebkit2gtk-4.0-dev
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
