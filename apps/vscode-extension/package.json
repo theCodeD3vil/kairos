@@ -80,7 +80,7 @@
     "build:release": "pnpm run clean && pnpm --filter @kairos/shared build && node esbuild.mjs --release",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test .test-dist/test/**/*.test.js",
+    "test": "tsc -p tsconfig.test.json && node ./scripts/run-compiled-tests.mjs",
     "package:vsix": "pnpm run build:release && vsce package --no-dependencies --out dist/kairos-vscode-${npm_package_version}.vsix",
     "publish:marketplace": "vsce publish --packagePath dist/kairos-vscode-${npm_package_version}.vsix",
     "verify:release": "pnpm run typecheck && pnpm run test && pnpm run build:release",

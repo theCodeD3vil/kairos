@@ -78,9 +78,17 @@ desktop-build: ## Build Go desktop scaffold
 
 desktop-release-build: ## Build the packaged desktop app with Wails
 	@if command -v wails >/dev/null 2>&1; then \
-		cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 wails build; \
+		if [ -n "$$KAIROS_GO_LDFLAGS" ]; then \
+			cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 wails build -ldflags "$$KAIROS_GO_LDFLAGS"; \
+		else \
+			cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 wails build; \
+		fi; \
 	elif [ -x "$$HOME/go/bin/wails" ]; then \
-		cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 "$$HOME/go/bin/wails" build; \
+		if [ -n "$$KAIROS_GO_LDFLAGS" ]; then \
+			cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 "$$HOME/go/bin/wails" build -ldflags "$$KAIROS_GO_LDFLAGS"; \
+		else \
+			cd apps/desktop && KAIROS_DATABASE_PATH="$(ROOT_DIR)/apps/desktop/build/kairos-build.sqlite3" KAIROS_LOCAL_SERVER_PORT=0 "$$HOME/go/bin/wails" build; \
+		fi; \
 	else \
 		echo "wails CLI is not installed."; \
 		echo "Install with: go install github.com/wailsapp/wails/v2/cmd/wails@latest"; \

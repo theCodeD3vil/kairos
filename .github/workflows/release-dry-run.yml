@@ -75,7 +75,7 @@ jobs:
           VERSION="${RELEASE_TAG#v}"
           COMMIT="$(git rev-parse --short HEAD)"
           BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          export GOFLAGS="-ldflags=-X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.DesktopVersion=${VERSION} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildChannel=${KAIROS_BUILD_CHANNEL} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.GitCommit=${COMMIT} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildDate=${BUILD_DATE}"
+          export KAIROS_GO_LDFLAGS="-X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.DesktopVersion=${VERSION} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildChannel=${KAIROS_BUILD_CHANNEL} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.GitCommit=${COMMIT} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildDate=${BUILD_DATE}"
           make desktop-release-build
 
       - name: Collect dry-run desktop artifacts
