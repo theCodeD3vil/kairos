@@ -1,7 +1,6 @@
 import { Bell, Home, LineChart, Settings, CalendarDays, Palette, CalendarRange } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AccountMenu, { type AccountMenuAction } from '@/components/ruixen/account-menu';
 import { NotificationsFilter } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
 import { useToast } from '@/components/toast/ToastProvider';
@@ -33,7 +32,7 @@ function resolveTabFromPath(pathname: string) {
 }
 
 export function Navbar() {
-  const { info, success, error } = useToast();
+  const { info, success } = useToast();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(() => resolveTabFromPath(pathname));
@@ -86,28 +85,6 @@ export function Navbar() {
     success('Notification Opened', title);
   };
 
-  const handleAccountAction = (action: AccountMenuAction) => {
-    if (action === 'logout') {
-      error('Sign Out', 'You have been signed out.');
-      return;
-    }
-
-    const labels: Record<AccountMenuAction, string> = {
-      dashboard: 'Dashboard selected',
-      'team-space': 'Team Space selected',
-      settings: 'Settings selected',
-      'theme-light': 'Theme set to Light',
-      'theme-dark': 'Theme set to Dark',
-      'theme-system': 'Theme set to System',
-      'notification-email': 'Email alerts preference updated',
-      'notification-push': 'Push alerts preference updated',
-      'notification-sms': 'SMS alerts preference updated',
-      logout: 'Signed out',
-    };
-
-    info('Account', labels[action]);
-  };
-
   return (
     <header className="px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6 lg:px-7 lg:pt-7">
       <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between rounded-[20px] bg-[var(--surface-navbar)] px-3 py-2.5 sm:px-5 sm:py-3 shadow-[var(--shadow-inset-faint)]">
@@ -125,7 +102,7 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="ml-2 flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center">
           <div className="relative" ref={notificationsRef}>
             <Button
               variant="outline"
@@ -145,7 +122,6 @@ export function Navbar() {
               </div>
             ) : null}
           </div>
-          <AccountMenu onAction={handleAccountAction} />
         </div>
       </div>
     </header>
