@@ -1,4 +1,4 @@
-import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
+import { KairosAreaChart, KairosBarChart, KairosDonutChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
@@ -103,14 +103,12 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         <article className={SHOW_MULTI_MACHINE_UI ? 'rounded-xl bg-[var(--surface-muted)] p-3 lg:col-span-2' : 'rounded-xl bg-[var(--surface-muted)] p-3'}>
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Time Spent per Project</h3>
           <div className="mt-2 h-56">
-            <BarChart
+            <KairosBarChart
               data={snapshot.topProjects}
               index="project"
               categories={['minutes']}
               colors={chartColors}
               height={224}
-              showAnimation
-              animationDuration={1000}
               rotateLabelX={{ angle: -20, xAxisHeight: 60 }}
               showLegend={false}
               showGridLines
@@ -124,15 +122,12 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
           <article className="rounded-xl bg-[var(--surface-muted)] p-3">
             <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Machine Time Distribution</h3>
             <div className="mt-2 h-44">
-              <DonutChart
+              <KairosDonutChart
                 data={snapshot.machineDistribution}
                 index="machineName"
                 category="share"
                 colors={snapshot.machineDistribution.map((machine, index) => machine.color ?? overviewChartPalette[index % overviewChartPalette.length])}
-                showAnimation
-                animationDuration={900}
-                showLabel={false}
-                style={{ height: 176 }}
+                height={176}
                 valueFormatter={(value) => `${value}%`}
               />
             </div>
@@ -167,7 +162,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Project Activity Over Time</h3>
         <div className="mt-2 h-52">
-          <AreaChart
+          <KairosAreaChart
             data={projectTrendData}
             index="label"
             categories={trendCategories}
@@ -175,8 +170,6 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
             stack={false}
             showGradient={false}
             height={208}
-            showAnimation
-            animationDuration={1000}
             showLegend
             showGridLines
             valueFormatter={(value) => `${Number(value).toFixed(1)}h`}

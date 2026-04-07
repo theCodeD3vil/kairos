@@ -179,6 +179,11 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
   }, [bootstrapped]);
 
   useEffect(() => {
+    // Wails runtime is unavailable in standalone dev mode (pnpm run dev).
+    if (!(window as unknown as { runtime?: unknown }).runtime) {
+      return;
+    }
+
     const unsubscribe = EventsOn(dataChangedEventName, () => {
       void refreshAll('event');
     });

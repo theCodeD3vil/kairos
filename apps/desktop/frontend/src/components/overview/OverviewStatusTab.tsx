@@ -1,4 +1,4 @@
-import { Tracker } from '@lobehub/charts';
+import { KairosTracker } from '@/components/charts/kairos-charts';
 import { syncUptimeColors } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
@@ -93,7 +93,7 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
           </div>
           <div className="mt-3 overflow-x-auto">
             <div className="min-w-[340px]">
-              <Tracker
+              <KairosTracker
                 data={snapshot.syncHealth.blocks}
                 blockHeight={28}
                 blockWidth={16}

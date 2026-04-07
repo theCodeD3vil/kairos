@@ -1,4 +1,4 @@
-import { DonutChart } from '@lobehub/charts';
+import { KairosDonutChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { LanguageIcon } from '@/lib/languageIcons';
@@ -18,15 +18,12 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Language Distribution</h3>
           <div className="mt-2 h-56 grid items-center">
-            <DonutChart
+            <KairosDonutChart
               data={languages}
               index="language"
               category="share"
               colors={pieColors}
-              showAnimation
-              animationDuration={1000}
-              showLabel={false}
-              style={{ height: 224 }}
+              height={224}
               valueFormatter={(value) => `${value}%`}
             />
           </div>

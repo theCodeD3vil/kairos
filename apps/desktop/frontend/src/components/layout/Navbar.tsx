@@ -1,12 +1,12 @@
 import { Bell, Home, LineChart, Settings, CalendarDays, Palette, CalendarRange } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NotificationsFilter } from '@/components/ruixen/notifications-filter';
+import { NotificationsFilter, type FilterItem } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
-import { useToast } from '@/components/toast/ToastProvider';
 import { Button } from '@/components/ui/button';
 import kairosMark from '@/assets/kairos-mark.svg';
 import { LAST_PAGE_STORAGE_KEY } from '@/lib/settings/preferences';
+import { useNotifications } from '@/lib/hooks/useNotifications';
 
 const showTheme = import.meta.env.DEV;
 
@@ -31,13 +31,44 @@ function resolveTabFromPath(pathname: string) {
   return nested?.url ?? tabs[0].url;
 }
 
+function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 export function Navbar() {
-  const { info, success } = useToast();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(() => resolveTabFromPath(pathname));
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+
+  const {
+    notifications,
+    unreadCount,
+    markAllRead,
+    clearAll,
+    handleSelect,
+  } = useNotifications();
+
+  const filterItems: FilterItem[] = useMemo(
+    () =>
+      notifications.map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        time: formatRelativeTime(n.createdAt),
+        category: n.category,
+        read: n.read,
+      })),
+    [notifications],
+  );
 
   useEffect(() => {
     setActiveTab(resolveTabFromPath(pathname));
@@ -68,21 +99,15 @@ export function Navbar() {
   };
 
   const handleNotificationsToggle = () => {
-    setNotificationsOpen((current) => {
-      const next = !current;
-      if (next) {
-        info('Notifications', 'Opened your notifications center.');
-      }
-      return next;
-    });
+    setNotificationsOpen((current) => !current);
   };
 
-  const handleCategoryChange = (category: string) => {
-    info('Notification Filter', `Showing ${category} notifications.`);
-  };
-
-  const handleNotificationSelect = (title: string) => {
-    success('Notification Opened', title);
+  const handleItemSelect = (item: FilterItem) => {
+    const notification = notifications.find((n) => n.id === item.id);
+    if (notification) {
+      handleSelect(notification);
+    }
+    setNotificationsOpen(false);
   };
 
   return (
@@ -111,13 +136,27 @@ export function Navbar() {
               onClick={handleNotificationsToggle}
             >
               <Bell size={16} />
+              {unreadCount > 0 && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full text-[9px] font-bold leading-none"
+                  style={{
+                    background: 'hsl(var(--primary))',
+                    color: 'hsl(var(--primary-foreground))',
+                  }}
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Button>
             {notificationsOpen ? (
               <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[75vh] overflow-auto rounded-2xl hover:border-[var(--surface-subtle)] bg-transparent p-1">
                 <NotificationsFilter
+                  items={filterItems}
                   sound={false}
-                  onCategoryChange={handleCategoryChange}
-                  onItemSelect={(item) => handleNotificationSelect(item.title)}
+                  unreadCount={unreadCount}
+                  onItemSelect={handleItemSelect}
+                  onMarkAllRead={markAllRead}
+                  onClearAll={clearAll}
                 />
               </div>
             ) : null}
@@ -127,3 +166,4 @@ export function Navbar() {
     </header>
   );
 }
+

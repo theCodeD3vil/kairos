@@ -1,4 +1,4 @@
-import { AreaChart, BarChart, DonutChart } from '@lobehub/charts';
+import { KairosAreaChart, KairosBarChart, KairosDonutChart } from '@/components/charts/kairos-charts';
 import { cn } from '@/lib/utils';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
@@ -89,13 +89,11 @@ export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
           {daily.length === 0 ? (
             <p className="text-sm text-[var(--ink-tertiary)]">No sessions in range.</p>
           ) : (
-            <BarChart
+            <KairosBarChart
               data={dailyData}
               index="label"
               categories={['minutes']}
               colors={[overviewChartPalette[0]]}
-              showAnimation
-              animationDuration={900}
               showGridLines
               valueFormatter={(value) => formatMinutes(Number(value))}
               yAxisWidth={44}
@@ -111,14 +109,12 @@ export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
           {weekly.length === 0 ? (
             <p className="text-sm text-[var(--ink-tertiary)]">No sessions in range.</p>
           ) : (
-            <AreaChart
+            <KairosAreaChart
               data={weekly}
               index="label"
               categories={['minutes']}
               colors={[overviewChartPalette[1]]}
               height={224}
-              showAnimation
-              animationDuration={900}
               showLegend={false}
               showGridLines
               valueFormatter={(value) => formatMinutes(Number(value))}
@@ -141,13 +137,11 @@ export function AnalyticsMachineList({ items }: MachineListProps) {
         {items.length === 0 ? (
           <p className="text-sm text-[var(--ink-tertiary)]">No machine activity in this range.</p>
         ) : (
-          <BarChart
+          <KairosBarChart
             data={items.map((item) => ({ label: item.name, minutes: item.minutes }))}
             index="label"
             categories={['minutes']}
             colors={[overviewChartPalette[2]]}
-            showAnimation
-            animationDuration={900}
             showGridLines
             valueFormatter={(value) => formatMinutes(Number(value))}
             yAxisWidth={44}
@@ -173,16 +167,13 @@ export function AnalyticsDonut({
         {items.length === 0 ? (
           <p className="text-sm text-[var(--ink-tertiary)]">No data for this filter.</p>
         ) : (
-          <DonutChart
+          <KairosDonutChart
             data={items}
             index="name"
             category="share"
             colors={items.map((_, idx) => overviewChartPalette[idx % overviewChartPalette.length])}
-            showAnimation
-            animationDuration={900}
-            showLabel={false}
             valueFormatter={(value) => `${value}%`}
-            style={{ height: 200 }}
+            height={200}
           />
         )}
       </div>

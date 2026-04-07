@@ -1,4 +1,4 @@
-import { AreaChart, Tracker } from '@lobehub/charts';
+import { KairosAreaChart, KairosTracker } from '@/components/charts/kairos-charts';
 import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
 import {
   AverageSessionBarsIllustration,
@@ -145,14 +145,12 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">{trendTitleByRange[snapshot.range]}</h3>
           <div className="mt-2 h-52">
-            <AreaChart
+            <KairosAreaChart
               data={snapshot.weeklyTrend}
               index="label"
               categories={['value']}
               colors={areaChartColors}
               height={208}
-              showAnimation
-              animationDuration={900}
               showLegend={false}
               showGridLines
               valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
@@ -226,7 +224,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
           </div>
           <div className="mt-3 overflow-x-auto">
             <div className="min-w-[340px]">
-              <Tracker
+              <KairosTracker
                 data={snapshot.syncHealth.blocks}
                 blockHeight={28}
                 blockWidth={16}

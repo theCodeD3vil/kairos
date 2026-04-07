@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 /**
@@ -45,94 +45,45 @@ export interface FilterItem {
   body: string;
   time: string;
   category: string;
+  read?: boolean;
 }
 
 interface NotificationsFilterProps {
   items?: FilterItem[];
   categories?: string[];
   sound?: boolean;
+  unreadCount?: number;
   onCategoryChange?: (category: string) => void;
   onItemSelect?: (item: FilterItem) => void;
+  onMarkAllRead?: () => void;
+  onClearAll?: () => void;
 }
-
-/* ── Defaults ── */
-
-const DEFAULT_CATEGORIES = ["All", "Updates", "Alerts", "Messages"];
-
-const DEFAULT_ITEMS: FilterItem[] = [
-  {
-    id: "1",
-    title: "New deployment",
-    body: "v2.4.1 deployed to production",
-    time: "2m",
-    category: "Updates",
-  },
-  {
-    id: "2",
-    title: "Security alert",
-    body: "New login from unknown device",
-    time: "8m",
-    category: "Alerts",
-  },
-  {
-    id: "3",
-    title: "Message from Alex",
-    body: "Hey, can you review my PR?",
-    time: "15m",
-    category: "Messages",
-  },
-  {
-    id: "4",
-    title: "Build passed",
-    body: "Pipeline #846 completed successfully",
-    time: "24m",
-    category: "Updates",
-  },
-  {
-    id: "5",
-    title: "Rate limit warning",
-    body: "API approaching rate limit threshold",
-    time: "1h",
-    category: "Alerts",
-  },
-  {
-    id: "6",
-    title: "Message from Sarah",
-    body: "The design review is scheduled for 3pm",
-    time: "2h",
-    category: "Messages",
-  },
-  {
-    id: "7",
-    title: "Package update",
-    body: "3 dependencies have available updates",
-    time: "4h",
-    category: "Updates",
-  },
-  {
-    id: "8",
-    title: "Downtime alert",
-    body: "Scheduled maintenance at midnight",
-    time: "6h",
-    category: "Alerts",
-  },
-];
 
 /* ── CSS ── */
 
-const CSS = `.nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.62));--nf-border:rgba(0,0,0,.06);--nf-shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--nf-hi:rgba(0,0,0,.88);--nf-dim:rgba(0,0,0,.35);--nf-sep:rgba(0,0,0,.06);--nf-pill-bg:hsl(var(--primary));--nf-pill-fg:hsl(var(--primary-foreground));--nf-pill-idle:hsl(var(--foreground)/.56);--nf-hover:hsl(var(--secondary)/.2)}`;
+const CSS = `.nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.62));--nf-border:rgba(0,0,0,.06);--nf-shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--nf-hi:rgba(0,0,0,.88);--nf-dim:rgba(0,0,0,.35);--nf-sep:rgba(0,0,0,.06);--nf-pill-bg:hsl(var(--primary));--nf-pill-fg:hsl(var(--primary-foreground));--nf-pill-idle:hsl(var(--foreground)/.56);--nf-hover:hsl(var(--secondary)/.2);--nf-unread:hsl(var(--primary))}`;
 
 /* ── Component ── */
 
 export function NotificationsFilter({
-  items = DEFAULT_ITEMS,
-  categories = DEFAULT_CATEGORIES,
+  items = [],
+  categories: categoriesProp,
   sound = false,
+  unreadCount = 0,
   onCategoryChange,
   onItemSelect,
+  onMarkAllRead,
+  onClearAll,
 }: NotificationsFilterProps) {
-  const [active, setActive] = useState(categories[0]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const derivedCategories = useMemo(() => {
+    if (categoriesProp) {
+      return categoriesProp;
+    }
+    const unique = [...new Set(items.map((i) => i.category))];
+    return unique.length > 0 ? ["All", ...unique] : ["All"];
+  }, [categoriesProp, items]);
+
+  const [active, setActive] = useState(derivedCategories[0]);
 
   const filtered =
     active === "All" ? items : items.filter((i) => i.category === active);
@@ -164,7 +115,14 @@ export function NotificationsFilter({
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* Header */}
-      <div style={{ padding: "12px 14px 0" }}>
+      <div
+        style={{
+          padding: "12px 14px 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <span
           style={{
             fontSize: 13,
@@ -174,60 +132,128 @@ export function NotificationsFilter({
           }}
         >
           Notifications
-        </span>
-      </div>
-
-      {/* Pill bar */}
-      <div
-        style={{
-          display: "flex",
-          gap: 4,
-          padding: "10px 14px 12px",
-          overflowX: "auto",
-        }}
-      >
-        {categories.map((cat) => {
-          const isActive = cat === active;
-          return (
-            <button
-              key={cat}
-              onClick={() => handleCategory(cat)}
+          {unreadCount > 0 && (
+            <span
               style={{
-                position: "relative",
-                height: 28,
-                padding: "0 12px",
-                border: "none",
+                marginLeft: 6,
+                fontSize: 10,
+                fontWeight: 600,
+                color: "var(--nf-pill-fg)",
+                background: "var(--nf-unread)",
                 borderRadius: 999,
-                background: "transparent",
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: "0.01em",
-                color: isActive ? "var(--nf-pill-fg)" : "var(--nf-pill-idle)",
-                zIndex: 1,
-                transition: "color 0.15s",
-                whiteSpace: "nowrap",
-                textTransform: "uppercase" as const,
+                padding: "1px 6px",
+                verticalAlign: "middle",
               }}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="nf-indicator"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: 999,
-                    background: "var(--nf-pill-bg)",
-                    zIndex: -1,
-                  }}
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                />
-              )}
-              {cat}
+              {unreadCount}
+            </span>
+          )}
+        </span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {unreadCount > 0 && onMarkAllRead && (
+            <button
+              onClick={onMarkAllRead}
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "var(--nf-dim)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 6px",
+                borderRadius: 6,
+                transition: "color 0.12s",
+              }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.color = "var(--nf-hi)")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.color = "var(--nf-dim)")
+              }
+            >
+              Mark all read
             </button>
-          );
-        })}
+          )}
+          {items.length > 0 && onClearAll && (
+            <button
+              onClick={onClearAll}
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "var(--nf-dim)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 6px",
+                borderRadius: 6,
+                transition: "color 0.12s",
+              }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.color = "var(--nf-hi)")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.color = "var(--nf-dim)")
+              }
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Pill bar — only show if more than one category */}
+      {derivedCategories.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: "10px 14px 12px",
+            overflowX: "auto",
+          }}
+        >
+          {derivedCategories.map((cat) => {
+            const isActive = cat === active;
+            return (
+              <button
+                key={cat}
+                onClick={() => handleCategory(cat)}
+                style={{
+                  position: "relative",
+                  height: 28,
+                  padding: "0 12px",
+                  border: "none",
+                  borderRadius: 999,
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.01em",
+                  color: isActive ? "var(--nf-pill-fg)" : "var(--nf-pill-idle)",
+                  zIndex: 1,
+                  transition: "color 0.15s",
+                  whiteSpace: "nowrap",
+                  textTransform: "uppercase" as const,
+                }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="nf-indicator"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: 999,
+                      background: "var(--nf-pill-bg)",
+                      zIndex: -1,
+                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div
         style={{
@@ -242,8 +268,8 @@ export function NotificationsFilter({
       <div style={{ maxHeight: 320, overflowY: "auto" }}>
         <AnimatePresence mode="popLayout" initial={false}>
           {filtered.map((item, index) => {
-            const isHovered = hoveredId === item.id;
             const isLast = index === filtered.length - 1;
+            const isUnread = item.read === false;
 
             return (
               <motion.div
@@ -258,15 +284,15 @@ export function NotificationsFilter({
                   stiffness: 400,
                   damping: 30,
                 }}
-                onMouseEnter={() => setHoveredId(item.id)}
-                onMouseLeave={() => setHoveredId(null)}
                 onClick={() => onItemSelect?.(item)}
                 style={{
                   padding: "10px 14px",
                   borderBottom: isLast ? "none" : `0.5px solid var(--nf-sep)`,
                   cursor: onItemSelect ? "pointer" : "default",
-                  background: isHovered ? "var(--nf-hover)" : "transparent",
                   transition: "background 0.12s",
+                }}
+                whileHover={{
+                  backgroundColor: "var(--nf-hover)",
                 }}
               >
                 <div
@@ -277,21 +303,42 @@ export function NotificationsFilter({
                     marginBottom: 2,
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 520,
-                      color: isHovered ? "var(--nf-hi)" : "var(--nf-dim)",
-                      transition: "color 0.12s",
-                      letterSpacing: "-0.01em",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
                       flex: 1,
+                      overflow: "hidden",
                     }}
                   >
-                    {item.title}
-                  </span>
+                    {isUnread && (
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: "var(--nf-unread)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: isUnread ? 560 : 480,
+                        color: isUnread ? "var(--nf-hi)" : "var(--nf-dim)",
+                        transition: "color 0.12s",
+                        letterSpacing: "-0.01em",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        flex: 1,
+                      }}
+                    >
+                      {item.title}
+                    </span>
+                  </div>
                   <span
                     style={{
                       fontSize: 11,
@@ -313,6 +360,7 @@ export function NotificationsFilter({
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                     lineHeight: 1.4,
+                    paddingLeft: isUnread ? 14 : 0,
                   }}
                 >
                   {item.body}

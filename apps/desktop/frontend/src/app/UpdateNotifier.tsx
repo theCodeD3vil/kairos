@@ -8,6 +8,7 @@ import {
 } from '../../wailsjs/runtime/runtime';
 import { useToast } from '@/components/toast/ToastProvider';
 import { checkDesktopUpdate } from '@/lib/backend/settings';
+import { addNotificationIfNew } from '@/lib/notification-store';
 
 const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const UPDATE_NOTICE_STORAGE_KEY = 'kairos:update-notice-token';
@@ -40,12 +41,22 @@ export function UpdateNotifier() {
           return;
         }
 
+        // In-app toast (ephemeral)
         info(
           'Update Available',
           `Kairos ${status.latestVersion} is available. Open Settings and use Download Update.`,
           { durationMs: 8000 },
         );
 
+        // Persistent notification in the bell icon panel
+        addNotificationIfNew({
+          title: 'Update Available',
+          body: `Kairos ${status.latestVersion} is ready. Open Settings to download.`,
+          category: 'Updates',
+          action: { type: 'navigate', target: '/settings' },
+        });
+
+        // OS-level notification (best-effort)
         try {
           const notificationsAvailable = await IsNotificationAvailable();
           if (notificationsAvailable) {
@@ -85,3 +96,4 @@ export function UpdateNotifier() {
 
   return null;
 }
+

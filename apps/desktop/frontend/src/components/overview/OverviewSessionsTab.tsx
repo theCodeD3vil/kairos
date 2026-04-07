@@ -1,4 +1,4 @@
-import { AreaChart } from '@lobehub/charts';
+import { KairosAreaChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 
@@ -66,14 +66,12 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Session Durations Over Time</h3>
           <div className="mt-2 h-52">
-            <AreaChart
+            <KairosAreaChart
               data={sessionDurationTrend}
               index="label"
               categories={['value']}
               colors={[overviewChartPalette[2]]}
               height={208}
-              showAnimation
-              animationDuration={900}
               showLegend={false}
               showGridLines
               valueFormatter={(value) => `${Number(value).toFixed(1)}h`}

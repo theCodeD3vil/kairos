@@ -99,6 +99,20 @@
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
     background-color: hsl(var(--background));
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+  }
+
+  /* Allow text selection where expected */
+  input,
+  textarea,
+  [contenteditable="true"],
+  pre,
+  code {
+    -webkit-user-select: text;
+    user-select: text;
+    cursor: text;
   }
 
   h1,
@@ -119,11 +133,6 @@
   .font-numeric {
     font-family: var(--font-numeric);
     font-variant-numeric: tabular-nums;
-  }
-
-  ::selection {
-    background: hsl(var(--primary) / 0.35);
-    color: hsl(var(--foreground));
   }
 }
 

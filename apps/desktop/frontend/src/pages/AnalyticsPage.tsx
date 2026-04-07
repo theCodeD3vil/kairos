@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BarChart } from '@lobehub/charts';
+import { KairosBarChart } from '@/components/charts/kairos-charts';
 import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
 import {
   AnalyticsBreakdownList,
@@ -214,13 +214,11 @@ export function AnalyticsPage() {
               {snapshot.projects.items.length === 0 ? (
                 <p className="text-sm text-[var(--ink-tertiary)]">No project time yet.</p>
               ) : (
-                <BarChart
+                <KairosBarChart
                   data={snapshot.projects.items.map((item) => ({ label: item.name, minutes: item.minutes }))}
                   index="label"
                   categories={['minutes']}
                   colors={[overviewChartPalette[0]]}
-                  showAnimation
-                  animationDuration={900}
                   rotateLabelX={{ angle: -20, xAxisHeight: 70 }}
                   showGridLines
                   valueFormatter={(value) => formatMinutes(Number(value))}
@@ -244,13 +242,11 @@ export function AnalyticsPage() {
               {snapshot.languages.items.length === 0 ? (
                 <p className="text-sm text-[var(--ink-tertiary)]">No language time yet.</p>
               ) : (
-                <BarChart
+                <KairosBarChart
                   data={snapshot.languages.items.map((item) => ({ label: item.name, minutes: item.minutes }))}
                   index="label"
                   categories={['minutes']}
                   colors={[overviewChartPalette[3]]}
-                  showAnimation
-                  animationDuration={900}
                   rotateLabelX={{ angle: -20, xAxisHeight: 70 }}
                   showGridLines
                   valueFormatter={(value) => formatMinutes(Number(value))}
@@ -300,13 +296,11 @@ export function AnalyticsPage() {
             {snapshot.patterns.hourBuckets.length === 0 ? (
               <p className="text-sm text-[var(--ink-tertiary)]">No hourly data in this range.</p>
             ) : (
-              <BarChart
+              <KairosBarChart
                 data={snapshot.patterns.hourBuckets.map((bucket) => ({ label: bucket.hourLabel, minutes: bucket.minutes }))}
                 index="label"
                 categories={['minutes']}
                 colors={[overviewChartPalette[4]]}
-                showAnimation
-                animationDuration={900}
                 showGridLines
                 valueFormatter={(value) => formatMinutes(Number(value))}
                 yAxisWidth={44}
