@@ -56,14 +56,17 @@ jobs:
           sudo apt-get update -y -o Acquire::Retries=3 -o Dpkg::Use-Pty=0
           sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 libgtk-3-dev libglib2.0-dev pkg-config zip
           sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 libwebkit2gtk-4.1-dev
-          for dir in /usr/lib/*/pkgconfig /usr/lib/pkgconfig; do
-            if [[ -f "$dir/webkit2gtk-4.1.pc" && ! -f "$dir/webkit2gtk-4.0.pc" ]]; then
-              sudo ln -s "$dir/webkit2gtk-4.1.pc" "$dir/webkit2gtk-4.0.pc"
+          compat_pc_dir="${RUNNER_TEMP}/pkgconfig-compat"
+          mkdir -p "$compat_pc_dir"
+          while IFS= read -r dir; do
+            if [[ -f "$dir/webkit2gtk-4.1.pc" && ! -f "$compat_pc_dir/webkit2gtk-4.0.pc" ]]; then
+              ln -sf "$dir/webkit2gtk-4.1.pc" "$compat_pc_dir/webkit2gtk-4.0.pc"
             fi
-            if [[ -f "$dir/javascriptcoregtk-4.1.pc" && ! -f "$dir/javascriptcoregtk-4.0.pc" ]]; then
-              sudo ln -s "$dir/javascriptcoregtk-4.1.pc" "$dir/javascriptcoregtk-4.0.pc"
+            if [[ -f "$dir/javascriptcoregtk-4.1.pc" && ! -f "$compat_pc_dir/javascriptcoregtk-4.0.pc" ]]; then
+              ln -sf "$dir/javascriptcoregtk-4.1.pc" "$compat_pc_dir/javascriptcoregtk-4.0.pc"
             fi
-          done
+          done < <(find /usr/lib -type d -name pkgconfig 2>/dev/null)
+          echo "PKG_CONFIG_PATH=${compat_pc_dir}:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
