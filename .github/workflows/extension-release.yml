@@ -64,10 +64,18 @@ jobs:
         run: ./scripts/release/write-checksums.sh apps/vscode-extension/dist apps/vscode-extension/dist/SHA256SUMS-vsix.txt
 
       - name: Publish to VS Code Marketplace
-        if: ${{ secrets.VSCE_PAT != '' && (github.event_name != 'workflow_dispatch' || inputs.publish_marketplace) }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: pnpm --filter kairos-vscode publish:marketplace
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "Skipping marketplace publish (no VSCE_PAT secret)"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ inputs.publish_marketplace }}" == "false" ]; then
+            echo "Skipping marketplace publish (workflow_dispatch disabled publish)"
+            exit 0
+          fi
+          pnpm --filter kairos-vscode publish:marketplace
 
       - name: Upload VSIX artifacts
         uses: actions/upload-artifact@v4
