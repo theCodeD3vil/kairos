@@ -30,8 +30,8 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
   const splash = useMemo(() => (
     <motion.div
       key="desktop-splash"
-      initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
-      animate={reduceMotion ? { opacity: 1 } : { opacity: 1 }}
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 1 }}
       exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.02 }}
       transition={{ duration: reduceMotion ? 0.12 : 0.32, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--surface-shell)]"

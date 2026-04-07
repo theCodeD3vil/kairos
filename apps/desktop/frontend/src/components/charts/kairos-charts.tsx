@@ -105,6 +105,7 @@ export function KairosAreaChart({
           itemStyle={tooltipItemStyle}
           formatter={(value: number) => [valueFormatter(value), undefined]}
           cursor={{ stroke: 'var(--ink-tertiary)', strokeWidth: 1, strokeDasharray: '4 4' }}
+          isAnimationActive={false}
         />
         {showLegend && (
           <Legend
@@ -188,6 +189,7 @@ export function KairosBarChart({
           itemStyle={tooltipItemStyle}
           formatter={(value: number) => [valueFormatter(value), undefined]}
           cursor={{ fill: 'var(--surface-subtle)', opacity: 0.5 }}
+          isAnimationActive={false}
         />
         {showLegend && (
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
@@ -252,6 +254,7 @@ export function KairosDonutChart({
           labelStyle={tooltipLabelStyle}
           itemStyle={tooltipItemStyle}
           formatter={(value: number) => [valueFormatter(value), undefined]}
+          isAnimationActive={false}
         />
       </RechartsPieChart>
     </ResponsiveContainer>
