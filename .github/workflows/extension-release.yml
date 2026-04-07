@@ -16,6 +16,9 @@ on:
         default: true
         type: boolean
 
+permissions:
+  contents: write
+
 jobs:
   release-extension:
     runs-on: ubuntu-latest
