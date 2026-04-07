@@ -151,6 +151,11 @@ jobs:
             --wait
           xcrun stapler staple "$APP_PATH"
 
+      - name: Build Ubuntu Data (.deb) Package
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./scripts/release/build-ubuntu-deb.sh
+
       - name: Collect release artifacts
         shell: bash
         run: |
