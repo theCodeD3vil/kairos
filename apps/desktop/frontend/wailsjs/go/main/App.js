@@ -94,6 +94,14 @@ export function RebuildSessionsForRange(arg1, arg2) {
   return window['go']['main']['App']['RebuildSessionsForRange'](arg1, arg2);
 }
 
+export function ReconnectVSCodeExtension() {
+  return window['go']['main']['App']['ReconnectVSCodeExtension']();
+}
+
+export function RefreshVSCodeExtensionStatus() {
+  return window['go']['main']['App']['RefreshVSCodeExtensionStatus']();
+}
+
 export function ResetSettingsSection(arg1) {
   return window['go']['main']['App']['ResetSettingsSection'](arg1);
 }

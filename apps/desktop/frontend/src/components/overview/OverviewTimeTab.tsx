@@ -1,5 +1,5 @@
 import { AreaChart, Tracker } from '@lobehub/charts';
-import { overviewChartPalette } from '@/components/overview/chart-colors';
+import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
 import {
   AverageSessionBarsIllustration,
   CodingOrbitIllustration,
@@ -97,6 +97,25 @@ function AvgSessionCard({ value }: { value: string }) {
   );
 }
 
+function SyncHealthLegend() {
+  const items = [
+    { label: 'Healthy', color: syncUptimeColors.high },
+    { label: 'Degraded', color: syncUptimeColors.medium },
+    { label: 'Offline', color: syncUptimeColors.critical },
+  ];
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-tertiary)]">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
   const syncStatus: StatusBadgeStatus =
     snapshot.syncHealth.status === 'Healthy'
@@ -159,17 +178,17 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
           <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-6">
             <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
               <p className="text-xs text-[var(--ink-muted)]">Machine Name</p>
-              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
+              <p className="mt-1 line-clamp-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.machineName}</p>
             </div>
             <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
               <p className="text-xs text-[var(--ink-muted)]">Operating System</p>
-              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
+              <p className="mt-1 line-clamp-1 text-sm font-medium text-[var(--ink-strong)]">
                 {snapshot.currentMachine.os} {snapshot.currentMachine.osVersion}
               </p>
             </div>
             <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
               <p className="text-xs text-[var(--ink-muted)]">Editor</p>
-              <p className="mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">
+              <p className="mt-1 line-clamp-1 text-sm font-medium text-[var(--ink-strong)]">
                 {snapshot.currentMachine.editorName} {snapshot.currentMachine.editorVersion}
               </p>
             </div>
@@ -187,7 +206,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
             </div>
             <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
               <p className="text-xs text-[var(--ink-muted)]">Last Seen</p>
-              <p className="font-numeric mt-1 text-sm font-medium line-cllamp-1 text-[var(--ink-strong)]">{snapshot.currentMachine.lastSeenAt}</p>
+              <p className="font-numeric mt-1 line-clamp-1 text-sm font-medium text-[var(--ink-strong)]">{snapshot.currentMachine.lastSeenAt}</p>
             </div>
           </div>
         </article>
@@ -196,15 +215,22 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
         <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
-          <Tracker
-            data={snapshot.syncHealth.blocks}
-            blockHeight={30}
-            blockWidth={8}
-            blockGap={4}
-            leftLabel={<StatusBadge status={syncStatus} />}
-            rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <StatusBadge status={syncStatus} />
+            <p className="font-numeric text-xs text-[var(--ink-tertiary)]">Last sync {snapshot.syncHealth.lastSyncAt}</p>
+          </div>
+          <div className="mt-3 overflow-x-auto">
+            <div className="min-w-[340px]">
+              <Tracker
+                data={snapshot.syncHealth.blocks}
+                blockHeight={28}
+                blockWidth={16}
+                blockGap={6}
+              />
+            </div>
+          </div>
         </div>
+        <SyncHealthLegend />
       </article>
     </div>
   );

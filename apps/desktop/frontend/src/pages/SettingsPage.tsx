@@ -24,18 +24,20 @@ import {
   emptySettingsScreenData,
   loadSettingsScreenData,
   resetSettingsSectionViewModel,
+  reconnectVSCodeExtension,
   saveAppBehaviorSettings,
   saveExclusionsSettings,
   saveExtensionSettings,
   saveGeneralSettings,
   savePrivacySettings,
   saveTrackingSettings,
+  refreshVSCodeExtensionStatus,
   settingsSections,
 } from '@/lib/backend/settings';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 
 export function SettingsPage() {
-  const { error, info, success } = useToast();
+  const { error, success } = useToast();
   const [activeTab, setActiveTab] = useState('general');
   const initialData = emptySettingsScreenData();
   const [general, setGeneral] = useState(initialData.viewModel.general);
@@ -140,9 +142,8 @@ export function SettingsPage() {
     }
   }, [applyScreenData, error, success]);
 
-  const placeholderAction = (title: string, body: string) => {
-    info(title, body);
-  };
+  const canOpenRepository = about.repositoryLabel.startsWith('http');
+  const canOpenReleaseNotes = about.releaseNotesLabel.startsWith('http');
 
   const tabs = [
     {
@@ -161,10 +162,10 @@ export function SettingsPage() {
               value={general.defaultDateRange}
               onChange={(event) => updateGeneralState({ ...general, defaultDateRange: event.target.value as typeof general.defaultDateRange })}
               options={[
-                { label: 'Today', value: 'today' },
-                { label: 'Last 7 days', value: 'week' },
-                { label: 'This month', value: 'month' },
-                { label: 'Custom', value: 'custom' },
+                { label: '1D', value: 'today' },
+                { label: '7D', value: 'week' },
+                { label: '1M', value: 'month' },
+                { label: 'custom', value: 'custom' },
               ]}
             />
           </SettingsRow>
@@ -211,10 +212,11 @@ export function SettingsPage() {
           <SettingsRow label="Local-only mode" helper="Keeps Kairos desktop-first with no cloud sync behavior in v1.">
             <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => updatePrivacyState({ ...privacy, localOnlyMode: next })} />
           </SettingsRow>
-          <SettingsRow label="Cloud sync" helper="Placeholder only">
+          <SettingsRow label="Cloud sync" helper="Cloud sync controls are disabled in this desktop release.">
             <SettingsToggle
               checked={privacy.cloudSyncEnabled}
-              onChange={() => placeholderAction('Cloud Sync', 'Cloud sync is intentionally out of scope for the local-first v1 release.')}
+              onChange={() => {}}
+              disabled
             />
           </SettingsRow>
           <SettingsRow label="File path visibility" helper="Controls whether file paths are stored and returned as full paths, masked names, or hidden values.">
@@ -280,16 +282,18 @@ export function SettingsPage() {
               onChange={(event) => updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: event.target.value })}
             />
           </SettingsRow>
-          <SettingsRow label="Detect active coding window" helper="Placeholder only. Intended to refine tracking to active editor-focused coding windows.">
+          <SettingsRow label="Detect active coding window" helper="This control is disabled in this desktop release.">
             <SettingsToggle
               checked={tracking.detectActiveCodingWindow}
-              onChange={() => placeholderAction('Active Coding Window', 'This desktop-only toggle is not implemented in v1.')}
+              onChange={() => {}}
+              disabled
             />
           </SettingsRow>
-          <SettingsRow label="Background activity capture" helper="Placeholder only. Would include background/editor activity outside the current focused coding window.">
+          <SettingsRow label="Background activity capture" helper="This control is disabled in this desktop release.">
             <SettingsToggle
               checked={tracking.backgroundActivityCapture}
-              onChange={() => placeholderAction('Background Activity Capture', 'Background activity capture is intentionally deferred.')}
+              onChange={() => {}}
+              disabled
             />
           </SettingsRow>
         </SettingsSection>
@@ -366,8 +370,17 @@ export function SettingsPage() {
                     className="rounded-full!"
                     onClick={() => {
                       void (async () => {
-                        if (await reloadSettings()) {
-                          success('Extension Status', 'Desktop extension status refreshed.');
+                        try {
+                          const status = await refreshVSCodeExtensionStatus();
+                          await reloadSettings({ silent: true });
+                          success('Extension Status', status.connected
+                            ? 'VS Code extension responded and status was refreshed.'
+                            : 'Refresh completed, but extension remains offline.');
+                        } catch (cause) {
+                          error(
+                            'Extension Status',
+                            cause instanceof Error ? cause.message : 'Unable to refresh VS Code extension status.',
+                          );
                         }
                       })();
                     }}
@@ -378,7 +391,25 @@ export function SettingsPage() {
                     variant="outline"
                     size="sm"
                     className="rounded-full! border-black/10"
-                    onClick={() => placeholderAction('Reconnect Extension', 'Reconnect is controlled by the VS Code extension runtime and desktop local server.')}
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const status = await reconnectVSCodeExtension();
+                          await reloadSettings({ silent: true });
+                          success(
+                            'VS Code Extension',
+                            status.connected
+                              ? 'Reconnect succeeded and extension is online.'
+                              : 'Reconnect attempted, but extension is still offline.',
+                          );
+                        } catch (cause) {
+                          error(
+                            'VS Code Extension',
+                            cause instanceof Error ? cause.message : 'Unable to reach VS Code extension.',
+                          );
+                        }
+                      })();
+                    }}
                   >
                     Reconnect
                   </Button>
@@ -386,7 +417,7 @@ export function SettingsPage() {
                     variant="outline"
                     size="sm"
                     className="rounded-full! border-black/10"
-                    onClick={() => placeholderAction('Detected Workspaces', 'Workspace discovery is not wired yet.')}
+                    disabled
                   >
                     View Workspaces
                   </Button>
@@ -436,10 +467,11 @@ export function SettingsPage() {
             <SettingsRow label="Track edit activity" helper="Controls whether text edits emit `edit` activity events.">
               <SettingsToggle checked={vscodeExtension.trackEditActivity} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackEditActivity: next })} />
             </SettingsRow>
-            <SettingsRow label="Sessionization handled by" helper="Desktop-owned in v1. The extension does not derive canonical sessions.">
+            <SettingsRow label="Sessionization handled by" helper="Sessionization is managed by the desktop app.">
               <SettingsSelect
                 value={vscodeExtension.sessionizationOwner}
-                onChange={() => placeholderAction('Sessionization Owner', 'Sessionization remains desktop-owned in the v1 release.')}
+                onChange={() => {}}
+                disabled
                 options={[
                   { label: 'Desktop app', value: 'desktop' },
                   { label: 'Extension', value: 'extension' },
@@ -506,10 +538,11 @@ export function SettingsPage() {
           <SettingsRow label="Restore last selected date range" helper="Reuses your previous Overview, Sessions, or Analytics date range when reopening the app.">
             <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => updateAppBehaviorState({ ...appBehavior, restoreLastSelectedDateRange: next })} />
           </SettingsRow>
-          <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="Placeholder only. Would restore page-specific calendar state and analytics filters on reopen.">
+          <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="This control is disabled in this desktop release.">
             <SettingsToggle
               checked={appBehavior.reopenLastViewedContext}
-              onChange={() => placeholderAction('Reopen Last Context', 'Restoring page-specific context is not implemented in v1.')}
+              onChange={() => {}}
+              disabled
             />
           </SettingsRow>
         </SettingsSection>
@@ -542,13 +575,13 @@ export function SettingsPage() {
               label="Local data"
               actions={
                 <>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={() => placeholderAction('Clear Local Data', 'Local data clearing is not wired yet.')}>
+                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
                     Clear Local Data
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={() => placeholderAction('Export Data', 'Export is a placeholder action.')}>
+                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
                     Export Data
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={() => placeholderAction('Import Data', 'Import is a placeholder action.')}>
+                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
                     Import Data
                   </Button>
                 </>
@@ -557,7 +590,7 @@ export function SettingsPage() {
             <SettingsActionRow
               label="Processing"
               actions={
-                <Button variant="secondary" size="sm" className="rounded-full!" onClick={() => placeholderAction('Rebuild Analytics Cache', 'Cache rebuild will be wired later.')}>
+                <Button variant="secondary" size="sm" className="rounded-full!" disabled>
                   Rebuild Analytics Cache
                 </Button>
               }
@@ -587,7 +620,7 @@ export function SettingsPage() {
             />
           </SettingsSection>
           <SettingsActionRow
-            label="Placeholder actions"
+            label="Links"
             actions={
               <>
                 <Button
@@ -595,12 +628,9 @@ export function SettingsPage() {
                   size="sm"
                   className="rounded-full! border-black/10"
                   onClick={() => {
-                    if (about.repositoryLabel.startsWith('http')) {
-                      BrowserOpenURL(about.repositoryLabel);
-                      return;
-                    }
-                    placeholderAction('Repository', 'Repository URL is not configured in this build.');
+                    BrowserOpenURL(about.repositoryLabel);
                   }}
+                  disabled={!canOpenRepository}
                 >
                   Open Repository
                 </Button>
@@ -609,12 +639,9 @@ export function SettingsPage() {
                   size="sm"
                   className="rounded-full! border-black/10"
                   onClick={() => {
-                    if (about.releaseNotesLabel.startsWith('http')) {
-                      BrowserOpenURL(about.releaseNotesLabel);
-                      return;
-                    }
-                    placeholderAction('Release Notes', 'Release notes URL is not configured in this build.');
+                    BrowserOpenURL(about.releaseNotesLabel);
                   }}
+                  disabled={!canOpenReleaseNotes}
                 >
                   View Release Notes
                 </Button>

@@ -27,11 +27,31 @@ type LoadSnapshotOptions = {
   quiet?: boolean;
 };
 
+type DisplayPreferences = {
+  hour12: boolean;
+  weekStartsOn: 'monday' | 'sunday';
+  showMachineNames: boolean;
+  showHostname: boolean;
+  obfuscateProjectNames: boolean;
+  minimizeExtensionMetadata: boolean;
+  trackMachineAttribution: boolean;
+  sendMachineAttribution: boolean;
+};
+
+const REDACTED_MACHINE_LABEL = 'redacted-machine';
+
+function normalizeLanguageLabel(language: string): string {
+  return language === 'TypeScriptReact' ? 'React' : language;
+}
+
 const syncColorByStatus = {
   Healthy: syncUptimeColors.high,
   Degraded: syncUptimeColors.medium,
   Offline: syncUptimeColors.critical,
 } as const;
+const syncHistoryWindowMinutes = 90;
+const syncHistoryBucketMinutes = 10;
+const extensionPingIntervalMs = 60_000;
 
 export type SessionsScreenData = {
   range: OverviewRange;
@@ -68,7 +88,7 @@ type DateWindow = {
   end: Date;
 };
 
-function formatDateTime(value?: string) {
+function formatDateTime(value?: string, hour12?: boolean) {
   if (!value) {
     return '—';
   }
@@ -83,6 +103,7 @@ function formatDateTime(value?: string) {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12,
   });
 }
 
@@ -102,7 +123,7 @@ function formatDate(value?: string) {
   });
 }
 
-function formatTime(value?: string) {
+function formatTime(value?: string, hour12?: boolean) {
   if (!value) {
     return null;
   }
@@ -115,6 +136,7 @@ function formatTime(value?: string) {
   return parsed.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12,
   });
 }
 
@@ -150,10 +172,10 @@ function formatDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function startOfWeekUTC(date: Date) {
+function startOfWeekUTC(date: Date, weekStartsOn: DisplayPreferences['weekStartsOn'] = 'monday') {
   const current = startOfDayUTC(date);
   const weekday = current.getUTCDay();
-  const offset = weekday === 0 ? 6 : weekday - 1;
+  const offset = weekStartsOn === 'sunday' ? weekday : (weekday === 0 ? 6 : weekday - 1);
   return addDays(current, -offset);
 }
 
@@ -161,7 +183,12 @@ function endOfMonthUTC(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
 }
 
-function resolveDateWindow(range: OverviewRange, customRange: DateRange | null, reference: Date = new Date()): DateWindow {
+function resolveDateWindow(
+  range: OverviewRange,
+  customRange: DateRange | null,
+  weekStartsOn: DisplayPreferences['weekStartsOn'] = 'monday',
+  reference: Date = new Date(),
+): DateWindow {
   const today = startOfDayUTC(reference);
 
   if (range === 'custom' && customRange) {
@@ -177,10 +204,11 @@ function resolveDateWindow(range: OverviewRange, customRange: DateRange | null, 
   }
 
   if (range === 'today') {
+    const day = formatDateKey(today);
     return {
-      rangeLabel: 'today',
-      startDate: formatDateKey(today),
-      endDate: formatDateKey(today),
+      rangeLabel: `${day}..${day}`,
+      startDate: day,
+      endDate: day,
       start: today,
       end: today,
     };
@@ -189,21 +217,25 @@ function resolveDateWindow(range: OverviewRange, customRange: DateRange | null, 
   if (range === 'month') {
     const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
     const end = endOfMonthUTC(today);
+    const startDate = formatDateKey(start);
+    const endDate = formatDateKey(end);
     return {
-      rangeLabel: 'month',
-      startDate: formatDateKey(start),
-      endDate: formatDateKey(end),
+      rangeLabel: `${startDate}..${endDate}`,
+      startDate,
+      endDate,
       start,
       end,
     };
   }
 
-  const start = startOfWeekUTC(today);
+  const start = startOfWeekUTC(today, weekStartsOn);
   const end = addDays(start, 6);
+  const startDate = formatDateKey(start);
+  const endDate = formatDateKey(end);
   return {
-    rangeLabel: 'week',
-    startDate: formatDateKey(start),
-    endDate: formatDateKey(end),
+    rangeLabel: `${startDate}..${endDate}`,
+    startDate,
+    endDate,
     start,
     end,
   };
@@ -232,61 +264,157 @@ function buildTrend(points: DailyStat[] | Array<{ label: string; minutes: number
   }));
 }
 
-function buildSyncHealth(status: contracts.SettingsData['extensionStatus'], lastUpdatedAt: string): OverviewSnapshot['syncHealth'] {
-  const syncStatus: OverviewSnapshot['syncHealth']['status'] = status.connected
-    ? 'Healthy'
-    : status.installed
-      ? 'Degraded'
-      : 'Offline';
-  const color = syncColorByStatus[syncStatus];
+function buildSyncHealth(
+  status: contracts.SettingsData['extensionStatus'],
+  lastUpdatedAt: string,
+  preferences: DisplayPreferences,
+): OverviewSnapshot['syncHealth'] {
+  const now = new Date();
+  const healthyWindowMs = extensionPingIntervalMs;
+  const degradedWindowMs = extensionPingIntervalMs * 2;
+
+  const timestamps = [status.lastEventAt, status.lastHandshakeAt]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value))
+    .filter((value) => !Number.isNaN(value.getTime()))
+    .sort((left, right) => right.getTime() - left.getTime());
+
+  const lastSeen = timestamps[0] ?? null;
+
+  const resolveStatusAt = (at: Date): OverviewSnapshot['syncHealth']['status'] => {
+    if (!status.installed || !lastSeen) {
+      return 'Offline';
+    }
+
+    const gap = at.getTime() - lastSeen.getTime();
+    if (gap <= healthyWindowMs) {
+      return 'Healthy';
+    }
+    if (gap <= degradedWindowMs) {
+      return 'Degraded';
+    }
+    return 'Offline';
+  };
+
+  const nowStatus = status.connected ? resolveStatusAt(now) : 'Offline';
 
   return {
-    status: syncStatus,
-    lastSyncAt: formatDateTime(status.lastHandshakeAt ?? lastUpdatedAt),
-    blocks: Array.from({ length: 40 }, (_, index) => ({
-      key: `sync-${index + 1}`,
-      color,
-      tooltip: `${syncStatus} at slot ${index + 1}`,
-    })),
+    status: nowStatus,
+    lastSyncAt: formatDateTime(status.lastHandshakeAt ?? lastUpdatedAt, preferences.hour12),
+    blocks: Array.from({ length: syncHistoryWindowMinutes / syncHistoryBucketMinutes }, (_, index) => {
+      const bucketOffset = syncHistoryWindowMinutes - (index + 1) * syncHistoryBucketMinutes;
+      const bucketStart = new Date(now.getTime() - bucketOffset * 60_000);
+      const bucketEnd = new Date(bucketStart.getTime() + syncHistoryBucketMinutes * 60_000);
+      const slotStatus = resolveStatusAt(bucketEnd);
+      const startLabel = bucketStart.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: preferences.hour12,
+      });
+      const endLabel = bucketEnd.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: preferences.hour12,
+      });
+      return {
+        key: `sync-${bucketStart.toISOString()}`,
+        color: syncColorByStatus[slotStatus],
+        tooltip: `${startLabel} - ${endLabel} · ${slotStatus}`,
+      };
+    }),
   };
 }
 
-function adaptMachine(system: contracts.SettingsData['system'], extensionStatus: contracts.SettingsData['extensionStatus']): MachineInfo {
+function adaptMachine(
+  system: contracts.SettingsData['system'],
+  extensionStatus: contracts.SettingsData['extensionStatus'],
+  preferences: DisplayPreferences,
+): MachineInfo {
+  const machineName = resolveDisplayMachineName(system.machineName, system.machineId, preferences);
   return {
-    machineName: system.machineName,
+    machineName,
     machineId: system.machineId,
-    hostname: system.hostname ?? '',
+    hostname: preferences.showHostname ? (system.hostname ?? '') : '',
     os: formatOsLabel(system),
     osVersion: system.osVersion ?? '',
     architecture: system.arch ?? '',
     editorName: system.editor === 'vscode' ? 'VS Code' : system.editor,
-    editorVersion: system.editorVersion ?? '',
-    extensionVersion: extensionStatus.extensionVersion ?? system.extensionVersion ?? '',
-    lastSeenAt: formatDateTime(system.lastSeenAt),
+    editorVersion: preferences.minimizeExtensionMetadata ? '' : (system.editorVersion ?? ''),
+    extensionVersion: preferences.minimizeExtensionMetadata ? '' : (extensionStatus.extensionVersion ?? system.extensionVersion ?? ''),
+    lastSeenAt: formatDateTime(system.lastSeenAt, preferences.hour12),
   };
 }
 
-function adaptKnownMachine(machine: contracts.MachineInfo, extensionStatus: contracts.SettingsData['extensionStatus']): MachineInfo {
+function adaptKnownMachine(
+  machine: contracts.MachineInfo,
+  extensionStatus: contracts.SettingsData['extensionStatus'],
+  preferences: DisplayPreferences,
+): MachineInfo {
+  const machineName = resolveDisplayMachineName(machine.machineName, machine.machineId, preferences);
   return {
-    machineName: machine.machineName,
+    machineName,
     machineId: machine.machineId,
-    hostname: machine.hostname ?? '',
+    hostname: preferences.showHostname ? (machine.hostname ?? '') : '',
     os: formatOsLabel(machine),
     osVersion: machine.osVersion ?? '',
     architecture: machine.arch ?? '',
     editorName: 'VS Code',
     editorVersion: '',
-    extensionVersion: extensionStatus.extensionVersion ?? '',
+    extensionVersion: preferences.minimizeExtensionMetadata ? '' : (extensionStatus.extensionVersion ?? ''),
     lastSeenAt: 'Recently seen',
   };
 }
 
+function getDisplayPreferences(settings: contracts.SettingsData): DisplayPreferences {
+  return {
+    hour12: settings.general.timeFormat !== '24h',
+    weekStartsOn: settings.general.weekStartsOn === 'sunday' ? 'sunday' : 'monday',
+    showMachineNames: settings.privacy.showMachineNames,
+    showHostname: settings.privacy.showHostname,
+    obfuscateProjectNames: settings.privacy.obfuscateProjectNames,
+    minimizeExtensionMetadata: settings.privacy.minimizeExtensionMetadata,
+    trackMachineAttribution: settings.tracking.trackMachineAttribution,
+    sendMachineAttribution: settings.extension.sendMachineAttribution,
+  };
+}
+
+function resolveDisplayMachineName(
+  source: string | undefined,
+  machineId: string,
+  preferences: DisplayPreferences,
+) {
+  const canShowMachineNames = preferences.showMachineNames
+    && preferences.trackMachineAttribution
+    && preferences.sendMachineAttribution;
+  if (!canShowMachineNames) {
+    return REDACTED_MACHINE_LABEL;
+  }
+  return source ?? machineId;
+}
+
+function createProjectLabelMapper(obfuscate: boolean) {
+  const labels = new Map<string, string>();
+  return (value: string) => {
+    if (!obfuscate || value.trim() === '') {
+      return value;
+    }
+    const existing = labels.get(value);
+    if (existing) {
+      return existing;
+    }
+    const mapped = `Project ${labels.size + 1}`;
+    labels.set(value, mapped);
+    return mapped;
+  };
+}
+
 function buildAppStatus(settings: contracts.SettingsData, lastUpdatedAt: string): AppStatus {
+  const preferences = getDisplayPreferences(settings);
   return {
     appVersion: settings.about.appVersion,
     trackingEnabled: settings.tracking.trackingEnabled,
     localOnlyMode: settings.privacy.localOnlyMode,
-    lastUpdatedAt: formatDateTime(lastUpdatedAt),
+    lastUpdatedAt: formatDateTime(lastUpdatedAt, preferences.hour12),
   };
 }
 
@@ -294,14 +422,19 @@ function machineIndex(machines: contracts.MachineInfo[]) {
   return new Map(machines.map((machine) => [machine.machineId, machine]));
 }
 
-function mapSessionRecord(session: contracts.Session, machines: Map<string, contracts.MachineInfo>): SessionRecordInternal {
+function mapSessionRecord(
+  session: contracts.Session,
+  machines: Map<string, contracts.MachineInfo>,
+  preferences: DisplayPreferences,
+  mapProjectLabel: (value: string) => string,
+): SessionRecordInternal {
   const machine = machines.get(session.machineId);
-  const machineName = session.machineName ?? machine?.machineName ?? session.machineId;
+  const machineName = resolveDisplayMachineName(session.machineName ?? machine?.machineName, session.machineId, preferences);
 
   return {
     id: session.id,
-    project: session.projectName,
-    language: session.language,
+    project: mapProjectLabel(session.projectName),
+    language: normalizeLanguageLabel(session.language),
     machine: machineName,
     machineId: session.machineId,
     start: session.startTime,
@@ -346,10 +479,10 @@ function computeDailyTotals(records: SessionRecordInternal[]): DailyStat[] {
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
-function computeWeeklyTotals(daily: DailyStat[]) {
+function computeWeeklyTotals(daily: DailyStat[], weekStartsOn: DisplayPreferences['weekStartsOn']) {
   const totals = new Map<string, number>();
   for (const day of daily) {
-    const current = startOfWeekUTC(new Date(day.date));
+    const current = startOfWeekUTC(new Date(day.date), weekStartsOn);
     const key = formatDateKey(current);
     totals.set(key, (totals.get(key) ?? 0) + day.minutes);
   }
@@ -365,6 +498,7 @@ function computeWeeklyTotals(daily: DailyStat[]) {
 function computeBreakdown(
   records: SessionRecordInternal[],
   field: 'project' | 'language' | 'machine',
+  hour12: boolean,
 ): BreakdownItem[] {
   const totalMinutes = records.reduce((sum, record) => sum + record.durationMinutes, 0);
   const aggregates = new Map<string, { minutes: number; activeDays: Set<string>; lastActiveAt: string }>();
@@ -390,7 +524,7 @@ function computeBreakdown(
       minutes: value.minutes,
       share: totalMinutes === 0 ? 0 : Number(((value.minutes / totalMinutes) * 100).toFixed(1)),
       activeDays: value.activeDays.size,
-      recent: formatDateTime(value.lastActiveAt),
+      recent: formatDateTime(value.lastActiveAt, hour12),
     }))
     .sort((left, right) => {
       if (right.minutes !== left.minutes) {
@@ -400,8 +534,8 @@ function computeBreakdown(
     });
 }
 
-function computeMachineBreakdown(records: SessionRecordInternal[]): MachineBreakdown[] {
-  return computeBreakdown(records, 'machine').map((item) => ({
+function computeMachineBreakdown(records: SessionRecordInternal[], hour12: boolean): MachineBreakdown[] {
+  return computeBreakdown(records, 'machine', hour12).map((item) => ({
     name: item.name,
     minutes: item.minutes,
     share: item.share,
@@ -575,8 +709,14 @@ export function emptySessionsScreenData(range: OverviewRange): SessionsScreenDat
   };
 }
 
-async function fetchAnalyticsSnapshot(filters: AnalyticsFilters): Promise<AnalyticsSnapshot> {
-  const window = resolveDateWindow(filters.range, filters.customRange ?? null);
+async function fetchAnalyticsSnapshot(
+  filters: AnalyticsFilters,
+  settingsInput?: contracts.SettingsData,
+): Promise<AnalyticsSnapshot> {
+  const settings = settingsInput ?? await GetSettingsData();
+  const preferences = getDisplayPreferences(settings);
+  const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
+  const window = resolveDateWindow(filters.range, filters.customRange ?? null, preferences.weekStartsOn);
   const previous = previousWindow(window);
 
   const [currentSessions, previousSessions, machines] = await Promise.all([
@@ -586,22 +726,22 @@ async function fetchAnalyticsSnapshot(filters: AnalyticsFilters): Promise<Analyt
   ]);
 
   const machinesById = machineIndex(machines);
-  const allCurrentRecords = currentSessions.map((session) => mapSessionRecord(session, machinesById));
+  const allCurrentRecords = currentSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
   const filteredCurrentRecords = filterSessionRecords(allCurrentRecords, filters);
   const filteredPreviousRecords = filterSessionRecords(
-    previousSessions.map((session) => mapSessionRecord(session, machinesById)),
+    previousSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel)),
     filters,
   );
 
   const totalMinutes = filteredCurrentRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
   const previousMinutes = filteredPreviousRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
   const daily = computeDailyTotals(filteredCurrentRecords);
-  const weekly = computeWeeklyTotals(daily);
-  const breakdownProjects = computeBreakdown(filteredCurrentRecords, 'project');
-  const breakdownLanguages = computeBreakdown(filteredCurrentRecords, 'language');
-  const breakdownMachines = computeMachineBreakdown(filteredCurrentRecords);
-  const previousProjects = computeBreakdown(filteredPreviousRecords, 'project');
-  const previousLanguages = computeBreakdown(filteredPreviousRecords, 'language');
+  const weekly = computeWeeklyTotals(daily, preferences.weekStartsOn);
+  const breakdownProjects = computeBreakdown(filteredCurrentRecords, 'project', preferences.hour12);
+  const breakdownLanguages = computeBreakdown(filteredCurrentRecords, 'language', preferences.hour12);
+  const breakdownMachines = computeMachineBreakdown(filteredCurrentRecords, preferences.hour12);
+  const previousProjects = computeBreakdown(filteredPreviousRecords, 'project', preferences.hour12);
+  const previousLanguages = computeBreakdown(filteredPreviousRecords, 'language', preferences.hour12);
   const hourBuckets = computeHourBuckets(filteredCurrentRecords);
   const recentSessions = [...filteredCurrentRecords]
     .sort((left, right) => right.start.localeCompare(left.start))
@@ -721,22 +861,23 @@ export async function loadOverviewSnapshot(
   options: LoadSnapshotOptions = {},
 ): Promise<OverviewSnapshot> {
   const operation = async () => {
+    const settings = await GetSettingsData();
+    const preferences = getDisplayPreferences(settings);
     const analytics = await fetchAnalyticsSnapshot({
       range,
       customRange,
       project: 'all',
       language: 'all',
       machine: 'all',
-    });
+    }, settings);
 
-    const [overview, settings, machines] = await Promise.all([
+    const [overview, machines] = await Promise.all([
       GetOverviewData(),
-      GetSettingsData(),
       ListKnownMachines(),
     ]);
 
-    const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
-    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
+    const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
+    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus, preferences));
     const machineDistribution = analytics.machines.items.map((machine, index) => ({
       machineName: machine.name,
       minutes: machine.minutes,
@@ -754,10 +895,10 @@ export async function loadOverviewSnapshot(
       sessionCount: analytics.summary.sessions,
       averageSessionMinutes: analytics.summary.averageSessionMinutes,
       codingDaysThisWeek: analytics.summary.activeDays,
-      lastActiveAt: overview.lastActiveAt ? formatDateTime(overview.lastActiveAt) : '—',
+      lastActiveAt: overview.lastActiveAt ? formatDateTime(overview.lastActiveAt, preferences.hour12) : '—',
       trackingEnabled: overview.trackingEnabled,
       localOnlyMode: overview.localOnlyMode,
-      lastUpdatedAt: formatDateTime(overview.lastUpdatedAt),
+      lastUpdatedAt: formatDateTime(overview.lastUpdatedAt, preferences.hour12),
       currentMachine,
       knownMachines,
       appStatus: buildAppStatus(settings, overview.lastUpdatedAt),
@@ -778,14 +919,18 @@ export async function loadOverviewSnapshot(
       recentSessions: analytics.sessions.recent.map((session) => ({
         project: session.project,
         durationMinutes: session.durationMinutes,
-        startAt: formatDateTime(session.start),
+        startAt: formatDateTime(session.start, preferences.hour12),
         machineName: session.machine,
         osLabel: formatOsLabel(
           machines.find((machine) => machine.machineName === session.machine) ?? { osPlatform: 'linux' },
         ),
       })),
       activeHoursSummary: overview.activeHoursSummary,
-      syncHealth: buildSyncHealth(settings.extensionStatus, overview.lastUpdatedAt),
+      syncHealth: buildSyncHealth(
+        settings.extensionStatus,
+        overview.lastUpdatedAt,
+        preferences,
+      ),
     };
   };
 
@@ -806,25 +951,27 @@ export async function loadSessionsScreenData(
   options: LoadSnapshotOptions = {},
 ): Promise<SessionsScreenData> {
   const operation = async () => {
-    const rangeWindow = resolveDateWindow(range, customRange);
-    const [data, settings, machines] = await Promise.all([
+    const settings = await GetSettingsData();
+    const preferences = getDisplayPreferences(settings);
+    const rangeWindow = resolveDateWindow(range, customRange, preferences.weekStartsOn);
+    const [data, machines] = await Promise.all([
       GetSessionsPageData(rangeWindow.rangeLabel),
-      GetSettingsData(),
       ListKnownMachines(),
     ]);
 
-    const currentMachine = adaptMachine(settings.system, settings.extensionStatus);
-    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus));
+    const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
+    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus, preferences));
     const machinesById = machineIndex(machines);
+    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
     const sessions = data.sessions.map((session) => {
       const machine = machinesById.get(session.machineId);
-      const machineName = session.machineName ?? machine?.machineName ?? session.machineId;
+      const machineName = resolveDisplayMachineName(session.machineName ?? machine?.machineName, session.machineId, preferences);
       return {
         id: session.id,
-        project: session.projectName,
-        language: session.language,
+        project: mapProjectLabel(session.projectName),
+        language: normalizeLanguageLabel(session.language),
         durationMinutes: session.durationMinutes,
-        startAt: formatDateTime(session.startTime),
+        startAt: formatDateTime(session.startTime, preferences.hour12),
         machineName,
         osLabel: formatOsLabel(machine ?? { osPlatform: 'linux' }),
       };
@@ -835,7 +982,7 @@ export async function loadSessionsScreenData(
       totalSessions: data.totalSessions,
       averageSessionMinutes: data.averageSessionMinutes,
       longestSessionMinutes: data.longestSessionMinutes,
-      lastActiveAt: formatDateTime(data.sessions[0]?.endTime ?? data.sessions[0]?.startTime),
+      lastActiveAt: formatDateTime(data.sessions[0]?.endTime ?? data.sessions[0]?.startTime, preferences.hour12),
       lastActiveMachine: sessions[0]?.machineName ?? currentMachine.machineName,
       currentMachine,
       knownMachines,
@@ -860,6 +1007,9 @@ export async function loadCalendarMonth(
   options: LoadSnapshotOptions = {},
 ): Promise<{ monthLabel: string; days: CalendarDay[] }> {
   const operation = async () => {
+    const settings = await GetSettingsData();
+    const preferences = getDisplayPreferences(settings);
+    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
     const monthLabel = `${year}-${String(month + 1).padStart(2, '0')}`;
     const data = await GetCalendarMonthData(monthLabel);
 
@@ -869,8 +1019,8 @@ export async function loadCalendarMonth(
         date: day.date,
         totalMinutes: day.totalMinutes,
         sessionCount: day.sessionCount,
-        topProject: day.topProject ?? null,
-        topLanguage: day.topLanguage ?? null,
+        topProject: day.topProject ? mapProjectLabel(day.topProject) : null,
+        topLanguage: day.topLanguage ? normalizeLanguageLabel(day.topLanguage) : null,
         machineCount: day.machineCount,
         hadActivity: day.hadActivity,
       })),
@@ -893,6 +1043,9 @@ export async function loadCalendarDay(
   options: LoadSnapshotOptions = {},
 ): Promise<CalendarDayDetail | null> {
   const operation = async () => {
+    const settings = await GetSettingsData();
+    const preferences = getDisplayPreferences(settings);
+    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
     const data = await GetCalendarDayData(date);
     if (!data.hadActivity) {
       return null;
@@ -903,25 +1056,25 @@ export async function loadCalendarDay(
       totalMinutes: data.totalMinutes,
       sessionCount: data.sessionCount,
       averageSessionMinutes: data.averageSessionMinutes,
-      firstActiveAt: formatTime(data.firstActiveAt),
-      lastActiveAt: formatTime(data.lastActiveAt),
-      topProject: data.topProject ?? null,
-      topLanguage: data.topLanguage ?? null,
+      firstActiveAt: formatTime(data.firstActiveAt, preferences.hour12),
+      lastActiveAt: formatTime(data.lastActiveAt, preferences.hour12),
+      topProject: data.topProject ? mapProjectLabel(data.topProject) : null,
+      topLanguage: data.topLanguage ? normalizeLanguageLabel(data.topLanguage) : null,
       machines: data.machineBreakdown.map((machine) => ({
-        name: machine.machineName,
+        name: resolveDisplayMachineName(machine.machineName, machine.machineId, preferences),
         os: formatOsLabel({ osPlatform: machine.osPlatform ?? '' }),
         minutes: machine.totalMinutes,
       })),
       sessions: data.sessions.map((session) => ({
         id: session.id,
-        start: formatTime(session.startTime) ?? session.startTime,
+        start: formatTime(session.startTime, preferences.hour12) ?? session.startTime,
         durationMinutes: session.durationMinutes,
-        project: session.projectName,
-        machine: session.machineName ?? session.machineId,
-        language: session.language,
+        project: mapProjectLabel(session.projectName),
+        machine: resolveDisplayMachineName(session.machineName, session.machineId, preferences),
+        language: normalizeLanguageLabel(session.language),
       })),
       projectBreakdown: data.projectBreakdown.map((project) => ({
-        project: project.projectName,
+        project: mapProjectLabel(project.projectName),
         minutes: project.totalMinutes,
         sessionCount: project.sessionCount,
       })),

@@ -304,7 +304,33 @@ func (a *App) GetExtensionStatus() (contracts.ExtensionStatus, error) {
 	if a.initErr != nil {
 		return contracts.ExtensionStatus{}, a.initErr
 	}
-	return a.ingestionService.GetExtensionStatus(a.requestContext())
+	return a.settingsService.GetExtensionStatus(a.requestContext())
+}
+
+func (a *App) RefreshVSCodeExtensionStatus() (contracts.ExtensionStatus, error) {
+	if a.initErr != nil {
+		return contracts.ExtensionStatus{}, a.initErr
+	}
+	status, err := a.settingsService.GetExtensionStatus(a.requestContext())
+	if err == nil {
+		a.emitDataChanged("extension-status")
+	}
+	return status, err
+}
+
+func (a *App) ReconnectVSCodeExtension() (contracts.ExtensionStatus, error) {
+	if a.initErr != nil {
+		return contracts.ExtensionStatus{}, a.initErr
+	}
+	status, err := a.settingsService.GetExtensionStatus(a.requestContext())
+	if err != nil {
+		return contracts.ExtensionStatus{}, err
+	}
+	a.emitDataChanged("extension-status")
+	if status.Connected {
+		return status, nil
+	}
+	return status, fmt.Errorf("extension is offline; waiting for next extension handshake")
 }
 
 func (a *App) GetSystemInfo() (contracts.SystemInfo, error) {

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { OverviewRangeSelector } from '@/components/overview/OverviewRangeSelector';
-import type { OverviewRange } from '@/components/overview/types';
+import { normalizeOverviewRange, type OverviewRange } from '@/components/overview/types';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,8 @@ import {
 } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -21,8 +23,15 @@ function formatMinutes(minutes: number) {
 }
 
 export function SessionsPage() {
+  const rangeTouchedRef = useRef(false);
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
+    cacheKey: desktopResourceKeys.settings(),
+    emptyValue: emptySettingsScreenData(),
+    errorMessage: 'Unable to load desktop settings.',
+    load: (options) => loadSettingsScreenData(options),
+  });
   const emptyState = useMemo(() => emptySessionsScreenData(range), [range]);
   const {
     data: screenData,
@@ -34,6 +43,41 @@ export function SessionsPage() {
     errorMessage: 'Unable to load persisted sessions from the desktop backend.',
     load: (options) => loadSessionsScreenData(range, customRange, options),
   });
+
+  useEffect(() => {
+    if (!hasResolvedSettings || rangeTouchedRef.current) {
+      return;
+    }
+
+    const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
+    const saved = restoreLast ? readRangePreference(getRangeStorageKey('sessions')) : null;
+    if (saved) {
+      setRange(saved.range);
+      setCustomRange(saved.customRange);
+      rangeTouchedRef.current = true;
+      return;
+    }
+
+    setRange(normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange));
+    setCustomRange(null);
+    rangeTouchedRef.current = true;
+  }, [
+    hasResolvedSettings,
+    settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
+    settingsData.viewModel.general.defaultDateRange,
+  ]);
+
+  useEffect(() => {
+    if (!rangeTouchedRef.current) {
+      return;
+    }
+    saveRangePreference(getRangeStorageKey('sessions'), range, customRange);
+  }, [customRange, range]);
+
+  const handleRangeChange = (nextRange: OverviewRange) => {
+    rangeTouchedRef.current = true;
+    setRange(nextRange);
+  };
 
   return (
     <div className="space-y-4">
@@ -48,11 +92,12 @@ export function SessionsPage() {
           ) : null}
           <OverviewRangeSelector
             value={range}
-            onChange={setRange}
+            onChange={handleRangeChange}
             customRange={customRange}
             onCustomRangeChange={(nextRange) => {
+              rangeTouchedRef.current = true;
               setCustomRange(nextRange);
-              if (nextRange) setRange('custom');
+              if (nextRange) handleRangeChange('custom');
             }}
           />
         </div>

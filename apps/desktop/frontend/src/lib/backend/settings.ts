@@ -27,6 +27,18 @@ type LoadSettingsOptions = {
   quiet?: boolean;
 };
 
+function callAppBridgeMethod<T>(methodName: 'RefreshVSCodeExtensionStatus' | 'ReconnectVSCodeExtension'): Promise<T> {
+  const candidate = (window as unknown as {
+    go?: { main?: { App?: Record<string, unknown> } };
+  }).go?.main?.App?.[methodName];
+
+  if (typeof candidate !== 'function') {
+    throw new Error(`Desktop bridge "${methodName}" is unavailable. Restart Kairos Desktop and try again.`);
+  }
+
+  return (candidate as () => Promise<T>)();
+}
+
 export const settingsSections = {
   general: 'general',
   privacy: 'privacy',
@@ -501,4 +513,34 @@ export async function resetSettingsSectionViewModel(section: string): Promise<Se
       errorMessage: 'Settings reset failed',
     },
   );
+}
+
+export async function refreshVSCodeExtensionStatus(): Promise<contracts.ExtensionStatus> {
+  return trackSyncOperation(
+    async () => callAppBridgeMethod<contracts.ExtensionStatus>('RefreshVSCodeExtensionStatus'),
+    {
+      inProgressMessage: 'Refreshing VS Code status',
+      successMessage: 'VS Code status refreshed',
+      errorMessage: 'Refreshing VS Code status failed',
+    },
+  );
+}
+
+export async function reconnectVSCodeExtension(): Promise<contracts.ExtensionStatus> {
+  return trackSyncOperation(
+    async () => callAppBridgeMethod<contracts.ExtensionStatus>('ReconnectVSCodeExtension'),
+    {
+      inProgressMessage: 'Reconnecting VS Code extension',
+      successMessage: 'Reconnect command sent',
+      errorMessage: 'Reconnecting VS Code extension failed',
+    },
+  );
+}
+
+export async function probeVSCodeExtensionStatus(): Promise<contracts.ExtensionStatus | null> {
+  try {
+    return await callAppBridgeMethod<contracts.ExtensionStatus>('RefreshVSCodeExtensionStatus');
+  } catch {
+    return null;
+  }
 }

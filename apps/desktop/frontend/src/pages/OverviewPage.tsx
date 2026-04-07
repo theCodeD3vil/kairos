@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { OverviewLanguagesTab } from '@/components/overview/OverviewLanguagesTab';
 import { OverviewProjectsTab } from '@/components/overview/OverviewProjectsTab';
@@ -9,17 +9,26 @@ import { OverviewTimeTab } from '@/components/overview/OverviewTimeTab';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
-import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
+import { normalizeOverviewRange, type OverviewRange, type OverviewSnapshot } from '@/components/overview/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import { emptyOverviewSnapshot, loadOverviewSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 
 export function OverviewPage() {
+  const rangeTouchedRef = useRef(false);
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [activeTab, setActiveTab] = useState('time');
+  const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
+    cacheKey: desktopResourceKeys.settings(),
+    emptyValue: emptySettingsScreenData(),
+    errorMessage: 'Unable to load desktop settings.',
+    load: (options) => loadSettingsScreenData(options),
+  });
   const emptySnapshot = useMemo(() => emptyOverviewSnapshot(range), [range]);
   const {
     data: snapshot,
@@ -32,6 +41,41 @@ export function OverviewPage() {
     errorMessage: 'Unable to load desktop overview data.',
     load: (options) => loadOverviewSnapshot(range, customRange, options),
   });
+
+  useEffect(() => {
+    if (!hasResolvedSettings || rangeTouchedRef.current) {
+      return;
+    }
+
+    const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
+    const saved = restoreLast ? readRangePreference(getRangeStorageKey('overview')) : null;
+    if (saved) {
+      setRange(saved.range);
+      setCustomRange(saved.customRange);
+      rangeTouchedRef.current = true;
+      return;
+    }
+
+    setRange(normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange));
+    setCustomRange(null);
+    rangeTouchedRef.current = true;
+  }, [
+    hasResolvedSettings,
+    settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
+    settingsData.viewModel.general.defaultDateRange,
+  ]);
+
+  useEffect(() => {
+    if (!rangeTouchedRef.current) {
+      return;
+    }
+    saveRangePreference(getRangeStorageKey('overview'), range, customRange);
+  }, [customRange, range]);
+
+  const handleRangeChange = (nextRange: OverviewRange) => {
+    rangeTouchedRef.current = true;
+    setRange(nextRange);
+  };
 
   const tabs = [
     { label: 'Time', value: 'time', content: <OverviewTimeTab snapshot={snapshot} /> },
@@ -55,11 +99,12 @@ export function OverviewPage() {
           ) : null}
           <OverviewRangeSelector
             value={range}
-            onChange={setRange}
+            onChange={handleRangeChange}
             customRange={customRange}
             onCustomRangeChange={(nextRange) => {
+              rangeTouchedRef.current = true;
               setCustomRange(nextRange);
-              if (nextRange) setRange('custom');
+              if (nextRange) handleRangeChange('custom');
             }}
           />
         </div>

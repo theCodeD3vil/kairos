@@ -379,6 +379,27 @@ func applyRuntimeSettings(event contracts.ActivityEvent, machine contracts.Machi
 		}
 	}
 
+	if !settingsData.Extension.SendProjectMetadata || !settingsData.Tracking.TrackProjectActivity {
+		if event.ProjectName != "" {
+			warnings = append(warnings, "projectName redacted by settings")
+		}
+		event.ProjectName = "redacted-project"
+	}
+
+	if !settingsData.Extension.SendLanguageMetadata || !settingsData.Tracking.TrackLanguageActivity {
+		if event.Language != "" {
+			warnings = append(warnings, "language redacted by settings")
+		}
+		event.Language = "redacted-language"
+	}
+
+	if !settingsData.Extension.SendMachineAttribution || !settingsData.Tracking.TrackMachineAttribution {
+		if event.MachineID != "" {
+			warnings = append(warnings, "machineId redacted by settings")
+		}
+		event.MachineID = "redacted-machine"
+	}
+
 	switch settingsData.Privacy.FilePathMode {
 	case "hidden":
 		if event.FilePath != "" {

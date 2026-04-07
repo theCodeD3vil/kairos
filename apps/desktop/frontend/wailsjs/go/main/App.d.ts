@@ -49,6 +49,10 @@ export function RebuildSessionsForDate(arg1:string):Promise<contracts.SessionReb
 
 export function RebuildSessionsForRange(arg1:string,arg2:string):Promise<contracts.SessionRebuildResult>;
 
+export function ReconnectVSCodeExtension():Promise<contracts.ExtensionStatus>;
+
+export function RefreshVSCodeExtensionStatus():Promise<contracts.ExtensionStatus>;
+
 export function ResetSettingsSection(arg1:string):Promise<contracts.SettingsData>;
 
 export function UpdateAppBehaviorSettings(arg1:contracts.AppBehaviorSettings):Promise<contracts.AppBehaviorSettings>;

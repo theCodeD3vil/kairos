@@ -96,20 +96,28 @@ export function SettingsToggle({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        if (!disabled) {
+          onChange(!checked);
+        }
+      }}
+      disabled={disabled}
       className={cn(
         'inline-flex  items-center justify-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
         checked
           ? 'border-transparent bg-secondary text-secondary-foreground'
           : 'border-black/10 bg-[var(--surface-chip)] text-[var(--ink-accent)]',
+        disabled ? 'cursor-not-allowed opacity-50' : '',
       )}
     >
       <span

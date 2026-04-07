@@ -258,5 +258,5 @@ export const overviewRanges: Array<{ label: string; value: OverviewRange }> = [
   { label: '1D', value: 'today' },
   { label: '7D', value: 'week' },
   { label: '1M', value: 'month' },
-  { label: 'Custom', value: 'custom' },
+  { label: 'custom', value: 'custom' },
 ];

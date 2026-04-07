@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
@@ -237,6 +238,56 @@ func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 	}
 	if data.System.MachineID == "" || data.System.MachineName == "" {
 		t.Fatalf("expected system machine identity, got %+v", data.System)
+	}
+}
+
+func TestGetExtensionStatusMarksStaleConnectionOffline(t *testing.T) {
+	service, store := newTestSettingsService(t)
+	service.now = func() time.Time {
+		return time.Date(2026, time.April, 8, 12, 10, 0, 0, time.UTC)
+	}
+
+	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
+		Installed:        true,
+		Connected:        true,
+		Editor:           "vscode",
+		ExtensionVersion: "1.2.3",
+		LastHandshakeAt:  "2026-04-08T12:00:00Z",
+	}, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("upsert extension status failed: %v", err)
+	}
+
+	status, err := service.GetExtensionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetExtensionStatus failed: %v", err)
+	}
+	if status.Connected {
+		t.Fatalf("expected stale extension status to be disconnected, got %+v", status)
+	}
+}
+
+func TestGetExtensionStatusKeepsFreshConnectionOnline(t *testing.T) {
+	service, store := newTestSettingsService(t)
+	service.now = func() time.Time {
+		return time.Date(2026, time.April, 8, 12, 0, 20, 0, time.UTC)
+	}
+
+	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
+		Installed:        true,
+		Connected:        true,
+		Editor:           "vscode",
+		ExtensionVersion: "1.2.3",
+		LastEventAt:      "2026-04-08T12:00:00Z",
+	}, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("upsert extension status failed: %v", err)
+	}
+
+	status, err := service.GetExtensionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetExtensionStatus failed: %v", err)
+	}
+	if !status.Connected {
+		t.Fatalf("expected fresh extension status to stay connected, got %+v", status)
 	}
 }
 

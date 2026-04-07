@@ -7,6 +7,25 @@ type OverviewStatusTabProps = {
   snapshot: OverviewSnapshot;
 };
 
+function SyncHealthLegend() {
+  const items = [
+    { label: 'Healthy', color: 'bg-emerald-500' },
+    { label: 'Degraded', color: 'bg-amber-500' },
+    { label: 'Offline', color: 'bg-rose-500' },
+  ];
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-tertiary)]">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1.5">
+          <span className={`inline-block h-2.5 w-2.5 rounded-full ${item.color}`} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
   const syncStatus: StatusBadgeStatus =
     snapshot.syncHealth.status === 'Healthy'
@@ -71,6 +90,7 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
             rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
           />
         </div>
+        <SyncHealthLegend />
       </article>
     </div>
   );

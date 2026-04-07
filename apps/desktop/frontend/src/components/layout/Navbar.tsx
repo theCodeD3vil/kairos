@@ -7,6 +7,7 @@ import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-cap
 import { useToast } from '@/components/toast/ToastProvider';
 import { Button } from '@/components/ui/button';
 import kairosMark from '@/assets/kairos-mark.svg';
+import { LAST_PAGE_STORAGE_KEY } from '@/lib/settings/preferences';
 
 const showTheme = import.meta.env.DEV;
 
@@ -41,6 +42,8 @@ export function Navbar() {
 
   useEffect(() => {
     setActiveTab(resolveTabFromPath(pathname));
+    const tab = resolveTabFromPath(pathname);
+    localStorage.setItem(LAST_PAGE_STORAGE_KEY, tab);
   }, [pathname]);
 
   useEffect(() => {

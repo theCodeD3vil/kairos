@@ -33,6 +33,8 @@ type ServiceImpl struct {
 	databaseStatus string
 }
 
+const extensionPingInterval = time.Minute
+
 func NewService(store *storage.Store) *ServiceImpl {
 	status := "not-configured"
 	if store != nil {
@@ -214,7 +216,13 @@ func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.Extensi
 		}, nil
 	}
 
-	return s.store.GetExtensionStatus(ctx, "vscode")
+	status, err := s.store.GetExtensionStatus(ctx, "vscode")
+	if err != nil {
+		return contracts.ExtensionStatus{}, err
+	}
+
+	status.Connected = isExtensionConnectionFresh(status, s.now())
+	return status, nil
 }
 
 func (s *ServiceImpl) GetSystemInfo(_ context.Context) (contracts.SystemInfo, error) {
@@ -358,4 +366,29 @@ func hostnameOrFallback(value string, fallback string) string {
 		return fallback
 	}
 	return strings.TrimSpace(value)
+}
+
+func isExtensionConnectionFresh(status contracts.ExtensionStatus, now time.Time) bool {
+	if !status.Connected {
+		return false
+	}
+
+	var lastSeenAt time.Time
+	for _, raw := range []string{status.LastEventAt, status.LastHandshakeAt} {
+		if strings.TrimSpace(raw) == "" {
+			continue
+		}
+		parsed, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			continue
+		}
+		if lastSeenAt.IsZero() || parsed.After(lastSeenAt) {
+			lastSeenAt = parsed
+		}
+	}
+	if lastSeenAt.IsZero() {
+		return false
+	}
+
+	return now.UTC().Sub(lastSeenAt.UTC()) <= extensionPingInterval
 }

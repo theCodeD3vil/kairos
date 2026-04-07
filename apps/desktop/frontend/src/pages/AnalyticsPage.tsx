@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BarChart } from '@lobehub/charts';
 import { useToast } from '@/components/toast/ToastProvider';
 import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
@@ -20,6 +20,9 @@ import type { AnalyticsFilters as Filters } from '@/data/mockAnalytics';
 import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { normalizeOverviewRange } from '@/components/overview/types';
+import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 
 const analyticsDefaultFilters: Filters = {
   range: 'week',
@@ -31,7 +34,14 @@ const analyticsDefaultFilters: Filters = {
 
 export function AnalyticsPage() {
   const { info } = useToast();
+  const rangeTouchedRef = useRef(false);
   const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
+  const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
+    cacheKey: desktopResourceKeys.settings(),
+    emptyValue: emptySettingsScreenData(),
+    errorMessage: 'Unable to load desktop settings.',
+    load: (options) => loadSettingsScreenData(options),
+  });
   const {
     data: snapshot,
     isInitialLoading,
@@ -42,6 +52,47 @@ export function AnalyticsPage() {
     errorMessage: 'Unable to load analytics from persisted desktop data.',
     load: (options) => loadAnalyticsSnapshot(filters, options),
   });
+
+  useEffect(() => {
+    if (!hasResolvedSettings || rangeTouchedRef.current) {
+      return;
+    }
+
+    const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
+    const saved = restoreLast ? readRangePreference(getRangeStorageKey('analytics')) : null;
+    if (saved) {
+      setFilters((current) => ({
+        ...current,
+        range: saved.range,
+        customRange: saved.customRange,
+      }));
+      rangeTouchedRef.current = true;
+      return;
+    }
+
+    setFilters((current) => ({
+      ...current,
+      range: normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange),
+      customRange: null,
+    }));
+    rangeTouchedRef.current = true;
+  }, [
+    hasResolvedSettings,
+    settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
+    settingsData.viewModel.general.defaultDateRange,
+  ]);
+
+  useEffect(() => {
+    if (!rangeTouchedRef.current) {
+      return;
+    }
+    saveRangePreference(getRangeStorageKey('analytics'), filters.range, filters.customRange ?? null);
+  }, [filters.customRange, filters.range]);
+
+  const handleFiltersChange = (next: Filters) => {
+    rangeTouchedRef.current = true;
+    setFilters(next);
+  };
 
   const empty = snapshot.summary.totalMinutes === 0;
 
@@ -72,7 +123,7 @@ export function AnalyticsPage() {
       <section className="sticky top-3 z-10 rounded-[16px] bg-[var(--surface)]/92 p-3 shadow-[var(--shadow-inset-soft)] backdrop-blur">
         <AnalyticsFilters
           filters={filters}
-          onChange={setFilters}
+          onChange={handleFiltersChange}
           projectOptions={snapshot.filters.projects}
           languageOptions={snapshot.filters.languages}
           machineOptions={SHOW_MULTI_MACHINE_UI ? snapshot.filters.machines : []}

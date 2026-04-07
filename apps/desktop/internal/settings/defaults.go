@@ -101,5 +101,6 @@ func defaultAboutInfo() contracts.AboutInfo {
 		BuildChannel:   "local",
 		DesktopVersion: "0.0.0",
 		LicenseSummary: "License metadata pending",
+		RepositoryURL:  "https://github.com/michaelnji/kairos",
 	}
 }

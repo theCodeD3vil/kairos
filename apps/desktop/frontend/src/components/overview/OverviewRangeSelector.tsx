@@ -11,9 +11,9 @@ type OverviewRangeSelectorProps = {
 };
 
 const overviewRangeOptions: Array<{ label: string; value: Exclude<OverviewRange, 'custom'> }> = [
-  { label: 'Today', value: 'today' },
-  { label: 'Week', value: 'week' },
-  { label: 'Month', value: 'month' },
+  { label: '1D', value: 'today' },
+  { label: '7D', value: 'week' },
+  { label: '1M', value: 'month' },
 ];
 
 export function OverviewRangeSelector({
@@ -38,7 +38,7 @@ export function OverviewRangeSelector({
         size="sm"
       />
       <DateRangePicker
-        label="Custom"
+        label="custom"
         value={customRange}
         active={value === 'custom'}
         onChange={(nextRange) => {

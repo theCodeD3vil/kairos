@@ -2,6 +2,20 @@ import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 
 export type OverviewRange = 'today' | 'week' | 'month' | 'custom';
 
+export function normalizeOverviewRange(value: string | null | undefined): Exclude<OverviewRange, 'custom'> {
+  switch (value) {
+    case 'today':
+      return 'today';
+    case 'month':
+    case 'last-30-days':
+      return 'month';
+    case 'week':
+    case 'last-7-days':
+    default:
+      return 'week';
+  }
+}
+
 export type WeeklyTrendPoint = {
   label: string;
   value: number;

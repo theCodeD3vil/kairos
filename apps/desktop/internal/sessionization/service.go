@@ -46,6 +46,13 @@ type sessionCandidate struct {
 	events    []contracts.ActivityEvent
 }
 
+type trackingRuntimeSettings struct {
+	idleThreshold          time.Duration
+	mergeThreshold         time.Duration
+	idleDetectionEnabled   bool
+	trackSessionBoundaries bool
+}
+
 func (c sessionCandidate) dominantProject() string {
 	return dominantValue(c.events, func(event contracts.ActivityEvent) string {
 		return event.ProjectName
@@ -100,7 +107,7 @@ func (s *ServiceImpl) RebuildSessionsForDate(ctx context.Context, date string) (
 }
 
 func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate string, endDate string) (contracts.SessionRebuildResult, error) {
-	idleThreshold, mergeThreshold, err := s.resolveThresholds(ctx)
+	runtimeSettings, err := s.resolveTrackingRuntimeSettings(ctx)
 	if err != nil {
 		return contracts.SessionRebuildResult{}, err
 	}
@@ -110,9 +117,17 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 		return contracts.SessionRebuildResult{}, err
 	}
 
-	sessions, err := s.buildSessions(events, idleThreshold, mergeThreshold)
-	if err != nil {
-		return contracts.SessionRebuildResult{}, err
+	sessions := []contracts.Session{}
+	if runtimeSettings.trackSessionBoundaries {
+		sessions, err = s.buildSessions(
+			events,
+			runtimeSettings.idleThreshold,
+			runtimeSettings.mergeThreshold,
+			runtimeSettings.idleDetectionEnabled,
+		)
+		if err != nil {
+			return contracts.SessionRebuildResult{}, err
+		}
 	}
 
 	recordedAt := s.now().UTC().Format(time.RFC3339)
@@ -145,12 +160,12 @@ func (s *ServiceImpl) GetSessionStatsForRange(ctx context.Context, startDate str
 	return s.store.GetSessionStatsForRange(ctx, startDate, endDate)
 }
 
-func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThreshold time.Duration, mergeThreshold time.Duration) ([]contracts.Session, error) {
+func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThreshold time.Duration, mergeThreshold time.Duration, idleDetectionEnabled bool) ([]contracts.Session, error) {
 	if len(events) == 0 {
 		return []contracts.Session{}, nil
 	}
 
-	initialSessions, err := s.buildInitialSessions(events, idleThreshold)
+	initialSessions, err := s.buildInitialSessions(events, idleThreshold, idleDetectionEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +186,7 @@ func (s *ServiceImpl) buildSessions(events []contracts.ActivityEvent, idleThresh
 	return sessions, nil
 }
 
-func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idleThreshold time.Duration) ([]sessionCandidate, error) {
+func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idleThreshold time.Duration, idleDetectionEnabled bool) ([]sessionCandidate, error) {
 	candidates := make([]sessionCandidate, 0)
 	var current *sessionCandidate
 
@@ -182,7 +197,7 @@ func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idl
 		}
 		eventDate := eventTime.Format("2006-01-02")
 
-		if current == nil || shouldSplitSession(*current, event, eventTime, eventDate, idleThreshold) {
+		if current == nil || shouldSplitSession(*current, event, eventTime, eventDate, idleThreshold, idleDetectionEnabled) {
 			if current != nil {
 				candidates = append(candidates, *current)
 			}
@@ -207,14 +222,19 @@ func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idl
 	return candidates, nil
 }
 
-func (s *ServiceImpl) resolveThresholds(ctx context.Context) (time.Duration, time.Duration, error) {
+func (s *ServiceImpl) resolveTrackingRuntimeSettings(ctx context.Context) (trackingRuntimeSettings, error) {
 	if s.settings == nil {
-		return s.idleThreshold, s.mergeThreshold, nil
+		return trackingRuntimeSettings{
+			idleThreshold:          s.idleThreshold,
+			mergeThreshold:         s.mergeThreshold,
+			idleDetectionEnabled:   true,
+			trackSessionBoundaries: true,
+		}, nil
 	}
 
 	data, err := s.settings.GetSettingsData(ctx)
 	if err != nil {
-		return 0, 0, err
+		return trackingRuntimeSettings{}, err
 	}
 
 	idleThreshold := time.Duration(data.Tracking.IdleTimeoutMinutes) * time.Minute
@@ -226,15 +246,30 @@ func (s *ServiceImpl) resolveThresholds(ctx context.Context) (time.Duration, tim
 		mergeThreshold = s.mergeThreshold
 	}
 
-	return idleThreshold, mergeThreshold, nil
+	return trackingRuntimeSettings{
+		idleThreshold:          idleThreshold,
+		mergeThreshold:         mergeThreshold,
+		idleDetectionEnabled:   data.Tracking.IdleDetectionEnabled,
+		trackSessionBoundaries: data.Tracking.TrackSessionBoundaries,
+	}, nil
 }
 
-func shouldSplitSession(current sessionCandidate, event contracts.ActivityEvent, eventTime time.Time, eventDate string, idleThreshold time.Duration) bool {
+func shouldSplitSession(
+	current sessionCandidate,
+	event contracts.ActivityEvent,
+	eventTime time.Time,
+	eventDate string,
+	idleThreshold time.Duration,
+	idleDetectionEnabled bool,
+) bool {
 	if current.machineID != event.MachineID {
 		return true
 	}
 	if current.date != eventDate {
 		return true
+	}
+	if !idleDetectionEnabled {
+		return false
 	}
 	return eventTime.Sub(current.endAt) > idleThreshold
 }

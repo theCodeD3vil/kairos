@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { DateRange } from '@/components/ruixen/range-calendar';
-import type { OverviewRange } from '@/components/overview/types';
+import { normalizeOverviewRange, type OverviewRange } from '@/components/overview/types';
 import type { AnalyticsFilters } from '@/data/mockAnalytics';
 import {
   loadAnalyticsSnapshot,
@@ -18,9 +18,10 @@ import {
   loadOverviewSnapshot,
   loadSessionsScreenData,
 } from '@/lib/backend/page-data';
-import { loadSettingsScreenData } from '@/lib/backend/settings';
+import { loadSettingsScreenData, probeVSCodeExtensionStatus } from '@/lib/backend/settings';
 
 export const DATA_REFRESH_INTERVAL_MS = 10_000;
+const EXTENSION_PROBE_INTERVAL_MS = 60_000;
 
 export type DesktopRefreshReason = 'poll' | 'event' | 'manual' | 'query';
 
@@ -73,8 +74,10 @@ function currentMonthRef() {
 
 async function bootstrapDesktopCache(): Promise<void> {
   const monthRef = currentMonthRef();
+  const settings = await loadSettingsScreenData({ quiet: true }).catch(() => null);
+  const defaultRange = normalizeOverviewRange(settings?.viewModel.general.defaultDateRange);
   const defaultAnalyticsFilters: AnalyticsFilters = {
-    range: 'week',
+    range: defaultRange,
     customRange: null,
     project: 'all',
     language: 'all',
@@ -83,16 +86,16 @@ async function bootstrapDesktopCache(): Promise<void> {
 
   const resources = [
     {
-      key: desktopResourceKeys.overview('week', null),
-      load: () => loadOverviewSnapshot('week', null, { quiet: true }),
+      key: desktopResourceKeys.overview(defaultRange, null),
+      load: () => loadOverviewSnapshot(defaultRange, null, { quiet: true }),
     },
     {
       key: desktopResourceKeys.analytics(defaultAnalyticsFilters),
       load: () => loadAnalyticsSnapshot(defaultAnalyticsFilters, { quiet: true }),
     },
     {
-      key: desktopResourceKeys.sessions('week', null),
-      load: () => loadSessionsScreenData('week', null, { quiet: true }),
+      key: desktopResourceKeys.sessions(defaultRange, null),
+      load: () => loadSessionsScreenData(defaultRange, null, { quiet: true }),
     },
     {
       key: desktopResourceKeys.calendarMonth(monthRef.year, monthRef.month),
@@ -104,7 +107,7 @@ async function bootstrapDesktopCache(): Promise<void> {
     },
     {
       key: desktopResourceKeys.settings(),
-      load: () => loadSettingsScreenData({ quiet: true }),
+      load: () => settings ?? loadSettingsScreenData({ quiet: true }),
     },
   ];
 
@@ -119,6 +122,8 @@ async function bootstrapDesktopCache(): Promise<void> {
 export function DesktopDataProvider({ children }: PropsWithChildren) {
   const [bootstrapped, setBootstrapped] = useState(false);
   const refreshersRef = useRef(new Map<string, Set<(reason: DesktopRefreshReason) => Promise<void> | void>>());
+  const lastExtensionProbeAtRef = useRef(0);
+  const extensionProbeInFlightRef = useRef(false);
 
   const refreshAll = async (reason: DesktopRefreshReason) => {
     const handlers = Array.from(refreshersRef.current.values()).flatMap((group) => Array.from(group));
@@ -153,7 +158,19 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
     }
 
     const intervalId = window.setInterval(() => {
-      void refreshAll('poll');
+      void (async () => {
+        const now = Date.now();
+        if (!extensionProbeInFlightRef.current && now-lastExtensionProbeAtRef.current >= EXTENSION_PROBE_INTERVAL_MS) {
+          extensionProbeInFlightRef.current = true;
+          try {
+            await probeVSCodeExtensionStatus();
+          } finally {
+            lastExtensionProbeAtRef.current = Date.now();
+            extensionProbeInFlightRef.current = false;
+          }
+        }
+        await refreshAll('poll');
+      })();
     }, DATA_REFRESH_INTERVAL_MS);
 
     return () => {
