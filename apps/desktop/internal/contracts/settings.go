@@ -9,12 +9,13 @@ type GeneralSettings struct {
 }
 
 type PrivacySettings struct {
-	LocalOnlyMode             bool   `json:"localOnlyMode"`
-	FilePathMode              string `json:"filePathMode"`
-	ShowMachineNames          bool   `json:"showMachineNames"`
-	ShowHostname              bool   `json:"showHostname"`
-	ObfuscateProjectNames     bool   `json:"obfuscateProjectNames"`
-	MinimizeExtensionMetadata bool   `json:"minimizeExtensionMetadata"`
+	LocalOnlyMode             bool     `json:"localOnlyMode"`
+	FilePathMode              string   `json:"filePathMode"`
+	ShowMachineNames          bool     `json:"showMachineNames"`
+	ShowHostname              bool     `json:"showHostname"`
+	ObfuscateProjectNames     bool     `json:"obfuscateProjectNames"`
+	SensitiveProjectNames     []string `json:"sensitiveProjectNames"`
+	MinimizeExtensionMetadata bool     `json:"minimizeExtensionMetadata"`
 }
 
 type TrackingSettings struct {

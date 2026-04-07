@@ -6,6 +6,10 @@ export function GetAnalyticsData(arg1) {
   return window['go']['main']['App']['GetAnalyticsData'](arg1);
 }
 
+export function GetAutostartRegistrationStatus() {
+  return window['go']['main']['App']['GetAutostartRegistrationStatus']();
+}
+
 export function GetCalendarDayData(arg1) {
   return window['go']['main']['App']['GetCalendarDayData'](arg1);
 }
@@ -52,6 +56,10 @@ export function GetSettingsData() {
 
 export function GetSystemInfo() {
   return window['go']['main']['App']['GetSystemInfo']();
+}
+
+export function GetVSCodeBridgeHealth() {
+  return window['go']['main']['App']['GetVSCodeBridgeHealth']();
 }
 
 export function IngestEvents(arg1) {

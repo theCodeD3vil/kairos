@@ -43,6 +43,7 @@ func validateGeneral(input contracts.GeneralSettings) (contracts.GeneralSettings
 
 func validatePrivacy(input contracts.PrivacySettings) (contracts.PrivacySettings, error) {
 	input.FilePathMode = strings.TrimSpace(strings.ToLower(input.FilePathMode))
+	input.SensitiveProjectNames = normalizeStringList(input.SensitiveProjectNames)
 	switch input.FilePathMode {
 	case "full", "masked", "hidden":
 	default:
@@ -52,8 +53,8 @@ func validatePrivacy(input contracts.PrivacySettings) (contracts.PrivacySettings
 }
 
 func validateTracking(input contracts.TrackingSettings) (contracts.TrackingSettings, error) {
-	if input.IdleTimeoutMinutes < 1 || input.IdleTimeoutMinutes > 180 {
-		return contracts.TrackingSettings{}, fmt.Errorf("idleTimeoutMinutes must be between 1 and 180")
+	if input.IdleTimeoutMinutes < 5 || input.IdleTimeoutMinutes > 180 {
+		return contracts.TrackingSettings{}, fmt.Errorf("idleTimeoutMinutes must be between 5 and 180")
 	}
 	if input.SessionMergeThresholdMinutes < 0 || input.SessionMergeThresholdMinutes > 180 {
 		return contracts.TrackingSettings{}, fmt.Errorf("sessionMergeThresholdMinutes must be between 0 and 180")
@@ -78,6 +79,9 @@ func validateExtension(input contracts.ExtensionSettings) (contracts.ExtensionSe
 }
 
 func validateAppBehavior(input contracts.AppBehaviorSettings) contracts.AppBehaviorSettings {
+	enabled := input.LaunchOnStartup || input.OpenOnSystemLogin
+	input.LaunchOnStartup = enabled
+	input.OpenOnSystemLogin = enabled
 	return input
 }
 

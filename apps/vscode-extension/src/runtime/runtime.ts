@@ -28,6 +28,8 @@ import type {
   StatusDisplayState,
 } from './types';
 
+const FILE_DWELL_THRESHOLD_MS = 15_000;
+
 export class KairosRuntime {
   private readonly client: DesktopClient;
   private readonly observer: RuntimeObserver;
@@ -43,6 +45,7 @@ export class KairosRuntime {
   private disposed = false;
   private heartbeatHandle?: RuntimeSchedulerHandle;
   private retryHandle?: RuntimeSchedulerHandle;
+  private dwellHandle?: RuntimeSchedulerHandle;
   private retryDelayMs = INITIAL_RETRY_DELAY_MS;
   private stateDetail = 'Disconnected';
   private trackedMinuteKeys = new Set<string>();
@@ -51,6 +54,8 @@ export class KairosRuntime {
   private lastHandshakeAt?: string;
   private lastSuccessfulSendAt?: string;
   private lastEventAt?: string;
+  private activeContextKey?: string;
+  private qualifiedContextKey?: string;
 
   constructor(options: RuntimeOptions) {
     this.client = options.client;
@@ -73,6 +78,7 @@ export class KairosRuntime {
     this.disposed = true;
     this.heartbeatHandle?.cancel();
     this.retryHandle?.cancel();
+    this.dwellHandle?.cancel();
   }
 
   getConnectionState(): ConnectionState {
@@ -97,6 +103,23 @@ export class KairosRuntime {
 
   async updateActiveEditor(context?: EditorContext): Promise<void> {
     this.activeContext = context;
+    const nextContextKey = getContextKey(context);
+    if (nextContextKey !== this.activeContextKey) {
+      this.activeContextKey = nextContextKey;
+      this.qualifiedContextKey = undefined;
+      this.dwellHandle?.cancel();
+      this.dwellHandle = undefined;
+
+      if (context?.filePath && nextContextKey) {
+        this.dwellHandle = this.scheduler.setTimeout(() => {
+          if (this.disposed || this.activeContextKey !== nextContextKey || !this.activeContext?.filePath) {
+            return;
+          }
+          this.qualifiedContextKey = nextContextKey;
+          this.observer.logInfo('File active for 15s; starting tracked timer');
+        }, FILE_DWELL_THRESHOLD_MS);
+      }
+    }
     this.publishStatus();
   }
 
@@ -174,6 +197,18 @@ export class KairosRuntime {
     if (this.settings.respectDesktopExclusions && isExcludedContext(context, this.environment.machine, this.settings.exclusions)) {
       this.observer.logInfo(`Skipped ${eventType} event: excluded by desktop settings`);
       return;
+    }
+
+    if (eventType !== 'focus' && eventType !== 'blur') {
+      if (!context.filePath) {
+        this.observer.logInfo(`Skipped ${eventType} event: no active file`);
+        return;
+      }
+      const contextKey = getContextKey(context);
+      if (!contextKey || this.qualifiedContextKey !== contextKey) {
+        this.observer.logInfo(`Skipped ${eventType} event: waiting for 15s file dwell`);
+        return;
+      }
     }
 
     const shapedContext = shapeContextForEmission(context, this.settings);
@@ -382,6 +417,13 @@ export class KairosRuntime {
       return false;
     }
 
+    if (!this.activeContext?.filePath) {
+      return false;
+    }
+    if (!this.activeContextKey || this.qualifiedContextKey !== this.activeContextKey) {
+      return false;
+    }
+
     if (toDateKey(this.lastTrackedActivityAt) !== toDateKey(now)) {
       return false;
     }
@@ -394,7 +436,7 @@ export class KairosRuntime {
   }
 
   private recordTrackedActivity(eventType: ActivityEventType, at: Date): void {
-    if (eventType === 'focus' || eventType === 'blur') {
+    if (eventType !== 'edit') {
       return;
     }
 
@@ -460,4 +502,11 @@ function toMinuteKey(date: Date): string {
 
 function padNumber(value: number): string {
   return String(value).padStart(2, '0');
+}
+
+function getContextKey(context?: EditorContext): string | undefined {
+  if (!context) {
+    return undefined;
+  }
+  return `${context.workspaceId}::${context.projectName}::${context.language}::${context.filePath ?? ''}`;
 }

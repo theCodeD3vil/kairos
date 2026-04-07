@@ -4,6 +4,7 @@ import {
   GetOverviewData,
   GetSessionsPageData,
   GetSettingsData,
+  GetVSCodeBridgeHealth,
   ListKnownMachines,
   ListSessionsForRange,
 } from '../../../wailsjs/go/main/App';
@@ -264,9 +265,82 @@ function buildTrend(points: DailyStat[] | Array<{ label: string; minutes: number
   }));
 }
 
+function buildHourlyTrendForDay(
+  sessions: contracts.Session[],
+  dayStart: Date,
+  hour12: boolean,
+): Array<{ label: string; value: number }> {
+  const totals = Array.from({ length: 24 }, () => 0);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  for (const session of sessions) {
+    const sessionStart = new Date(session.startTime);
+    if (Number.isNaN(sessionStart.getTime()) || session.durationMinutes <= 0) {
+      continue;
+    }
+
+    let current = sessionStart;
+    let remaining = session.durationMinutes;
+
+    while (remaining > 0) {
+      const hourBoundary = new Date(Date.UTC(
+        current.getUTCFullYear(),
+        current.getUTCMonth(),
+        current.getUTCDate(),
+        current.getUTCHours() + 1,
+        0,
+        0,
+        0,
+      ));
+      const minutesUntilBoundary = Math.max(
+        1,
+        Math.ceil((hourBoundary.getTime() - current.getTime()) / 60_000),
+      );
+      const allocated = Math.min(remaining, minutesUntilBoundary);
+      const currentMs = current.getTime();
+      if (currentMs >= dayStart.getTime() && currentMs < dayEnd.getTime()) {
+        const hourIndex = current.getUTCHours();
+        totals[hourIndex] += allocated;
+      }
+
+      remaining -= allocated;
+      current = new Date(current.getTime() + allocated * 60_000);
+      if (current.getTime() >= dayEnd.getTime() && remaining <= 0) {
+        break;
+      }
+    }
+  }
+
+  return Array.from({ length: 24 }, (_, hour) => {
+    const labelDate = new Date(Date.UTC(
+      dayStart.getUTCFullYear(),
+      dayStart.getUTCMonth(),
+      dayStart.getUTCDate(),
+      hour,
+      0,
+      0,
+      0,
+    ));
+    const label = hour % 2 === 0
+      ? labelDate.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12,
+        timeZone: 'UTC',
+      })
+      // Keep category keys unique while visually hiding odd-hour ticks.
+      : '\u200B'.repeat(hour + 1);
+    return {
+      label,
+      value: Number((totals[hour] / 60).toFixed(2)),
+    };
+  });
+}
+
 function buildSyncHealth(
   status: contracts.SettingsData['extensionStatus'],
   lastUpdatedAt: string,
+  bridgeReachable: boolean,
   preferences: DisplayPreferences,
 ): OverviewSnapshot['syncHealth'] {
   const now = new Date();
@@ -300,6 +374,7 @@ function buildSyncHealth(
 
   return {
     status: nowStatus,
+    bridgeReachable,
     lastSyncAt: formatDateTime(status.lastHandshakeAt ?? lastUpdatedAt, preferences.hour12),
     blocks: Array.from({ length: syncHistoryWindowMinutes / syncHistoryBucketMinutes }, (_, index) => {
       const bucketOffset = syncHistoryWindowMinutes - (index + 1) * syncHistoryBucketMinutes;
@@ -392,12 +467,21 @@ function resolveDisplayMachineName(
   return source ?? machineId;
 }
 
-function createProjectLabelMapper(obfuscate: boolean) {
+function createProjectLabelMapper(obfuscate: boolean, sensitiveProjectNames: string[]) {
   const labels = new Map<string, string>();
+  const sensitiveSet = new Set(
+    sensitiveProjectNames
+      .map((name) => name.trim().toLowerCase())
+      .filter((name) => name.length > 0),
+  );
+
   return (value: string) => {
-    if (!obfuscate || value.trim() === '') {
+    const normalized = value.trim().toLowerCase();
+    const shouldObfuscate = obfuscate && normalized !== '' && sensitiveSet.has(normalized);
+    if (!shouldObfuscate) {
       return value;
     }
+
     const existing = labels.get(value);
     if (existing) {
       return existing;
@@ -631,6 +715,7 @@ export function emptyOverviewSnapshot(range: OverviewRange): OverviewSnapshot {
     activeHoursSummary: 'No activity processed yet',
     syncHealth: {
       status: 'Offline',
+      bridgeReachable: false,
       lastSyncAt: '—',
       blocks: [],
     },
@@ -715,7 +800,10 @@ async function fetchAnalyticsSnapshot(
 ): Promise<AnalyticsSnapshot> {
   const settings = settingsInput ?? await GetSettingsData();
   const preferences = getDisplayPreferences(settings);
-  const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
+  const mapProjectLabel = createProjectLabelMapper(
+    preferences.obfuscateProjectNames,
+    settings.privacy.sensitiveProjectNames ?? [],
+  );
   const window = resolveDateWindow(filters.range, filters.customRange ?? null, preferences.weekStartsOn);
   const previous = previousWindow(window);
 
@@ -863,6 +951,11 @@ export async function loadOverviewSnapshot(
   const operation = async () => {
     const settings = await GetSettingsData();
     const preferences = getDisplayPreferences(settings);
+    const mapProjectLabel = createProjectLabelMapper(
+      preferences.obfuscateProjectNames,
+      settings.privacy.sensitiveProjectNames ?? [],
+    );
+    const rangeWindow = resolveDateWindow(range, customRange, preferences.weekStartsOn);
     const analytics = await fetchAnalyticsSnapshot({
       range,
       customRange,
@@ -871,9 +964,13 @@ export async function loadOverviewSnapshot(
       machine: 'all',
     }, settings);
 
-    const [overview, machines] = await Promise.all([
+    const [overview, machines, bridgeReachable, dailySessions] = await Promise.all([
       GetOverviewData(),
       ListKnownMachines(),
+      GetVSCodeBridgeHealth().catch(() => false),
+      range === 'today'
+        ? ListSessionsForRange(rangeWindow.startDate, rangeWindow.endDate)
+        : Promise.resolve([] as contracts.Session[]),
     ]);
 
     const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
@@ -884,9 +981,11 @@ export async function loadOverviewSnapshot(
       share: Math.round(machine.share),
       color: overviewChartPalette[index % overviewChartPalette.length],
     }));
-    const trend = range === 'month'
-      ? buildTrend(analytics.time.weekly)
-      : buildTrend(analytics.time.daily);
+    const trend = range === 'today'
+      ? buildHourlyTrendForDay(dailySessions, rangeWindow.start, preferences.hour12)
+      : range === 'month'
+        ? buildTrend(analytics.time.weekly)
+        : buildTrend(analytics.time.daily);
 
     return {
       range,
@@ -905,7 +1004,7 @@ export async function loadOverviewSnapshot(
       lastActiveMachine: analytics.machines.lastActiveMachine ?? currentMachine.machineName,
       weeklyTrend: trend,
       topProjects: analytics.projects.items.slice(0, 5).map((project, index) => ({
-        project: project.name,
+        project: mapProjectLabel(project.name),
         minutes: project.minutes,
         recentActivityAt: project.recent,
         color: overviewChartPalette[index % overviewChartPalette.length],
@@ -929,6 +1028,7 @@ export async function loadOverviewSnapshot(
       syncHealth: buildSyncHealth(
         settings.extensionStatus,
         overview.lastUpdatedAt,
+        bridgeReachable,
         preferences,
       ),
     };
@@ -962,7 +1062,10 @@ export async function loadSessionsScreenData(
     const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
     const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus, preferences));
     const machinesById = machineIndex(machines);
-    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
+    const mapProjectLabel = createProjectLabelMapper(
+      preferences.obfuscateProjectNames,
+      settings.privacy.sensitiveProjectNames ?? [],
+    );
     const sessions = data.sessions.map((session) => {
       const machine = machinesById.get(session.machineId);
       const machineName = resolveDisplayMachineName(session.machineName ?? machine?.machineName, session.machineId, preferences);
@@ -1009,7 +1112,10 @@ export async function loadCalendarMonth(
   const operation = async () => {
     const settings = await GetSettingsData();
     const preferences = getDisplayPreferences(settings);
-    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
+    const mapProjectLabel = createProjectLabelMapper(
+      preferences.obfuscateProjectNames,
+      settings.privacy.sensitiveProjectNames ?? [],
+    );
     const monthLabel = `${year}-${String(month + 1).padStart(2, '0')}`;
     const data = await GetCalendarMonthData(monthLabel);
 
@@ -1045,7 +1151,10 @@ export async function loadCalendarDay(
   const operation = async () => {
     const settings = await GetSettingsData();
     const preferences = getDisplayPreferences(settings);
-    const mapProjectLabel = createProjectLabelMapper(preferences.obfuscateProjectNames);
+    const mapProjectLabel = createProjectLabelMapper(
+      preferences.obfuscateProjectNames,
+      settings.privacy.sensitiveProjectNames ?? [],
+    );
     const data = await GetCalendarDayData(date);
     if (!data.hadActivity) {
       return null;

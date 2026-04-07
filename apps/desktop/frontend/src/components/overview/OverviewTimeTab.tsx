@@ -216,7 +216,12 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
         <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <StatusBadge status={syncStatus} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={syncStatus} />
+              <span className="rounded-md border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
+                Bridge {snapshot.syncHealth.bridgeReachable ? 'Reachable' : 'Unreachable'}
+              </span>
+            </div>
             <p className="font-numeric text-xs text-[var(--ink-tertiary)]">Last sync {snapshot.syncHealth.lastSyncAt}</p>
           </div>
           <div className="mt-3 overflow-x-auto">

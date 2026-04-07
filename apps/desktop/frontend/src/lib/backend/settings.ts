@@ -1,5 +1,6 @@
 import {
   GetSettingsData,
+  GetVSCodeBridgeHealth,
   ResetSettingsSection,
   UpdateAppBehaviorSettings,
   UpdateExclusionsSettings,
@@ -27,6 +28,13 @@ type LoadSettingsOptions = {
   quiet?: boolean;
 };
 
+export type AutostartRegistrationStatus = {
+  enabled: boolean;
+  platform: string;
+  mechanism: string;
+  location: string;
+};
+
 function callAppBridgeMethod<T>(methodName: 'RefreshVSCodeExtensionStatus' | 'ReconnectVSCodeExtension'): Promise<T> {
   const candidate = (window as unknown as {
     go?: { main?: { App?: Record<string, unknown> } };
@@ -37,6 +45,30 @@ function callAppBridgeMethod<T>(methodName: 'RefreshVSCodeExtensionStatus' | 'Re
   }
 
   return (candidate as () => Promise<T>)();
+}
+
+function callAutostartStatusMethod(): Promise<AutostartRegistrationStatus> {
+  const candidate = (window as unknown as {
+    go?: { main?: { App?: Record<string, unknown> } };
+  }).go?.main?.App?.GetAutostartRegistrationStatus;
+
+  if (typeof candidate !== 'function') {
+    throw new Error('Desktop bridge "GetAutostartRegistrationStatus" is unavailable. Restart Kairos Desktop and try again.');
+  }
+
+  return (candidate as () => Promise<AutostartRegistrationStatus>)();
+}
+
+function callBridgeHealthMethod(): Promise<boolean> {
+  const candidate = (window as unknown as {
+    go?: { main?: { App?: Record<string, unknown> } };
+  }).go?.main?.App?.GetVSCodeBridgeHealth;
+
+  if (typeof candidate !== 'function') {
+    throw new Error('Desktop bridge "GetVSCodeBridgeHealth" is unavailable. Restart Kairos Desktop and try again.');
+  }
+
+  return (candidate as () => Promise<boolean>)();
 }
 
 export const settingsSections = {
@@ -70,6 +102,7 @@ function emptyViewModel(): SettingsDefaults {
       showMachineNames: true,
       showHostname: false,
       obfuscateSensitiveProjects: false,
+      sensitiveProjectNames: [],
       minimizeExtensionMetadata: false,
     },
     tracking: {
@@ -184,6 +217,7 @@ function toPrivacy(input: contracts.PrivacySettings): PrivacySettings {
     showMachineNames: input.showMachineNames,
     showHostname: input.showHostname,
     obfuscateSensitiveProjects: input.obfuscateProjectNames,
+    sensitiveProjectNames: input.sensitiveProjectNames ?? [],
     minimizeExtensionMetadata: input.minimizeExtensionMetadata,
   };
 }
@@ -392,6 +426,7 @@ export async function savePrivacySettings(input: PrivacySettings): Promise<Priva
         showMachineNames: input.showMachineNames,
         showHostname: input.showHostname,
         obfuscateProjectNames: input.obfuscateSensitiveProjects,
+        sensitiveProjectNames: input.sensitiveProjectNames,
         minimizeExtensionMetadata: input.minimizeExtensionMetadata,
       });
       return toPrivacy(updated);
@@ -540,6 +575,26 @@ export async function reconnectVSCodeExtension(): Promise<contracts.ExtensionSta
 export async function probeVSCodeExtensionStatus(): Promise<contracts.ExtensionStatus | null> {
   try {
     return await callAppBridgeMethod<contracts.ExtensionStatus>('RefreshVSCodeExtensionStatus');
+  } catch {
+    return null;
+  }
+}
+
+export async function getVSCodeBridgeReachability(): Promise<boolean> {
+  try {
+    return await callBridgeHealthMethod();
+  } catch {
+    try {
+      return await GetVSCodeBridgeHealth();
+    } catch {
+      return false;
+    }
+  }
+}
+
+export async function getAutostartRegistrationStatus(): Promise<AutostartRegistrationStatus | null> {
+  try {
+    return await callAutostartStatusMethod();
   } catch {
     return null;
   }

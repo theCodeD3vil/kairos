@@ -34,6 +34,7 @@ func defaultEditableSettings() editableDefaults {
 			ShowMachineNames:          true,
 			ShowHostname:              false,
 			ObfuscateProjectNames:     false,
+			SensitiveProjectNames:     []string{},
 			MinimizeExtensionMetadata: true,
 		},
 		Tracking: contracts.TrackingSettings{

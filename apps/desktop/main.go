@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 
@@ -18,13 +19,25 @@ func main() {
 		log.Fatalf("kairos backend initialization failed: %v", app.initErr)
 	}
 
+	behavior := app.launchBehaviorOptions(context.Background())
+	if err := app.applyCurrentStartupBehavior(context.Background()); err != nil {
+		log.Printf("app: unable to apply startup behavior: %v", err)
+	}
+	startState := options.Normal
+	if behavior.startMinimized {
+		startState = options.Minimised
+	}
+
 	err := wails.Run(&options.App{
-		Title:         "Kairos",
-		Width:         1200,
-		Height:        800,
-		MinWidth:      1200,
-		MinHeight:     800,
-		DisableResize: false,
+		Title:             "Kairos",
+		Width:             1200,
+		Height:            800,
+		MinWidth:          1200,
+		MinHeight:         800,
+		DisableResize:     false,
+		WindowStartState:  startState,
+		StartHidden:       behavior.startMinimized,
+		HideWindowOnClose: behavior.minimizeToTray,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

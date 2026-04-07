@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { BarChart } from '@lobehub/charts';
-import { useToast } from '@/components/toast/ToastProvider';
 import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
 import {
   AnalyticsBreakdownList,
@@ -33,7 +32,6 @@ const analyticsDefaultFilters: Filters = {
 };
 
 export function AnalyticsPage() {
-  const { info } = useToast();
   const rangeTouchedRef = useRef(false);
   const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
@@ -105,7 +103,7 @@ export function AnalyticsPage() {
             variant="outline"
             size="sm"
             className="rounded-full! border-black/10"
-            onClick={() => info('Export CSV', 'Export is deferred for a later desktop release.')}
+            disabled
           >
             Export CSV
           </Button>
@@ -113,7 +111,7 @@ export function AnalyticsPage() {
             variant="secondary"
             size="sm"
             className="rounded-full!"
-            onClick={() => info('Share', 'Sharing is not part of the local-first v1 desktop release.')}
+            disabled
           >
             Share
           </Button>

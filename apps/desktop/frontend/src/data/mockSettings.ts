@@ -15,6 +15,7 @@ export type PrivacySettings = {
   showMachineNames: boolean;
   showHostname: boolean;
   obfuscateSensitiveProjects: boolean;
+  sensitiveProjectNames: string[];
   minimizeExtensionMetadata: boolean;
 };
 
@@ -130,7 +131,8 @@ export const settingsDefaults: SettingsDefaults = {
     filePathVisibility: 'masked',
     showMachineNames: true,
     showHostname: false,
-    obfuscateSensitiveProjects: true,
+    obfuscateSensitiveProjects: false,
+    sensitiveProjectNames: [],
     minimizeExtensionMetadata: true,
   },
   tracking: {
@@ -147,7 +149,7 @@ export const settingsDefaults: SettingsDefaults = {
   },
   exclusions: {
     folders: ['~/Projects/client-sandbox', '~/Downloads'],
-    projectNames: ['sandbox-playground', 'private-audit'],
+    projectNames: [],
     workspacePatterns: ['**/vendor/**', '**/.tmp/**'],
     fileExtensions: ['.env', '.pem', '.key'],
     machineNames: ['Shared Demo Mac'],
@@ -193,13 +195,13 @@ export const settingsDefaults: SettingsDefaults = {
   },
   about: {
     appName: 'Kairos',
-    version: '0.16.0-mock',
-    environment: 'Desktop frontend mock',
-    buildChannel: 'Internal alpha',
+    version: '0.16.0',
+    environment: 'Desktop',
+    buildChannel: 'Local',
     desktopAppVersion: systemInfoSnapshot.appStatus.appVersion,
     extensionVersion: systemInfoSnapshot.currentMachine.extensionVersion,
-    licenseSummary: 'Source-available placeholder',
-    repositoryLabel: 'Repository placeholder',
-    releaseNotesLabel: 'Release notes placeholder',
+    licenseSummary: 'License metadata unavailable',
+    repositoryLabel: 'Not configured',
+    releaseNotesLabel: 'Not configured',
   },
 };

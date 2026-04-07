@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -18,6 +19,9 @@ import {
 
 const MACHINE_ID_KEY = 'kairos.machineId';
 const STATUS_REFRESH_INTERVAL_MS = 15000;
+const DESKTOP_BRIDGE_HOST = process.env.KAIROS_EXTENSION_BRIDGE_HOST ?? '127.0.0.1';
+const parsedBridgePort = Number.parseInt(process.env.KAIROS_EXTENSION_BRIDGE_PORT ?? '42138', 10);
+const DESKTOP_BRIDGE_PORT = Number.isFinite(parsedBridgePort) ? parsedBridgePort : 42138;
 
 let runtime: KairosRuntime | undefined;
 
@@ -219,6 +223,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await runtime.setWindowFocused(vscode.window.state.focused);
   await runtime.start();
 
+  const desktopBridge = createDesktopBridgeServer({
+    getSnapshot: () => runtime?.getStatusSnapshot(),
+    reconnect: () => runtime?.refreshSettings(),
+    logInfo: observer.logInfo,
+    logWarn: observer.logWarn,
+  });
+  context.subscriptions.push(desktopBridge);
+
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       const editorContext = toEditorContext(editor?.document);
@@ -252,6 +264,74 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       },
     },
   );
+}
+
+function createDesktopBridgeServer(options: {
+  getSnapshot: () => RuntimeStatusSnapshot | undefined;
+  reconnect: () => Promise<void> | undefined;
+  logInfo: (message: string) => void;
+  logWarn: (message: string) => void;
+}): vscode.Disposable {
+  const server = http.createServer((request, response) => {
+    void (async () => {
+      response.setHeader('Content-Type', 'application/json');
+
+      if (!request.url) {
+        response.statusCode = 400;
+        response.end(JSON.stringify({ error: 'missing request url' }));
+        return;
+      }
+
+      if (request.url === '/health' && request.method === 'GET') {
+        writeHealthResponse(response, options.getSnapshot());
+        return;
+      }
+
+      if ((request.url === '/reconnect' || request.url === '/refresh') && request.method === 'POST') {
+        try {
+          await options.reconnect();
+        } catch (error) {
+          response.statusCode = 502;
+          response.end(JSON.stringify({ error: formatError(error) }));
+          return;
+        }
+        writeHealthResponse(response, options.getSnapshot());
+        return;
+      }
+
+      response.statusCode = 404;
+      response.end(JSON.stringify({ error: 'not found' }));
+    })();
+  });
+
+  server.on('error', (error) => {
+    options.logWarn(`Desktop bridge server error: ${formatError(error)}`);
+  });
+
+  server.listen(DESKTOP_BRIDGE_PORT, DESKTOP_BRIDGE_HOST, () => {
+    options.logInfo(`Desktop bridge listening on ${DESKTOP_BRIDGE_HOST}:${DESKTOP_BRIDGE_PORT}`);
+  });
+
+  return new vscode.Disposable(() => {
+    server.close();
+  });
+}
+
+function writeHealthResponse(response: http.ServerResponse, snapshot: RuntimeStatusSnapshot | undefined): void {
+  if (!snapshot) {
+    response.statusCode = 503;
+    response.end(JSON.stringify({ error: 'runtime unavailable' }));
+    return;
+  }
+
+  response.statusCode = 200;
+  response.end(JSON.stringify({
+    connectionState: snapshot.connectionState,
+    extensionVersion: snapshot.extensionVersion,
+    lastHandshakeAt: snapshot.lastHandshakeAt,
+    lastSuccessfulSendAt: snapshot.lastSuccessfulSendAt,
+    lastEventAt: snapshot.lastEventAt,
+  }));
 }
 
 export function deactivate(): void {

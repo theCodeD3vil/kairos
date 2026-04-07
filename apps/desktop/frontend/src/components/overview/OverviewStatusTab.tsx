@@ -1,4 +1,5 @@
 import { Tracker } from '@lobehub/charts';
+import { syncUptimeColors } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
@@ -9,16 +10,16 @@ type OverviewStatusTabProps = {
 
 function SyncHealthLegend() {
   const items = [
-    { label: 'Healthy', color: 'bg-emerald-500' },
-    { label: 'Degraded', color: 'bg-amber-500' },
-    { label: 'Offline', color: 'bg-rose-500' },
+    { label: 'Healthy', color: syncUptimeColors.high },
+    { label: 'Degraded', color: syncUptimeColors.medium },
+    { label: 'Offline', color: syncUptimeColors.critical },
   ];
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-tertiary)]">
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--ink-tertiary)]">
       {items.map((item) => (
         <span key={item.label} className="inline-flex items-center gap-1.5">
-          <span className={`inline-block h-2.5 w-2.5 rounded-full ${item.color}`} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
           {item.label}
         </span>
       ))}
@@ -81,14 +82,25 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
         <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
-          <Tracker
-            data={snapshot.syncHealth.blocks}
-            blockHeight={30}
-            blockWidth={8}
-            blockGap={4}
-            leftLabel={<StatusBadge status={syncStatus} />}
-            rightLabel={`Last sync ${snapshot.syncHealth.lastSyncAt}`}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={syncStatus} />
+              <span className="rounded-md border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
+                Bridge {snapshot.syncHealth.bridgeReachable ? 'Reachable' : 'Unreachable'}
+              </span>
+            </div>
+            <p className="font-numeric text-xs text-[var(--ink-tertiary)]">Last sync {snapshot.syncHealth.lastSyncAt}</p>
+          </div>
+          <div className="mt-3 overflow-x-auto">
+            <div className="min-w-[340px]">
+              <Tracker
+                data={snapshot.syncHealth.blocks}
+                blockHeight={28}
+                blockWidth={16}
+                blockGap={6}
+              />
+            </div>
+          </div>
         </div>
         <SyncHealthLegend />
       </article>

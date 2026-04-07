@@ -101,6 +101,7 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
     activeHoursSummary: '09:00 - 12:00',
     syncHealth: {
       status: 'Healthy',
+      bridgeReachable: true,
       lastSyncAt: 'Today 14:27',
       blocks: buildSyncBlocks('today', [4, 4, 3, 4, 2]),
     },
@@ -172,6 +173,7 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
     activeHoursSummary: '09:00 - 12:00',
     syncHealth: {
       status: 'Healthy',
+      bridgeReachable: true,
       lastSyncAt: 'Today 14:27',
       blocks: buildSyncBlocks('week', [4, 3, 4, 2, 3, 4]),
     },
@@ -240,6 +242,7 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
     activeHoursSummary: '10:00 - 14:00',
     syncHealth: {
       status: 'Degraded',
+      bridgeReachable: false,
       lastSyncAt: 'Today 14:27',
       blocks: buildSyncBlocks('month', [3, 3, 2, 3, 2, 1], 'extension restart needed'),
     },

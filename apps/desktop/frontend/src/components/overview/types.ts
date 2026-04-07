@@ -57,6 +57,7 @@ export type SyncHealthBlock = {
 
 export type SyncHealth = {
   status: 'Healthy' | 'Degraded' | 'Offline';
+  bridgeReachable: boolean;
   lastSyncAt: string;
   blocks: SyncHealthBlock[];
 };

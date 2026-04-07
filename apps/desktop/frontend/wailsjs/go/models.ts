@@ -728,6 +728,7 @@ export namespace contracts {
 	    showMachineNames: boolean;
 	    showHostname: boolean;
 	    obfuscateProjectNames: boolean;
+	    sensitiveProjectNames: string[];
 	    minimizeExtensionMetadata: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -741,6 +742,7 @@ export namespace contracts {
 	        this.showMachineNames = source["showMachineNames"];
 	        this.showHostname = source["showHostname"];
 	        this.obfuscateProjectNames = source["obfuscateProjectNames"];
+	        this.sensitiveProjectNames = source["sensitiveProjectNames"];
 	        this.minimizeExtensionMetadata = source["minimizeExtensionMetadata"];
 	    }
 	}
@@ -960,6 +962,29 @@ export namespace contracts {
 	}
 	
 	
+
+}
+
+export namespace main {
+	
+	export class autostartRegistrationStatus {
+	    enabled: boolean;
+	    platform: string;
+	    mechanism: string;
+	    location: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new autostartRegistrationStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.platform = source["platform"];
+	        this.mechanism = source["mechanism"];
+	        this.location = source["location"];
+	    }
+	}
 
 }
 

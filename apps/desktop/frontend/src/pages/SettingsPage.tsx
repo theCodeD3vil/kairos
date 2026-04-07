@@ -22,6 +22,8 @@ import {
 } from '@/components/settings/SettingsPrimitives';
 import {
   emptySettingsScreenData,
+  getAutostartRegistrationStatus,
+  getVSCodeBridgeReachability,
   loadSettingsScreenData,
   resetSettingsSectionViewModel,
   reconnectVSCodeExtension,
@@ -35,6 +37,12 @@ import {
   settingsSections,
 } from '@/lib/backend/settings';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+
+const MIN_IDLE_TIMEOUT_MINUTES = 5;
+const MIN_SESSION_MERGE_THRESHOLD_MINUTES = 0;
+const MIN_HEARTBEAT_INTERVAL_SECONDS = 1;
+const THRESHOLD_SAVE_DEBOUNCE_MS = 500;
+const OBFUSCATED_STORAGE_PATH_LABEL = '••••••••••';
 
 export function SettingsPage() {
   const { error, success } = useToast();
@@ -50,6 +58,14 @@ export function SettingsPage() {
   const [about, setAbout] = useState(initialData.viewModel.about);
   const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
+  const [bridgeReachable, setBridgeReachable] = useState<boolean | null>(null);
+  const [autostartRegistrationLabel, setAutostartRegistrationLabel] = useState('Checking…');
+  const [idleTimeoutDraft, setIdleTimeoutDraft] = useState(initialData.viewModel.tracking.idleTimeoutMinutes);
+  const [idleTimeoutWarning, setIdleTimeoutWarning] = useState<string | null>(null);
+  const [sessionMergeDraft, setSessionMergeDraft] = useState(initialData.viewModel.tracking.sessionMergeThresholdMinutes);
+  const [sessionMergeWarning, setSessionMergeWarning] = useState<string | null>(null);
+  const [heartbeatIntervalDraft, setHeartbeatIntervalDraft] = useState(initialData.viewModel.vscodeExtension.heartbeatIntervalSeconds);
+  const [heartbeatIntervalWarning, setHeartbeatIntervalWarning] = useState<string | null>(null);
   const persistCountRef = useRef(0);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
@@ -83,6 +99,40 @@ export function SettingsPage() {
     }
     applyScreenData(settingsScreenData);
   }, [applyScreenData, settingsScreenData]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const reachable = await getVSCodeBridgeReachability();
+      if (active) {
+        setBridgeReachable(reachable);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [settingsScreenData]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const status = await getAutostartRegistrationStatus();
+      if (!active) {
+        return;
+      }
+
+      if (!status) {
+        setAutostartRegistrationLabel('Unavailable');
+        return;
+      }
+
+      setAutostartRegistrationLabel(`${status.enabled ? 'Enabled' : 'Disabled'} · ${status.platform} (${status.mechanism})`);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [settingsScreenData]);
 
   const reloadSettings = useCallback(async (options?: { silent?: boolean }) => {
     try {
@@ -131,6 +181,114 @@ export function SettingsPage() {
   const updateAppBehaviorState = useCallback((next: typeof appBehavior) => {
     void persistSection(next, saveAppBehaviorSettings, setAppBehavior, 'App Behavior Settings');
   }, [persistSection]);
+
+  useEffect(() => {
+    setIdleTimeoutDraft(tracking.idleTimeoutMinutes);
+  }, [tracking.idleTimeoutMinutes]);
+
+  useEffect(() => {
+    setSessionMergeDraft(tracking.sessionMergeThresholdMinutes);
+  }, [tracking.sessionMergeThresholdMinutes]);
+
+  useEffect(() => {
+    setHeartbeatIntervalDraft(vscodeExtension.heartbeatIntervalSeconds);
+  }, [vscodeExtension.heartbeatIntervalSeconds]);
+
+  useEffect(() => {
+    const trimmed = idleTimeoutDraft.trim();
+    if (trimmed === '') {
+      setIdleTimeoutWarning(null);
+      return;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      setIdleTimeoutWarning('Enter a whole number.');
+      return;
+    }
+
+    if (parsed < MIN_IDLE_TIMEOUT_MINUTES) {
+      setIdleTimeoutWarning(`Minimum is ${MIN_IDLE_TIMEOUT_MINUTES} minutes.`);
+      return;
+    }
+
+    setIdleTimeoutWarning(null);
+
+    const timeoutId = window.setTimeout(() => {
+      const nextValue = String(parsed);
+      if (tracking.idleTimeoutMinutes !== nextValue) {
+        updateTrackingState({ ...tracking, idleTimeoutMinutes: nextValue });
+      }
+    }, THRESHOLD_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [idleTimeoutDraft, tracking, updateTrackingState]);
+
+  useEffect(() => {
+    const trimmed = sessionMergeDraft.trim();
+    if (trimmed === '') {
+      setSessionMergeWarning(null);
+      return;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      setSessionMergeWarning('Enter a whole number.');
+      return;
+    }
+
+    if (parsed < MIN_SESSION_MERGE_THRESHOLD_MINUTES) {
+      setSessionMergeWarning(`Minimum is ${MIN_SESSION_MERGE_THRESHOLD_MINUTES} minutes.`);
+      return;
+    }
+
+    setSessionMergeWarning(null);
+
+    const timeoutId = window.setTimeout(() => {
+      const nextValue = String(parsed);
+      if (tracking.sessionMergeThresholdMinutes !== nextValue) {
+        updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: nextValue });
+      }
+    }, THRESHOLD_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [sessionMergeDraft, tracking, updateTrackingState]);
+
+  useEffect(() => {
+    const trimmed = heartbeatIntervalDraft.trim();
+    if (trimmed === '') {
+      setHeartbeatIntervalWarning(null);
+      return;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      setHeartbeatIntervalWarning('Enter a whole number.');
+      return;
+    }
+
+    if (parsed < MIN_HEARTBEAT_INTERVAL_SECONDS) {
+      setHeartbeatIntervalWarning(`Minimum is ${MIN_HEARTBEAT_INTERVAL_SECONDS} second.`);
+      return;
+    }
+
+    setHeartbeatIntervalWarning(null);
+
+    const timeoutId = window.setTimeout(() => {
+      const nextValue = String(parsed);
+      if (vscodeExtension.heartbeatIntervalSeconds !== nextValue) {
+        updateExtensionState({ ...vscodeExtension, heartbeatIntervalSeconds: nextValue });
+      }
+    }, THRESHOLD_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [heartbeatIntervalDraft, updateExtensionState, vscodeExtension]);
 
   const handleResetSection = useCallback(async (section: string, title: string) => {
     try {
@@ -209,10 +367,10 @@ export function SettingsPage() {
       value: 'privacy',
       content: (
         <SettingsSection title="Privacy" action={<ResetButton onClick={() => void handleResetSection(settingsSections.privacy, 'Privacy Settings')} />}>
-          <SettingsRow label="Local-only mode" helper="Keeps Kairos desktop-first with no cloud sync behavior in v1.">
+          <SettingsRow label="Local-only mode" helper="Stores and processes data on this device.">
             <SettingsToggle checked={privacy.localOnlyMode} onChange={(next) => updatePrivacyState({ ...privacy, localOnlyMode: next })} />
           </SettingsRow>
-          <SettingsRow label="Cloud sync" helper="Cloud sync controls are disabled in this desktop release.">
+          <SettingsRow label="Cloud sync" helper="Sync activity data across your devices.">
             <SettingsToggle
               checked={privacy.cloudSyncEnabled}
               onChange={() => {}}
@@ -239,6 +397,12 @@ export function SettingsPage() {
           <SettingsRow label="Obfuscate sensitive project names" helper="Masks project labels in desktop-facing data where privacy rules apply.">
             <SettingsToggle checked={privacy.obfuscateSensitiveProjects} onChange={(next) => updatePrivacyState({ ...privacy, obfuscateSensitiveProjects: next })} />
           </SettingsRow>
+          <ExclusionEditor
+            label="Sensitive project names"
+            items={privacy.sensitiveProjectNames}
+            placeholder="Add sensitive project name"
+            onChange={(items) => updatePrivacyState({ ...privacy, sensitiveProjectNames: items })}
+          />
           <SettingsRow label="Minimize extension metadata" helper="Reduces non-essential VS Code metadata included in extension traffic and status.">
             <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => updatePrivacyState({ ...privacy, minimizeExtensionMetadata: next })} />
           </SettingsRow>
@@ -269,27 +433,75 @@ export function SettingsPage() {
             <SettingsToggle checked={tracking.trackSessionBoundaries} onChange={(next) => updateTrackingState({ ...tracking, trackSessionBoundaries: next })} />
           </SettingsRow>
           <SettingsRow label="Idle timeout threshold" helper="Minutes. If the gap between events exceeds this value, Kairos starts a new session.">
-            <SettingsInput
-              value={tracking.idleTimeoutMinutes}
-              inputMode="numeric"
-              onChange={(event) => updateTrackingState({ ...tracking, idleTimeoutMinutes: event.target.value })}
-            />
+            <div className="w-full max-w-sm space-y-1">
+              <SettingsInput
+                value={idleTimeoutDraft}
+                inputMode="numeric"
+                onChange={(event) => {
+                  setIdleTimeoutDraft(event.target.value);
+                }}
+                onBlur={() => {
+                  const trimmed = idleTimeoutDraft.trim();
+                  const parsed = Number.parseInt(trimmed, 10);
+                  if (!Number.isFinite(parsed) || parsed < MIN_IDLE_TIMEOUT_MINUTES) {
+                    const minimum = String(MIN_IDLE_TIMEOUT_MINUTES);
+                    setIdleTimeoutDraft(minimum);
+                    if (tracking.idleTimeoutMinutes !== minimum) {
+                      updateTrackingState({ ...tracking, idleTimeoutMinutes: minimum });
+                    }
+                    return;
+                  }
+
+                  const normalized = String(parsed);
+                  if (normalized !== idleTimeoutDraft) {
+                    setIdleTimeoutDraft(normalized);
+                  }
+                }}
+              />
+              {idleTimeoutWarning ? (
+                <p className="text-xs text-[var(--ink-warning)]">{idleTimeoutWarning}</p>
+              ) : null}
+            </div>
           </SettingsRow>
           <SettingsRow label="Session merge threshold" helper="Minutes. Adjacent same-day sessions within this gap can be merged during session rebuilds.">
-            <SettingsInput
-              value={tracking.sessionMergeThresholdMinutes}
-              inputMode="numeric"
-              onChange={(event) => updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: event.target.value })}
-            />
+            <div className="w-full max-w-sm space-y-1">
+              <SettingsInput
+                value={sessionMergeDraft}
+                inputMode="numeric"
+                onChange={(event) => {
+                  setSessionMergeDraft(event.target.value);
+                }}
+                onBlur={() => {
+                  const trimmed = sessionMergeDraft.trim();
+                  const parsed = Number.parseInt(trimmed, 10);
+                  if (!Number.isFinite(parsed) || parsed < MIN_SESSION_MERGE_THRESHOLD_MINUTES) {
+                    const minimum = String(MIN_SESSION_MERGE_THRESHOLD_MINUTES);
+                    setSessionMergeDraft(minimum);
+                    if (tracking.sessionMergeThresholdMinutes !== minimum) {
+                      updateTrackingState({ ...tracking, sessionMergeThresholdMinutes: minimum });
+                    }
+                    return;
+                  }
+
+                  const normalized = String(parsed);
+                  if (normalized !== sessionMergeDraft) {
+                    setSessionMergeDraft(normalized);
+                  }
+                }}
+              />
+              {sessionMergeWarning ? (
+                <p className="text-xs text-[var(--ink-warning)]">{sessionMergeWarning}</p>
+              ) : null}
+            </div>
           </SettingsRow>
-          <SettingsRow label="Detect active coding window" helper="This control is disabled in this desktop release.">
+          <SettingsRow label="Detect active coding window" helper="Detect and prioritize active coding windows.">
             <SettingsToggle
               checked={tracking.detectActiveCodingWindow}
               onChange={() => {}}
               disabled
             />
           </SettingsRow>
-          <SettingsRow label="Background activity capture" helper="This control is disabled in this desktop release.">
+          <SettingsRow label="Background activity capture" helper="Capture activity while the app runs in the background.">
             <SettingsToggle
               checked={tracking.backgroundActivityCapture}
               onChange={() => {}}
@@ -357,6 +569,7 @@ export function SettingsPage() {
               rows={[
                 { label: 'Installed', value: vscodeExtension.extensionInstalled ? 'Yes' : 'No' },
                 { label: 'Connected', value: vscodeExtension.extensionConnected ? 'Yes' : 'No' },
+                { label: 'Bridge reachable', value: bridgeReachable === null ? 'Checking…' : (bridgeReachable ? 'Reachable' : 'Unreachable') },
                 { label: 'Editor detected', value: vscodeExtension.editorDetected },
                 { label: 'Extension version', value: vscodeExtension.extensionVersion },
                 { label: 'Last extension sync', value: vscodeExtension.lastExtensionSync },
@@ -373,10 +586,12 @@ export function SettingsPage() {
                         try {
                           const status = await refreshVSCodeExtensionStatus();
                           await reloadSettings({ silent: true });
+                          setBridgeReachable(true);
                           success('Extension Status', status.connected
                             ? 'VS Code extension responded and status was refreshed.'
                             : 'Refresh completed, but extension remains offline.');
                         } catch (cause) {
+                          setBridgeReachable(false);
                           error(
                             'Extension Status',
                             cause instanceof Error ? cause.message : 'Unable to refresh VS Code extension status.',
@@ -396,6 +611,7 @@ export function SettingsPage() {
                         try {
                           const status = await reconnectVSCodeExtension();
                           await reloadSettings({ silent: true });
+                          setBridgeReachable(true);
                           success(
                             'VS Code Extension',
                             status.connected
@@ -403,6 +619,7 @@ export function SettingsPage() {
                               : 'Reconnect attempted, but extension is still offline.',
                           );
                         } catch (cause) {
+                          setBridgeReachable(false);
                           error(
                             'VS Code Extension',
                             cause instanceof Error ? cause.message : 'Unable to reach VS Code extension.',
@@ -431,11 +648,35 @@ export function SettingsPage() {
               <SettingsToggle checked={vscodeExtension.sendHeartbeatEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendHeartbeatEvents: next })} />
             </SettingsRow>
             <SettingsRow label="Heartbeat interval" helper="Seconds. Controls how often heartbeat events are emitted while the extension is active.">
-              <SettingsInput
-                value={vscodeExtension.heartbeatIntervalSeconds}
-                inputMode="numeric"
-                onChange={(event) => updateExtensionState({ ...vscodeExtension, heartbeatIntervalSeconds: event.target.value })}
-              />
+              <div className="w-full max-w-sm space-y-1">
+                <SettingsInput
+                  value={heartbeatIntervalDraft}
+                  inputMode="numeric"
+                  onChange={(event) => {
+                    setHeartbeatIntervalDraft(event.target.value);
+                  }}
+                  onBlur={() => {
+                    const trimmed = heartbeatIntervalDraft.trim();
+                    const parsed = Number.parseInt(trimmed, 10);
+                    if (!Number.isFinite(parsed) || parsed < MIN_HEARTBEAT_INTERVAL_SECONDS) {
+                      const minimum = String(MIN_HEARTBEAT_INTERVAL_SECONDS);
+                      setHeartbeatIntervalDraft(minimum);
+                      if (vscodeExtension.heartbeatIntervalSeconds !== minimum) {
+                        updateExtensionState({ ...vscodeExtension, heartbeatIntervalSeconds: minimum });
+                      }
+                      return;
+                    }
+
+                    const normalized = String(parsed);
+                    if (normalized !== heartbeatIntervalDraft) {
+                      setHeartbeatIntervalDraft(normalized);
+                    }
+                  }}
+                />
+                {heartbeatIntervalWarning ? (
+                  <p className="text-xs text-[var(--ink-warning)]">{heartbeatIntervalWarning}</p>
+                ) : null}
+              </div>
             </SettingsRow>
             <SettingsRow label="Send project metadata" helper="Includes project and workspace context in extension events when allowed by privacy settings.">
               <SettingsToggle checked={vscodeExtension.sendProjectMetadata} onChange={(next) => updateExtensionState({ ...vscodeExtension, sendProjectMetadata: next })} />
@@ -464,7 +705,7 @@ export function SettingsPage() {
             <SettingsRow label="Track save events" helper="Controls whether saving a file emits a `save` activity event.">
               <SettingsToggle checked={vscodeExtension.trackSaveEvents} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackSaveEvents: next })} />
             </SettingsRow>
-            <SettingsRow label="Track edit activity" helper="Controls whether text edits emit `edit` activity events.">
+            <SettingsRow label="Track edit activity" helper="Only active edits count toward tracked coding time after a file has been active for at least 15 seconds.">
               <SettingsToggle checked={vscodeExtension.trackEditActivity} onChange={(next) => updateExtensionState({ ...vscodeExtension, trackEditActivity: next })} />
             </SettingsRow>
             <SettingsRow label="Sessionization handled by" helper="Sessionization is managed by the desktop app.">
@@ -521,7 +762,14 @@ export function SettingsPage() {
       content: (
         <SettingsSection title="App Behavior" action={<ResetButton onClick={() => void handleResetSection(settingsSections.appBehavior, 'App Behavior Settings')} />}>
           <SettingsRow label="Launch on startup" helper="Opens Kairos automatically when your OS starts your user session, where supported.">
-            <SettingsToggle checked={appBehavior.launchOnStartup} onChange={(next) => updateAppBehaviorState({ ...appBehavior, launchOnStartup: next })} />
+            <SettingsToggle
+              checked={appBehavior.launchOnStartup}
+              onChange={(next) => updateAppBehaviorState({
+                ...appBehavior,
+                launchOnStartup: next,
+                openOnSystemLogin: next,
+              })}
+            />
           </SettingsRow>
           <SettingsRow label="Start minimized" helper="Starts the desktop window minimized instead of foregrounded.">
             <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
@@ -530,7 +778,19 @@ export function SettingsPage() {
             <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
           </SettingsRow>
           <SettingsRow label="Open on system login" helper="Requests OS login-item behavior so Kairos launches after sign-in, where supported.">
-            <SettingsToggle checked={appBehavior.openOnSystemLogin} onChange={(next) => updateAppBehaviorState({ ...appBehavior, openOnSystemLogin: next })} />
+            <SettingsToggle
+              checked={appBehavior.openOnSystemLogin}
+              onChange={(next) => updateAppBehaviorState({
+                ...appBehavior,
+                launchOnStartup: next,
+                openOnSystemLogin: next,
+              })}
+            />
+          </SettingsRow>
+          <SettingsRow label="Autostart registration" helper="Detected from your OS startup integration.">
+            <div className="rounded-full bg-[var(--surface-chip)] px-3 py-1.5 text-xs font-medium text-[var(--ink-accent)]">
+              {autostartRegistrationLabel}
+            </div>
           </SettingsRow>
           <SettingsRow label="Remember last selected page" helper="Restores the last desktop page you visited when the app reopens.">
             <SettingsToggle checked={appBehavior.rememberLastSelectedPage} onChange={(next) => updateAppBehaviorState({ ...appBehavior, rememberLastSelectedPage: next })} />
@@ -538,7 +798,7 @@ export function SettingsPage() {
           <SettingsRow label="Restore last selected date range" helper="Reuses your previous Overview, Sessions, or Analytics date range when reopening the app.">
             <SettingsToggle checked={appBehavior.restoreLastSelectedDateRange} onChange={(next) => updateAppBehaviorState({ ...appBehavior, restoreLastSelectedDateRange: next })} />
           </SettingsRow>
-          <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="This control is disabled in this desktop release.">
+          <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="Restore your last calendar month and analytics filter state.">
             <SettingsToggle
               checked={appBehavior.reopenLastViewedContext}
               onChange={() => {}}
@@ -558,9 +818,9 @@ export function SettingsPage() {
               items={[
                 {
                   label: 'Local storage path',
-                  value: dataStorage.localStoragePath,
+                  value: dataStorage.localStoragePath ? OBFUSCATED_STORAGE_PATH_LABEL : 'Unavailable',
                   mono: true,
-                  icon: <KairosFileIcon filename={dataStorage.localStoragePath} size={16} />,
+                  icon: <KairosFileIcon filename="hidden" size={16} />,
                 },
                 { label: 'Database status', value: dataStorage.databaseStatus },
                 { label: 'Last processed time', value: dataStorage.lastProcessedTime, mono: true },
