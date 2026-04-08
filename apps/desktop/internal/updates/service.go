@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -90,34 +91,23 @@ func (s *Service) CheckForUpdate(ctx context.Context) CheckResult {
 }
 
 func (s *Service) fetchLatestRelease(ctx context.Context) (githubRelease, error) {
-	url := fmt.Sprintf("%s/repos/%s/releases", strings.TrimRight(s.githubAPIBaseURL, "/"), s.repository)
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return githubRelease{}, fmt.Errorf("create update request: %w", err)
-	}
-	request.Header.Set("Accept", "application/vnd.github+json")
-	request.Header.Set("User-Agent", "kairos-desktop-update-check")
-
-	response, err := s.httpClient.Do(request)
-	if err != nil {
-		return githubRelease{}, fmt.Errorf("request update metadata: %w", err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		return githubRelease{}, fmt.Errorf("update metadata request failed: %s %s", response.Status, strings.TrimSpace(string(body)))
-	}
-
-	var releases []githubRelease
-	if decodeErr := json.NewDecoder(response.Body).Decode(&releases); decodeErr != nil {
-		return githubRelease{}, fmt.Errorf("decode update metadata: %w", decodeErr)
-	}
-	if len(releases) == 0 {
-		return githubRelease{}, fmt.Errorf("no releases found")
-	}
-
 	allowPreRelease := strings.Contains(s.buildChannel, "pre") || strings.Contains(s.buildChannel, "beta") || strings.Contains(s.buildChannel, "rc")
+	if !allowPreRelease {
+		release, err := s.fetchLatestStableRelease(ctx)
+		if err == nil {
+			return release, nil
+		}
+
+		release, webErr := s.fetchLatestStableReleaseFromWeb(ctx)
+		if webErr == nil {
+			return release, nil
+		}
+	}
+
+	releases, err := s.fetchReleases(ctx)
+	if err != nil {
+		return githubRelease{}, err
+	}
 	for _, release := range releases {
 		if release.Draft {
 			continue
@@ -129,6 +119,128 @@ func (s *Service) fetchLatestRelease(ctx context.Context) (githubRelease, error)
 	}
 
 	return githubRelease{}, fmt.Errorf("no compatible release found")
+}
+
+func (s *Service) fetchLatestStableRelease(ctx context.Context) (githubRelease, error) {
+	url := fmt.Sprintf("%s/repos/%s/releases/latest", strings.TrimRight(s.githubAPIBaseURL, "/"), s.repository)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("create latest update request: %w", err)
+	}
+	request.Header.Set("Accept", "application/vnd.github+json")
+	request.Header.Set("User-Agent", "kairos-desktop-update-check")
+
+	response, err := s.httpClient.Do(request)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("request latest update metadata: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		return githubRelease{}, fmt.Errorf("latest update metadata request failed: %s %s", response.Status, strings.TrimSpace(string(body)))
+	}
+
+	var release githubRelease
+	if decodeErr := json.NewDecoder(response.Body).Decode(&release); decodeErr != nil {
+		return githubRelease{}, fmt.Errorf("decode latest update metadata: %w", decodeErr)
+	}
+	if release.Draft || release.Prerelease {
+		return githubRelease{}, fmt.Errorf("latest stable release is not available")
+	}
+
+	return release, nil
+}
+
+func (s *Service) fetchReleases(ctx context.Context) ([]githubRelease, error) {
+	url := fmt.Sprintf("%s/repos/%s/releases", strings.TrimRight(s.githubAPIBaseURL, "/"), s.repository)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create update request: %w", err)
+	}
+	request.Header.Set("Accept", "application/vnd.github+json")
+	request.Header.Set("User-Agent", "kairos-desktop-update-check")
+
+	response, err := s.httpClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("request update metadata: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		return nil, fmt.Errorf("update metadata request failed: %s %s", response.Status, strings.TrimSpace(string(body)))
+	}
+
+	var releases []githubRelease
+	if decodeErr := json.NewDecoder(response.Body).Decode(&releases); decodeErr != nil {
+		return nil, fmt.Errorf("decode update metadata: %w", decodeErr)
+	}
+	if len(releases) == 0 {
+		return nil, fmt.Errorf("no releases found")
+	}
+
+	return releases, nil
+}
+
+func (s *Service) fetchLatestStableReleaseFromWeb(ctx context.Context) (githubRelease, error) {
+	webURL := fmt.Sprintf("https://github.com/%s/releases/latest", s.repository)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, webURL, nil)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("create web latest request: %w", err)
+	}
+	request.Header.Set("User-Agent", "kairos-desktop-update-check")
+
+	client := &http.Client{
+		Timeout: s.httpClient.Timeout,
+		Transport: s.httpClient.Transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return githubRelease{}, fmt.Errorf("request web latest release: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < 300 || response.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 1024))
+		return githubRelease{}, fmt.Errorf("web latest release request failed: %s %s", response.Status, strings.TrimSpace(string(body)))
+	}
+
+	location := strings.TrimSpace(response.Header.Get("Location"))
+	if location == "" {
+		return githubRelease{}, fmt.Errorf("web latest release missing redirect location")
+	}
+
+	redirectURL, parseErr := url.Parse(location)
+	if parseErr != nil {
+		return githubRelease{}, fmt.Errorf("parse web latest redirect location: %w", parseErr)
+	}
+	baseURL, baseErr := url.Parse(webURL)
+	if baseErr != nil {
+		return githubRelease{}, fmt.Errorf("parse web latest base url: %w", baseErr)
+	}
+	resolved := baseURL.ResolveReference(redirectURL)
+
+	tagPrefix := "/releases/tag/"
+	path := resolved.Path
+	idx := strings.Index(path, tagPrefix)
+	if idx < 0 {
+		return githubRelease{}, fmt.Errorf("web latest redirect path does not include release tag")
+	}
+
+	tagName := strings.TrimSpace(path[idx+len(tagPrefix):])
+	if tagName == "" {
+		return githubRelease{}, fmt.Errorf("web latest redirect did not include release tag")
+	}
+
+	return githubRelease{
+		TagName: tagName,
+		HTMLURL: resolved.String(),
+	}, nil
 }
 
 func normalizeVersion(raw string) string {

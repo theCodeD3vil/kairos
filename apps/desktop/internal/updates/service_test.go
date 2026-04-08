@@ -50,6 +50,13 @@ func TestCheckForUpdateParsesGitHubReleases(t *testing.T) {
 	service := NewService("michaelnji/kairos", "1.1.0", "stable")
 	service.httpClient = &http.Client{
 		Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			if strings.HasSuffix(request.URL.Path, "/releases/latest") {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body: io.NopCloser(strings.NewReader(`{"tag_name":"v1.2.0","name":"Kairos 1.2.0","html_url":"https://github.com/michaelnji/kairos/releases/tag/v1.2.0","body":"notes","draft":false,"prerelease":false,"assets":[{"name":"Kairos-macos.zip","browser_download_url":"https://example.com/kairos.zip"}]}`)),
+					Header: make(http.Header),
+				}, nil
+			}
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body: io.NopCloser(strings.NewReader(`[
@@ -72,6 +79,80 @@ func TestCheckForUpdateParsesGitHubReleases(t *testing.T) {
 	}
 	if result.ReleaseURL == "" || result.AssetURL == "" {
 		t.Fatal("expected release and asset urls to be populated")
+	}
+}
+
+func TestStableBuildFallsBackToReleasesListWhenLatestEndpointFails(t *testing.T) {
+	service := NewService("michaelnji/kairos", "1.1.0", "stable")
+	service.httpClient = &http.Client{
+		Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			if strings.HasSuffix(request.URL.Path, "/releases/latest") {
+				return &http.Response{
+					StatusCode: http.StatusForbidden,
+					Status:     "403 Forbidden",
+					Body:       io.NopCloser(strings.NewReader(`{"message":"API rate limit exceeded"}`)),
+					Header:     make(http.Header),
+				}, nil
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body: io.NopCloser(strings.NewReader(`[
+  {"tag_name":"v1.2.0","name":"Kairos 1.2.0","html_url":"https://example.com/stable","body":"stable","draft":false,"prerelease":false,"assets":[]}
+]`)),
+				Header: make(http.Header),
+			}, nil
+		}),
+	}
+
+	result := service.CheckForUpdate(context.Background())
+	if result.Error != "" {
+		t.Fatalf("expected fallback to succeed, got error: %s", result.Error)
+	}
+	if !result.UpdateAvailable {
+		t.Fatal("expected update to be available after fallback")
+	}
+	if result.LatestVersion != "1.2.0" {
+		t.Fatalf("expected fallback latest v1.2.0, got %q", result.LatestVersion)
+	}
+}
+
+func TestStableBuildFallsBackToWebLatestRedirectWhenGitHubAPIIsForbidden(t *testing.T) {
+	service := NewService("michaelnji/kairos", "1.1.0", "stable")
+	service.httpClient = &http.Client{
+		Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+			if strings.Contains(request.URL.Host, "api.github.com") {
+				return &http.Response{
+					StatusCode: http.StatusForbidden,
+					Status:     "403 Forbidden",
+					Body:       io.NopCloser(strings.NewReader(`{"message":"API rate limit exceeded"}`)),
+					Header:     make(http.Header),
+					Request:    request,
+				}, nil
+			}
+			return &http.Response{
+				StatusCode: http.StatusFound,
+				Status:     "302 Found",
+				Header: http.Header{
+					"Location": []string{"https://github.com/michaelnji/kairos/releases/tag/v1.2.0"},
+				},
+				Body:    io.NopCloser(strings.NewReader("")),
+				Request: request,
+			}, nil
+		}),
+	}
+
+	result := service.CheckForUpdate(context.Background())
+	if result.Error != "" {
+		t.Fatalf("expected web fallback to succeed, got error: %s", result.Error)
+	}
+	if !result.UpdateAvailable {
+		t.Fatal("expected update to be available from web fallback")
+	}
+	if result.LatestVersion != "1.2.0" {
+		t.Fatalf("expected latest version 1.2.0 from web fallback, got %q", result.LatestVersion)
+	}
+	if result.ReleaseURL != "https://github.com/michaelnji/kairos/releases/tag/v1.2.0" {
+		t.Fatalf("expected release url from web fallback, got %q", result.ReleaseURL)
 	}
 }
 
