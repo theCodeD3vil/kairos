@@ -24,8 +24,8 @@ jobs:
             platform: macos
           - os: ubuntu-latest
             platform: linux
-          - os: windows-latest
-            platform: windows
+          # - os: windows-latest
+          #   platform: windows
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}

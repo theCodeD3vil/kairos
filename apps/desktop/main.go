@@ -6,8 +6,10 @@ import (
 	"log"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/menu"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -40,6 +42,16 @@ func main() {
 		HideWindowOnClose: behavior.minimizeToTray,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
+		},
+		Menu: menu.NewMenuFromItems(
+			menu.AppMenu(),
+			menu.EditMenu(),
+			menu.WindowMenu(),
+		),
+		Mac: &mac.Options{
+			TitleBar:             mac.TitleBarDefault(),
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
 		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
