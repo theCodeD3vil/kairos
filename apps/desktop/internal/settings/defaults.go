@@ -57,7 +57,7 @@ func defaultEditableSettings() editableDefaults {
 		},
 		Extension: contracts.ExtensionSettings{
 			AutoConnect:                  true,
-			SendHeartbeatEvents:          true,
+			SendHeartbeatEvents:          false,
 			HeartbeatIntervalSeconds:     30,
 			SendProjectMetadata:          true,
 			SendLanguageMetadata:         true,
@@ -66,8 +66,8 @@ func defaultEditableSettings() editableDefaults {
 			BufferEventsWhenOffline:      true,
 			RetryConnectionAutomatically: true,
 			TrackOnlyWhenFocused:         true,
-			TrackFileOpenEvents:          true,
-			TrackSaveEvents:              true,
+			TrackFileOpenEvents:          false,
+			TrackSaveEvents:              false,
 			TrackEditEvents:              true,
 		},
 		AppBehavior: contracts.AppBehaviorSettings{

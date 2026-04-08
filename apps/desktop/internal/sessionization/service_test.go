@@ -431,5 +431,6 @@ func event(id string, timestamp string, machineID string, project string, langua
 		WorkspaceID: "workspace-1",
 		ProjectName: project,
 		Language:    language,
+		FilePath:    "/workspace-1/main.go",
 	}
 }

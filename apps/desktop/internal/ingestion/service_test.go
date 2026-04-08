@@ -157,11 +157,12 @@ func TestListRecentEventsReturnsNewestFirst(t *testing.T) {
 		{
 			ID:          "evt-1",
 			Timestamp:   "2026-04-05T08:00:00Z",
-			EventType:   "open",
+			EventType:   "edit",
 			MachineID:   "machine-1",
 			WorkspaceID: "workspace-1",
 			ProjectName: "kairos",
 			Language:    "go",
+			FilePath:    "/workspace-1/main.go",
 		},
 		{
 			ID:          "evt-2",
@@ -171,15 +172,17 @@ func TestListRecentEventsReturnsNewestFirst(t *testing.T) {
 			WorkspaceID: "workspace-1",
 			ProjectName: "kairos",
 			Language:    "go",
+			FilePath:    "/workspace-1/app.go",
 		},
 		{
 			ID:          "evt-3",
 			Timestamp:   "2026-04-05T09:00:00Z",
-			EventType:   "save",
+			EventType:   "edit",
 			MachineID:   "machine-1",
 			WorkspaceID: "workspace-1",
 			ProjectName: "kairos",
 			Language:    "go",
+			FilePath:    "/workspace-1/handler.go",
 		},
 	}
 
@@ -411,11 +414,12 @@ func validRequest() contracts.IngestEventsRequest {
 			{
 				ID:          "evt-1",
 				Timestamp:   "2026-04-05T09:00:00Z",
-				EventType:   "open",
+				EventType:   "edit",
 				MachineID:   "machine-1",
 				WorkspaceID: "workspace-1",
 				ProjectName: "kairos",
 				Language:    "go",
+				FilePath:    "/workspace-1/main.go",
 			},
 			{
 				ID:          "evt-2",
@@ -425,6 +429,7 @@ func validRequest() contracts.IngestEventsRequest {
 				WorkspaceID: "workspace-1",
 				ProjectName: "kairos",
 				Language:    "typescript",
+				FilePath:    "/workspace-1/app.ts",
 			},
 		},
 	}

@@ -116,11 +116,12 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 	if err != nil {
 		return contracts.SessionRebuildResult{}, err
 	}
+	codingEvents := filterCodingEvents(events)
 
 	sessions := []contracts.Session{}
 	if runtimeSettings.trackSessionBoundaries {
 		sessions, err = s.buildSessions(
-			events,
+			codingEvents,
 			runtimeSettings.idleThreshold,
 			runtimeSettings.mergeThreshold,
 			runtimeSettings.idleDetectionEnabled,
@@ -136,12 +137,27 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 	}
 
 	return contracts.SessionRebuildResult{
-		ProcessedEventCount: len(events),
+		ProcessedEventCount: len(codingEvents),
 		CreatedSessionCount: len(sessions),
 		StartDate:           startDate,
 		EndDate:             endDate,
 		RebuiltAt:           recordedAt,
 	}, nil
+}
+
+func filterCodingEvents(events []contracts.ActivityEvent) []contracts.ActivityEvent {
+	filtered := make([]contracts.ActivityEvent, 0, len(events))
+	for _, event := range events {
+		if event.EventType != "edit" {
+			continue
+		}
+		if event.FilePath == "" {
+			continue
+		}
+		filtered = append(filtered, event)
+	}
+
+	return filtered
 }
 
 func (s *ServiceImpl) ListRecentSessions(ctx context.Context, limit int) ([]contracts.Session, error) {

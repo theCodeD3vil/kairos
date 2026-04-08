@@ -118,7 +118,7 @@ func TestUpdateAndResetSettingsSectionPersistCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResetSettingsSection failed: %v", err)
 	}
-	if reset.Extension.HeartbeatIntervalSeconds != 30 || !reset.Extension.TrackSaveEvents {
+	if reset.Extension.HeartbeatIntervalSeconds != 30 || reset.Extension.SendHeartbeatEvents || reset.Extension.TrackFileOpenEvents || reset.Extension.TrackSaveEvents {
 		t.Fatalf("expected extension section reset to defaults, got %+v", reset.Extension)
 	}
 }

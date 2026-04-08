@@ -47,6 +47,12 @@ const baseContext: EditorContext = {
   gitBranch: 'main',
 };
 
+const scmInputContext: EditorContext = {
+  workspaceId: 'untitled-workspace',
+  projectName: 'untitled-workspace',
+  language: 'scminput',
+};
+
 test('trackingEnabled=false suppresses event emission', async () => {
   const harness = createHarness({
     trackingEnabled: false,
@@ -123,7 +129,7 @@ test('filePathMode privacy shaping masks file paths before send', async () => {
 
   await harness.runtime.start();
   await qualifyActiveFile(harness);
-  await harness.runtime.recordSave(baseContext);
+  await harness.runtime.recordEdit(baseContext);
 
   assert.ok(harness.client.ingestRequests.length >= 1);
   const lastBatch = harness.client.ingestRequests.at(-1);
@@ -141,8 +147,19 @@ test('heartbeat interval settings are applied', async () => {
   harness.scheduler.advanceBy(1000);
   await flushMicrotasks();
 
-  assert.ok(harness.client.ingestRequests.length >= 1);
-  assert.equal(harness.client.ingestRequests[0].events[0]?.eventType, 'heartbeat');
+  assert.equal(harness.client.ingestRequests.length, 0);
+});
+
+test('non-coding contexts are ignored', async () => {
+  const harness = createHarness({});
+
+  await harness.runtime.start();
+  await harness.runtime.updateActiveEditor(scmInputContext);
+  await harness.runtime.setWindowFocused(false);
+  await harness.runtime.setWindowFocused(true);
+  await harness.runtime.recordEdit(scmInputContext);
+
+  assert.equal(harness.client.ingestRequests.length, 0);
 });
 
 test('offline buffering keeps events in memory when enabled', async () => {

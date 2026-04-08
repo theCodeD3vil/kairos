@@ -10,6 +10,7 @@ import {
 import {
   createActivityEvent,
   getDefaultEffectiveSettings,
+  isCodingContext,
   isExcludedContext,
   sanitizeEffectiveSettings,
   sanitizeMachine,
@@ -110,9 +111,9 @@ export class KairosRuntime {
       this.dwellHandle?.cancel();
       this.dwellHandle = undefined;
 
-      if (context?.filePath && nextContextKey) {
+      if (context && isCodingContext(context) && nextContextKey) {
         this.dwellHandle = this.scheduler.setTimeout(() => {
-          if (this.disposed || this.activeContextKey !== nextContextKey || !this.activeContext?.filePath) {
+          if (this.disposed || this.activeContextKey !== nextContextKey || !this.activeContext || !isCodingContext(this.activeContext)) {
             return;
           }
           this.qualifiedContextKey = nextContextKey;
@@ -188,6 +189,11 @@ export class KairosRuntime {
     }
 
     this.activeContext = context;
+    if (!isCodingContext(context)) {
+      this.observer.logInfo(`Skipped ${eventType} event: non-coding context`);
+      return;
+    }
+
     const decision = shouldEmitEvent(eventType, this.settings, this.focused);
     if (!decision.allowed) {
       this.observer.logInfo(`Skipped ${eventType} event: ${decision.reason}`);

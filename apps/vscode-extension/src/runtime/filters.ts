@@ -40,7 +40,7 @@ const DEFAULT_EFFECTIVE_SETTINGS: ExtensionEffectiveSettings = {
     machines: [],
   },
   autoConnect: true,
-  sendHeartbeatEvents: true,
+  sendHeartbeatEvents: false,
   heartbeatIntervalSeconds: DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
   sendProjectMetadata: true,
   sendLanguageMetadata: true,
@@ -49,8 +49,8 @@ const DEFAULT_EFFECTIVE_SETTINGS: ExtensionEffectiveSettings = {
   bufferEventsWhenOffline: true,
   retryConnectionAutomatically: true,
   trackOnlyWhenFocused: false,
-  trackFileOpenEvents: true,
-  trackSaveEvents: true,
+  trackFileOpenEvents: false,
+  trackSaveEvents: false,
   trackEditEvents: true,
 };
 
@@ -58,6 +58,8 @@ export type GateDecision = {
   allowed: boolean;
   reason?: string;
 };
+
+const NON_CODING_LANGUAGE_IDS = new Set(['scminput']);
 
 export function getDefaultEffectiveSettings(): ExtensionEffectiveSettings {
   return {
@@ -140,20 +142,11 @@ export function shouldEmitEvent(
 
   switch (eventType) {
     case 'heartbeat':
-      if (!settings.sendHeartbeatEvents) {
-        return { allowed: false, reason: 'heartbeat events disabled by desktop settings' };
-      }
-      break;
+      return { allowed: false, reason: 'heartbeat events are disabled in edit-driven mode' };
     case 'open':
-      if (!settings.trackFileOpenEvents) {
-        return { allowed: false, reason: 'open events disabled by desktop settings' };
-      }
-      break;
+      return { allowed: false, reason: 'open events are disabled in edit-driven mode' };
     case 'save':
-      if (!settings.trackSaveEvents) {
-        return { allowed: false, reason: 'save events disabled by desktop settings' };
-      }
-      break;
+      return { allowed: false, reason: 'save events are disabled in edit-driven mode' };
     case 'edit':
       if (!settings.trackEditEvents) {
         return { allowed: false, reason: 'edit events disabled by desktop settings' };
@@ -168,6 +161,14 @@ export function shouldEmitEvent(
   }
 
   return { allowed: true };
+}
+
+export function isCodingContext(context: EditorContext): boolean {
+  if (!context.filePath?.trim()) {
+    return false;
+  }
+
+  return !NON_CODING_LANGUAGE_IDS.has(context.language.trim().toLowerCase());
 }
 
 export function isExcludedContext(context: EditorContext, machine: MachineInfo, exclusions: ExclusionsSettings): boolean {

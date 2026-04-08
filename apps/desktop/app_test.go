@@ -76,6 +76,7 @@ func TestNewAppRebuildsSessionsWhenEventsExistButSessionsAreMissing(t *testing.T
 			WorkspaceID: "workspace-1",
 			ProjectName: "kairos",
 			Language:    "typescript",
+			FilePath:    "/workspace-1/README.md",
 		},
 		{
 			ID:          "evt-2",
@@ -85,6 +86,7 @@ func TestNewAppRebuildsSessionsWhenEventsExistButSessionsAreMissing(t *testing.T
 			WorkspaceID: "workspace-1",
 			ProjectName: "kairos",
 			Language:    "typescript",
+			FilePath:    "/workspace-1/main.ts",
 		},
 	}
 	if _, err := store.PersistIngestionBatch(context.Background(), machine, status, events, "2026-04-06T10:05:00Z"); err != nil {
