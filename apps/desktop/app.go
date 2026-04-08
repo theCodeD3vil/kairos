@@ -35,6 +35,7 @@ const extensionBridgeBaseURL = "http://127.0.0.1:42138"
 const launchAgentLabel = "com.kairos.desktop"
 const windowsStartupRegistryPath = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 const windowsStartupRegistryValueName = "KairosDesktop"
+const disableLocalServerEnvVar = "KAIROS_DISABLE_LOCAL_SERVER"
 
 // App is the root Wails binding for desktop lifecycle wiring.
 type App struct {
@@ -98,6 +99,17 @@ func NewApp() *App {
 	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService, func(kind string) {
 		app.emitDataChanged(kind)
 	})
+	if isLocalServerDisabled() {
+		log.Printf("app: local extension server startup disabled by %s", disableLocalServerEnvVar)
+		app.sqliteStore = sqliteStore
+		app.ingestionService = ingestionService
+		app.sessionService = sessionService
+		app.viewService = viewService
+		app.settingsService = settingsService
+		app.updateService = updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel)
+		return app
+	}
+
 	localServer, err := desktopserver.NewLocalServer(desktopserver.DefaultConfig(), ingestionService)
 	if err != nil {
 		log.Printf("app: local extension server initialization failed: %v", err)
@@ -120,6 +132,16 @@ func NewApp() *App {
 	app.updateService = updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel)
 
 	return app
+}
+
+func isLocalServerDisabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(disableLocalServerEnvVar)))
+	switch value {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func ensureSessionsCurrent(ctx context.Context, sqliteStore *storage.Store, sessionService sessionization.Service) error {

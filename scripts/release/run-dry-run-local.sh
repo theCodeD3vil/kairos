@@ -8,9 +8,9 @@ DESKTOP_OUT_DIR="$ROOT_DIR/dist/release-dry-run/desktop/$VERSION/$PLATFORM"
 EXTENSION_DIST_DIR="$ROOT_DIR/apps/vscode-extension/dist"
 FAILURES=0
 
-export GOCACHE="$ROOT_DIR/.dev/go-build-cache"
-export GOTMPDIR="$ROOT_DIR/.dev/go-tmp"
-mkdir -p "$GOCACHE" "$GOTMPDIR"
+if [[ "$PLATFORM" == "darwin" ]]; then
+  export KAIROS_DESKTOP_CGO_LDFLAGS="-framework UniformTypeIdentifiers"
+fi
 
 step() {
   local name="$1"

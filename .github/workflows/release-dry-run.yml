@@ -84,6 +84,9 @@ jobs:
       - name: Build desktop package
         shell: bash
         run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            export KAIROS_DESKTOP_CGO_LDFLAGS="-framework UniformTypeIdentifiers"
+          fi
           VERSION="${RELEASE_TAG#v}"
           COMMIT="$(git rev-parse --short HEAD)"
           BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
