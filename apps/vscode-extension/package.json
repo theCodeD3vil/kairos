@@ -1,7 +1,7 @@
 {
   "name": "kairos-vscode",
   "displayName": "Kairos",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "kairos-dev",
   "description": "Local-first activity tracking for Kairos Desktop from inside VS Code.",
   "license": "UNLICENSED",

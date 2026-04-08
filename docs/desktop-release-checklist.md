@@ -39,6 +39,7 @@
 - verify desktop assets + checksums are attached to GitHub Release
 - verify prerelease flag is correct for prerelease tags
 - for macOS trusted distribution: verify signature + notarization + stapling
+- if Homebrew cask is used: bump `Casks/kairos.rb` version + sha256 to match the new macOS DMG
   - `codesign --verify --deep --strict --verbose=2 <Kairos.app>`
   - `spctl --assess --type execute --verbose <Kairos.app>`
 

@@ -9,12 +9,14 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	stdruntime "runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,6 +38,9 @@ const launchAgentLabel = "com.kairos.desktop"
 const windowsStartupRegistryPath = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 const windowsStartupRegistryValueName = "KairosDesktop"
 const disableLocalServerEnvVar = "KAIROS_DISABLE_LOCAL_SERVER"
+const bridgeDiscoveryFileEnvVar = "KAIROS_BRIDGE_DISCOVERY_FILE"
+const fallbackPortRangeStart = 42137
+const fallbackPortRangeEnd = 42157
 
 // App is the root Wails binding for desktop lifecycle wiring.
 type App struct {
@@ -101,6 +106,7 @@ func NewApp() *App {
 	})
 	if isLocalServerDisabled() {
 		log.Printf("app: local extension server startup disabled by %s", disableLocalServerEnvVar)
+		clearDesktopBridgeDiscovery()
 		app.sqliteStore = sqliteStore
 		app.ingestionService = ingestionService
 		app.sessionService = sessionService
@@ -110,18 +116,23 @@ func NewApp() *App {
 		return app
 	}
 
-	localServer, err := desktopserver.NewLocalServer(desktopserver.DefaultConfig(), ingestionService)
+	localServer, err := startLocalServerWithFallback(ingestionService)
 	if err != nil {
-		log.Printf("app: local extension server initialization failed: %v", err)
-		_ = sqliteStore.Close()
-		return &App{
-			initErr:         fmt.Errorf("initialize local extension server: %w", err),
-			viewService:     views.NewStubService(),
-			settingsService: settingsService,
-			updateService:   updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel),
-		}
+		// The desktop app should stay usable even if the local extension bridge port is occupied.
+		log.Printf("app: local extension server initialization failed (continuing without bridge): %v", err)
+		clearDesktopBridgeDiscovery()
+		app.sqliteStore = sqliteStore
+		app.ingestionService = ingestionService
+		app.sessionService = sessionService
+		app.viewService = viewService
+		app.settingsService = settingsService
+		app.updateService = updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel)
+		return app
 	}
 	localServer.Start()
+	if err := writeDesktopBridgeDiscovery(localServer.Address()); err != nil {
+		log.Printf("app: unable to write desktop bridge discovery file: %v", err)
+	}
 
 	app.sqliteStore = sqliteStore
 	app.localServer = localServer
@@ -132,6 +143,118 @@ func NewApp() *App {
 	app.updateService = updates.NewService(buildinfo.UpdateRepository, buildinfo.DesktopVersion, buildinfo.BuildChannel)
 
 	return app
+}
+
+func startLocalServerWithFallback(ingestionService ingestion.Service) (*desktopserver.LocalServer, error) {
+	config := desktopserver.DefaultConfig()
+	server, err := desktopserver.NewLocalServer(config, ingestionService)
+	if err == nil {
+		return server, nil
+	}
+	if !isAddressInUse(err) {
+		return nil, err
+	}
+
+	candidates := make([]int, 0, fallbackPortRangeEnd-fallbackPortRangeStart+1)
+	for port := fallbackPortRangeStart; port <= fallbackPortRangeEnd; port += 1 {
+		if port == config.Port {
+			continue
+		}
+		candidates = append(candidates, port)
+	}
+	if config.Port >= 0 && config.Port <= 65535 && (config.Port < fallbackPortRangeStart || config.Port > fallbackPortRangeEnd) {
+		candidates = append(candidates, config.Port)
+	}
+
+	lastErr := err
+	for _, port := range candidates {
+		next := config
+		next.Port = port
+		server, nextErr := desktopserver.NewLocalServer(next, ingestionService)
+		if nextErr == nil {
+			log.Printf("app: local extension server fallback engaged: %d -> %d", config.Port, port)
+			return server, nil
+		}
+		lastErr = nextErr
+		if !isAddressInUse(nextErr) {
+			return nil, nextErr
+		}
+	}
+
+	return nil, lastErr
+}
+
+func isAddressInUse(err error) bool {
+	if err == nil {
+		return false
+	}
+	lower := strings.ToLower(err.Error())
+	return strings.Contains(lower, "address already in use")
+}
+
+func writeDesktopBridgeDiscovery(address string) error {
+	host, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("parse local server address %q: %w", address, err)
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil {
+		return fmt.Errorf("parse local server port %q: %w", portText, err)
+	}
+
+	path, err := desktopBridgeDiscoveryPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create discovery directory: %w", err)
+	}
+
+	payload := struct {
+		DesktopServerURL  string `json:"desktopServerUrl"`
+		DesktopServerHost string `json:"desktopServerHost"`
+		DesktopServerPort int    `json:"desktopServerPort"`
+		UpdatedAt         string `json:"updatedAt"`
+		Version           int    `json:"version"`
+	}{
+		DesktopServerURL:  fmt.Sprintf("http://%s:%d", host, port),
+		DesktopServerHost: host,
+		DesktopServerPort: port,
+		UpdatedAt:         time.Now().UTC().Format(time.RFC3339),
+		Version:           1,
+	}
+
+	bytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal discovery payload: %w", err)
+	}
+	if err := os.WriteFile(path, append(bytes, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write discovery file: %w", err)
+	}
+	return nil
+}
+
+func clearDesktopBridgeDiscovery() {
+	path, err := desktopBridgeDiscoveryPath()
+	if err != nil {
+		return
+	}
+	if removeErr := os.Remove(path); removeErr != nil && !os.IsNotExist(removeErr) {
+		log.Printf("app: unable to remove desktop bridge discovery file: %v", removeErr)
+	}
+}
+
+func desktopBridgeDiscoveryPath() (string, error) {
+	override := strings.TrimSpace(os.Getenv(bridgeDiscoveryFileEnvVar))
+	if override != "" {
+		return override, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory for bridge discovery: %w", err)
+	}
+	return filepath.Join(home, ".kairos", "desktop-bridge.json"), nil
 }
 
 func isLocalServerDisabled() bool {
@@ -386,9 +509,9 @@ func (a *App) ExportLocalDataToDisk() error {
 
 	homeDir, _ := os.UserHomeDir()
 	exportPath, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
-		Title:           "Export Kairos Data",
+		Title:            "Export Kairos Data",
 		DefaultDirectory: filepath.Join(homeDir, "Downloads"),
-		DefaultFilename: fmt.Sprintf("kairos_export_%s.json", time.Now().Format("2006-01-02")),
+		DefaultFilename:  fmt.Sprintf("kairos_export_%s.json", time.Now().Format("2006-01-02")),
 		Filters: []wailsruntime.FileFilter{{
 			DisplayName: "JSON Files (*.json)",
 			Pattern:     "*.json",

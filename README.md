@@ -39,6 +39,20 @@ pnpm install
 cd apps/desktop && go mod tidy
 ```
 
+### macOS Desktop via Homebrew Cask
+
+```bash
+brew tap theCodeD3vil/kairos https://github.com/theCodeD3vil/kairos
+brew install --cask kairos
+```
+
+Upgrade:
+
+```bash
+brew update
+brew upgrade --cask kairos
+```
+
 ## Development
 
 Run the desktop frontend only:

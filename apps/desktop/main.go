@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"log"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/menu"
@@ -30,7 +31,7 @@ func main() {
 		startState = options.Minimised
 	}
 
-	err := wails.Run(&options.App{
+	appOptions := &options.App{
 		Title:             "Kairos",
 		Width:             1200,
 		Height:            800,
@@ -43,22 +44,28 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		Menu: menu.NewMenuFromItems(
-			menu.AppMenu(),
-			menu.EditMenu(),
-			menu.WindowMenu(),
-		),
-		Mac: &mac.Options{
-			TitleBar:             mac.TitleBarDefault(),
-			WebviewIsTransparent: false,
-			WindowIsTranslucent:  false,
-		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
-	})
+	}
+
+	// Keep desktop menu/mac options scoped to macOS to avoid cross-platform startup regressions.
+	if runtime.GOOS == "darwin" {
+		appOptions.Menu = menu.NewMenuFromItems(
+			menu.AppMenu(),
+			menu.EditMenu(),
+			menu.WindowMenu(),
+		)
+		appOptions.Mac = &mac.Options{
+			TitleBar:             mac.TitleBarDefault(),
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
+		}
+	}
+
+	err := wails.Run(appOptions)
 	if err != nil {
 		log.Fatal(err)
 	}

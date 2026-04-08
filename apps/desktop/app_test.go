@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -129,4 +132,66 @@ func TestNewAppFailsClearlyWhenDatabaseInitializationFails(t *testing.T) {
 	if !strings.Contains(app.initErr.Error(), "initialize sqlite store") {
 		t.Fatalf("expected sqlite init failure, got %v", app.initErr)
 	}
+}
+
+func TestNewAppFallsBackWhenPreferredPortIsOccupied(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "kairos.sqlite3")
+	discoveryPath := filepath.Join(t.TempDir(), "desktop-bridge.json")
+	t.Setenv("KAIROS_DATABASE_PATH", dbPath)
+	t.Setenv("KAIROS_BRIDGE_DISCOVERY_FILE", discoveryPath)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve preferred local server port: %v", err)
+	}
+	defer listener.Close()
+	_, occupiedPortText, err := net.SplitHostPort(listener.Addr().String())
+	if err != nil {
+		t.Fatalf("split occupied local server address: %v", err)
+	}
+	t.Setenv("KAIROS_LOCAL_SERVER_PORT", occupiedPortText)
+
+	app := NewApp()
+	if app.initErr != nil {
+		t.Fatalf("expected app initialization to succeed with fallback local bridge, got %v", app.initErr)
+	}
+	if app.sqliteStore == nil {
+		t.Fatal("expected sqlite store to be initialized")
+	}
+	if app.localServer == nil || app.localServer.Address() == "" {
+		t.Fatal("expected local server to start on a fallback port")
+	}
+	_, activePortText, err := net.SplitHostPort(app.localServer.Address())
+	if err != nil {
+		t.Fatalf("split fallback local server address: %v", err)
+	}
+	activePort, err := strconv.Atoi(activePortText)
+	if err != nil {
+		t.Fatalf("parse fallback local server port: %v", err)
+	}
+	occupiedPort, err := strconv.Atoi(occupiedPortText)
+	if err != nil {
+		t.Fatalf("parse occupied local server port: %v", err)
+	}
+	if activePort == occupiedPort {
+		t.Fatalf("expected fallback local server port to differ from occupied port %d", occupiedPort)
+	}
+
+	discoveryBytes, err := os.ReadFile(discoveryPath)
+	if err != nil {
+		t.Fatalf("read discovery file: %v", err)
+	}
+	var discovery struct {
+		DesktopServerURL  string `json:"desktopServerUrl"`
+		DesktopServerHost string `json:"desktopServerHost"`
+		DesktopServerPort int    `json:"desktopServerPort"`
+	}
+	if err := json.Unmarshal(discoveryBytes, &discovery); err != nil {
+		t.Fatalf("decode discovery file: %v", err)
+	}
+	if discovery.DesktopServerPort != activePort {
+		t.Fatalf("expected discovery port %d to match active server port %d", discovery.DesktopServerPort, activePort)
+	}
+
+	app.shutdown(context.Background())
 }
