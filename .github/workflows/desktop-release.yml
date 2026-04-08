@@ -151,6 +151,13 @@ jobs:
             --wait
           xcrun stapler staple "$APP_PATH"
 
+      - name: Build macOS (.dmg) Installer
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install create-dmg
+          ./scripts/release/build-macos-dmg.sh
+
       - name: Build Ubuntu Data (.deb) Package
         if: runner.os == 'Linux'
         shell: bash
