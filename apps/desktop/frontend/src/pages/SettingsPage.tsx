@@ -19,8 +19,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ClearLocalData } from '../../wailsjs/go/main/App';
+import { ClearLocalData, ExportLocalDataToDisk } from '../../wailsjs/go/main/App';
 import { ExclusionEditor } from '@/components/settings/ExclusionEditor';
+import { ChangelogViewer } from '@/components/ui/changelog-viewer';
 import {
   ResetButton,
   SettingsActionRow,
@@ -76,6 +77,8 @@ export function SettingsPage() {
   const [updateStatusLabel, setUpdateStatusLabel] = useState('Checking…');
   const [latestVersionLabel, setLatestVersionLabel] = useState('—');
   const [updateReleaseUrl, setUpdateReleaseUrl] = useState('');
+  const [updateReleaseNotes, setUpdateReleaseNotes] = useState('');
+  const [changelogViewerOpen, setChangelogViewerOpen] = useState(false);
   const [updateCheckedAtLabel, setUpdateCheckedAtLabel] = useState('—');
   const [idleTimeoutDraft, setIdleTimeoutDraft] = useState(initialData.viewModel.tracking.idleTimeoutMinutes);
   const [idleTimeoutWarning, setIdleTimeoutWarning] = useState<string | null>(null);
@@ -923,7 +926,23 @@ export function SettingsPage() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full! border-black/10"
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          await ExportLocalDataToDisk();
+                          success('Export Complete', 'Your local tracking history has been successfully exported to disk.');
+                        } catch (err: unknown) {
+                          // Note: Error catching triggers on Wails backend failures
+                          // A cancelled dialog returns nil implicitly and does not throw
+                          error('Export Failed', err instanceof Error ? err.message : String(err));
+                        }
+                      })();
+                    }}
+                  >
                     Export Data
                   </Button>
                   <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
@@ -991,6 +1010,7 @@ export function SettingsPage() {
                       );
                       setLatestVersionLabel(status.latestVersion || '—');
                       setUpdateReleaseUrl(status.releaseUrl || status.assetUrl || '');
+                      setUpdateReleaseNotes(status.releaseNotes || '');
                       if (status.error) {
                         setUpdateStatusLabel('Check failed');
                         error('Update Check', status.error);
@@ -1014,6 +1034,22 @@ export function SettingsPage() {
                 >
                   Download Update
                 </Button>
+                {updateReleaseNotes && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full! border-black/10"
+                    onClick={() => setChangelogViewerOpen(true)}
+                  >
+                    View Changelog
+                  </Button>
+                )}
+                <ChangelogViewer
+                  version={latestVersionLabel}
+                  markdown={updateReleaseNotes}
+                  isOpen={changelogViewerOpen}
+                  onOpenChange={setChangelogViewerOpen}
+                />
               </>
             }
           />

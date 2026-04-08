@@ -355,6 +355,63 @@ func (a *App) ClearLocalData() error {
 	return err
 }
 
+func (a *App) ExportLocalDataToDisk() error {
+	if a.initErr != nil {
+		return a.initErr
+	}
+
+	ctx := a.requestContext()
+
+	homeDir, _ := os.UserHomeDir()
+	exportPath, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Kairos Data",
+		DefaultDirectory: filepath.Join(homeDir, "Downloads"),
+		DefaultFilename: fmt.Sprintf("kairos_export_%s.json", time.Now().Format("2006-01-02")),
+		Filters: []wailsruntime.FileFilter{{
+			DisplayName: "JSON Files (*.json)",
+			Pattern:     "*.json",
+		}},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to open save dialog: %w", err)
+	}
+	if exportPath == "" {
+		return nil
+	}
+
+	events, err := a.sqliteStore.ListEventsForDateRange(ctx, "0000-00-00", "9999-99-99")
+	if err != nil {
+		return fmt.Errorf("failed to fetch events for export: %w", err)
+	}
+
+	sessions, err := a.sqliteStore.ListSessionsForRange(ctx, "0000-00-00", "9999-99-99")
+	if err != nil {
+		return fmt.Errorf("failed to fetch sessions for export: %w", err)
+	}
+
+	file, err := os.Create(exportPath)
+	if err != nil {
+		return fmt.Errorf("failed to create export file: %w", err)
+	}
+	defer file.Close()
+
+	payload := struct {
+		Events   []contracts.ActivityEvent `json:"events"`
+		Sessions []contracts.Session       `json:"sessions"`
+	}{
+		Events:   events,
+		Sessions: sessions,
+	}
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(payload); err != nil {
+		return fmt.Errorf("failed to encode export data: %w", err)
+	}
+
+	return nil
+}
+
 func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {
 	if a.initErr != nil {
 		return contracts.SettingsData{}, a.initErr

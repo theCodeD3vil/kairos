@@ -36,7 +36,7 @@ export function UpdateNotifier() {
         }
 
         const token = buildUpdateToken(status.currentVersion, status.latestVersion);
-        const alreadyNotified = window.localStorage.getItem(UPDATE_NOTICE_STORAGE_KEY) === token;
+        const alreadyNotified = window.sessionStorage.getItem(UPDATE_NOTICE_STORAGE_KEY) === token;
         if (alreadyNotified) {
           return;
         }
@@ -77,7 +77,7 @@ export function UpdateNotifier() {
           // Ignore desktop notification transport failures and keep toast behavior.
         }
 
-        window.localStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, token);
+        window.sessionStorage.setItem(UPDATE_NOTICE_STORAGE_KEY, token);
       } finally {
         checkingRef.current = false;
       }
