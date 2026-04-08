@@ -3,6 +3,7 @@
 ## Pre-release
 - version bump completed (`VERSION`, desktop ldflags target, extension `package.json`)
 - changelog/release notes drafted
+- curated release notes file added at `release-notes/vX.Y.Z.md`
 - compatibility statement (desktop ↔ extension) verified
 
 ## Build + test gates

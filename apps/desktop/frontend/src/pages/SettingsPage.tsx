@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import { KairosFileIcon } from '@/components/file-icons/KairosFileIcon';
@@ -60,6 +61,8 @@ const OBFUSCATED_STORAGE_PATH_LABEL = '••••••••••';
 
 export function SettingsPage() {
   const { error, success } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
   const initialData = emptySettingsScreenData();
   const [general, setGeneral] = useState(initialData.viewModel.general);
@@ -87,6 +90,7 @@ export function SettingsPage() {
   const [heartbeatIntervalDraft, setHeartbeatIntervalDraft] = useState(initialData.viewModel.vscodeExtension.heartbeatIntervalSeconds);
   const [heartbeatIntervalWarning, setHeartbeatIntervalWarning] = useState<string | null>(null);
   const persistCountRef = useRef(0);
+  const changelogQueryHandledRef = useRef(false);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -170,6 +174,41 @@ export function SettingsPage() {
       active = false;
     };
   }, [settingsScreenData]);
+
+  useEffect(() => {
+    if (changelogQueryHandledRef.current) {
+      return;
+    }
+    const query = new URLSearchParams(location.search);
+    if (query.get('changelog') !== 'latest') {
+      return;
+    }
+
+    changelogQueryHandledRef.current = true;
+    setActiveTab('about');
+    void (async () => {
+      const status = await checkDesktopUpdate();
+      if (!status) {
+        return;
+      }
+
+      const checkedAt = status.checkedAt ? new Date(status.checkedAt) : null;
+      setUpdateCheckedAtLabel(
+        checkedAt && !Number.isNaN(checkedAt.getTime())
+          ? checkedAt.toLocaleString()
+          : '—',
+      );
+      setLatestVersionLabel(status.latestVersion || '—');
+      setUpdateReleaseUrl(status.releaseUrl || status.assetUrl || '');
+      setUpdateReleaseNotes(status.releaseNotes || '');
+      setUpdateStatusLabel(status.error ? 'Check failed' : status.updateAvailable ? 'Update available' : 'Up to date');
+      if (status.releaseNotes) {
+        setChangelogViewerOpen(true);
+      }
+    })();
+
+    navigate('/settings', { replace: true });
+  }, [location.search, navigate]);
 
   useEffect(() => {
     let active = true;

@@ -31,6 +31,7 @@ Does:
 - on macOS, optionally signs/notarizes/staples app bundles when Apple credentials are configured
 - collects release artifacts into `dist/release/desktop/<version>/<platform>`
 - generates SHA-256 checksums
+- resolves curated release notes from `release-notes/vX.Y.Z.md`
 - publishes assets to GitHub Release
 
 ### Extension release
@@ -45,6 +46,7 @@ Does:
 - `.vsix` packaging
 - checksum generation
 - optional VS Code Marketplace publish (if `VSCE_PAT` exists)
+- resolves curated release notes from `release-notes/vX.Y.Z.md`
 - attaches `.vsix` + checksum file to GitHub Release
 
 ### Release dry run
@@ -90,3 +92,4 @@ Extension artifacts:
 4. Monitor desktop + extension release workflows.
 5. Verify GitHub Release assets/checksums.
 6. Validate update-check in desktop app.
+7. Ensure `release-notes/vX.Y.Z.md` exists before triggering release workflows.

@@ -51,9 +51,9 @@ export function UpdateNotifier() {
         // Persistent notification in the bell icon panel
         addNotificationIfNew({
           title: 'Update Available',
-          body: `Kairos ${status.latestVersion} is ready. Open Settings to download.`,
+          body: `Kairos ${status.latestVersion} is ready. Open What's New, then download when you're ready.`,
           category: 'Updates',
-          action: { type: 'navigate', target: '/settings' },
+          action: { type: 'navigate', target: '/settings?changelog=latest' },
         });
 
         // OS-level notification (best-effort)
@@ -96,4 +96,3 @@ export function UpdateNotifier() {
 
   return null;
 }
-

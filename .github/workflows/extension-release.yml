@@ -88,11 +88,18 @@ jobs:
             apps/vscode-extension/dist/*.vsix
             apps/vscode-extension/dist/SHA256SUMS-vsix.txt
 
+      - name: Resolve curated release notes
+        shell: bash
+        run: |
+          RELEASE_NOTES_PATH="$(./scripts/release/resolve-release-notes.sh "$RELEASE_TAG")"
+          echo "RELEASE_NOTES_PATH=$RELEASE_NOTES_PATH" >> "$GITHUB_ENV"
+
       - name: Attach VSIX to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: ${{ env.RELEASE_NOTES_PATH }}
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           files: |
             apps/vscode-extension/dist/*.vsix

@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 
 interface ChangelogViewerProps {
@@ -21,9 +20,6 @@ export function ChangelogViewer({ version, markdown, isOpen, onOpenChange }: Cha
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col rounded-xl">
         <DialogHeader>
           <DialogTitle>What's New in Kairos {version}</DialogTitle>
-          <DialogDescription>
-            Release Notes
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-4 mt-2 mb-2 custom-scrollbar">
