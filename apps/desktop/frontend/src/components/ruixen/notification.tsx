@@ -104,7 +104,7 @@ const DEFAULT_ITEMS: NotificationItem[] = [
 
 /* ── Scoped CSS ── */
 
-const STYLE = `.nt{--nt-glass:rgba(255,255,255,.72);--nt-border:rgba(0,0,0,.06);--nt-shadow:0 0 0 .5px rgba(0,0,0,.04),0 2px 4px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);--nt-ink:0,0,0;--nt-ok:var(--status-ok);--nt-err:var(--status-err)}.dark .nt,[data-theme="dark"] .nt{--nt-glass:rgba(30,30,32,.82);--nt-border:rgba(255,255,255,.06);--nt-shadow:0 0 0 .5px rgba(255,255,255,.04),0 2px 4px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.3);--nt-ink:255,255,255;--nt-ok:var(--status-ok-alt);--nt-err:var(--status-err-alt)}.nt-grab{cursor:grab}.nt-grab:active{cursor:grabbing}`;
+const STYLE = `.nt{--nt-bg:var(--surface-contrast);--nt-border:hsl(var(--border)/.9);--nt-shadow:var(--shadow-layered);--nt-ink-strong:var(--ink-strong);--nt-ink-muted:var(--ink-muted);--nt-dot:var(--ink-tertiary);--nt-ok:var(--status-ok);--nt-err:var(--status-err)}[data-theme="dark"] .nt{--nt-ok:var(--status-ok-alt);--nt-err:var(--status-err-alt)}.nt-grab{cursor:grab}.nt-grab:active{cursor:grabbing}`;
 
 /* ── Springs ── */
 
@@ -149,7 +149,7 @@ export function Notification({
   const dotColor = (type?: "default" | "success" | "error"): string => {
     if (type === "success") return "var(--nt-ok)";
     if (type === "error") return "var(--nt-err)";
-    return `rgba(var(--nt-ink),.35)`;
+    return "var(--nt-dot)";
   };
 
   const stackH =
@@ -183,8 +183,7 @@ export function Notification({
               dragElastic={{ left: 0.06, right: 0.8 }}
               dragMomentum={false}
               whileDrag={{
-                boxShadow:
-                  "0 0 0 .5px rgba(var(--nt-ink),.04),0 4px 8px rgba(0,0,0,.08),0 16px 40px rgba(0,0,0,.12)",
+                boxShadow: "var(--shadow-elevated)",
               }}
               onDragStart={() => setIsDragging(true)}
               onDragEnd={(_, info) => {
@@ -221,15 +220,13 @@ export function Notification({
                 right: 0,
                 zIndex: visible.length - index,
                 filter: `blur(${index * 0.5}px)`,
-                background: "var(--nt-glass)",
+                background: "var(--nt-bg)",
                 border: "1px solid var(--nt-border)",
                 boxShadow: "var(--nt-shadow)",
                 borderRadius: 12,
                 padding: "14px 16px",
                 cursor: isTop ? undefined : "default",
                 touchAction: "none",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
               }}
             >
               {/* header row */}
@@ -254,7 +251,7 @@ export function Notification({
                   style={{
                     fontSize: 13,
                     fontWeight: 520,
-                    color: `rgba(var(--nt-ink),.88)`,
+                    color: "var(--nt-ink-strong)",
                     lineHeight: 1.3,
                     flex: 1,
                     overflow: "hidden",
@@ -269,7 +266,7 @@ export function Notification({
                   style={{
                     fontSize: 11,
                     fontWeight: 400,
-                    color: `rgba(var(--nt-ink),.35)`,
+                    color: "var(--nt-ink-muted)",
                     flexShrink: 0,
                     lineHeight: 1,
                     fontVariantNumeric: "tabular-nums",
@@ -284,7 +281,7 @@ export function Notification({
                 style={{
                   fontSize: 12,
                   fontWeight: 420,
-                  color: `rgba(var(--nt-ink),.42)`,
+                  color: "var(--nt-ink-muted)",
                   lineHeight: 1.45,
                   margin: 0,
                   paddingLeft: 14,

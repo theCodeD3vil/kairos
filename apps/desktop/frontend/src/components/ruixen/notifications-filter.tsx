@@ -61,7 +61,7 @@ interface NotificationsFilterProps {
 
 /* ── CSS ── */
 
-const CSS = `.nf{--nf-glass:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,255,255,.62));--nf-border:rgba(0,0,0,.06);--nf-shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--nf-hi:rgba(0,0,0,.88);--nf-dim:rgba(0,0,0,.35);--nf-sep:rgba(0,0,0,.06);--nf-pill-bg:hsl(var(--primary));--nf-pill-fg:hsl(var(--primary-foreground));--nf-pill-idle:hsl(var(--foreground)/.56);--nf-hover:hsl(var(--secondary)/.2);--nf-unread:hsl(var(--primary))}`;
+const CSS = `.nf{--nf-bg:var(--surface-muted);--nf-border:hsl(var(--border)/.9);--nf-shadow:var(--shadow-layered);--nf-hi:var(--ink-strong);--nf-dim:var(--ink-muted);--nf-sep:hsl(var(--border)/.75);--nf-pill-bg:hsl(var(--primary));--nf-pill-fg:hsl(var(--primary-foreground));--nf-pill-idle:var(--ink-secondary);--nf-hover:var(--surface-subtle);--nf-unread:hsl(var(--primary))}`;
 
 /* ── Component ── */
 
@@ -104,12 +104,10 @@ export function NotificationsFilter({
       style={{
         width: 360,
         borderRadius: 14,
-        background: "var(--nf-glass)",
+        background: "var(--nf-bg)",
         border: "1px solid var(--nf-border)",
         boxShadow: "var(--nf-shadow)",
         overflow: "hidden",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
