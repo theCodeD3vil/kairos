@@ -43,11 +43,20 @@ jobs:
       - name: Frontend tests
         run: pnpm --filter @kairos/desktop-frontend test
 
+      - name: Install Playwright browser
+        run: pnpm --filter @kairos/desktop-frontend exec playwright install --with-deps chromium
+
+      - name: Frontend e2e tests
+        run: pnpm --filter @kairos/desktop-frontend test:e2e
+
       - name: Build desktop frontend assets
         run: pnpm --filter @kairos/desktop-frontend build
 
       - name: Desktop backend tests
         run: cd apps/desktop && go test ./...
+
+      - name: Desktop e2e tests
+        run: cd apps/desktop && go test ./... -run TestE2E
 
       - name: Extension release verification
         run: pnpm --filter kairos-vscode verify:release

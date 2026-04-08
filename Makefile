@@ -1,4 +1,4 @@
-.PHONY: help doctor install typecheck build lint format clean \
+.PHONY: help doctor install typecheck test-unit test-e2e test-all build lint format clean \
 	shared-build frontend-build extension-build desktop-build \
 	desktop-release-build desktop-release-check desktop-release-artifacts desktop-release-checksums \
 	extension-release-package extension-release-publish \
@@ -58,6 +58,17 @@ install: ## Install workspace dependencies
 
 typecheck: ## Run workspace type checks
 	pnpm typecheck
+
+test-unit: ## Run unit test suites across workspace packages
+	pnpm --filter @kairos/desktop-frontend test
+	pnpm --filter kairos-vscode test
+	cd apps/desktop && go test ./...
+
+test-e2e: ## Run e2e suites
+	pnpm --filter @kairos/desktop-frontend test:e2e
+	cd apps/desktop && go test ./... -run TestE2E
+
+test-all: test-unit test-e2e ## Run all tests (unit + e2e)
 
 shared-build: ## Build @kairos/shared
 	pnpm --filter @kairos/shared build

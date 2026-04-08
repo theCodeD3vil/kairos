@@ -29,6 +29,8 @@ apps/desktop/build/darwin/*
 !apps/desktop/build/darwin/Info.plist
 !apps/desktop/build/darwin/Info.dev.plist
 apps/desktop/frontend/dist/
+apps/desktop/frontend/playwright-report/
+apps/desktop/frontend/test-results/
 
 # OS
 .DS_Store

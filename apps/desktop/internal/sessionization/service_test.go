@@ -391,6 +391,23 @@ func TestRunningRebuildTwiceIsDeterministic(t *testing.T) {
 	}
 }
 
+func TestFilterCodingEventsKeepsOnlyEditEventsWithFilePath(t *testing.T) {
+	events := []contracts.ActivityEvent{
+		{ID: "e1", EventType: "edit", FilePath: "/workspace/main.go"},
+		{ID: "e2", EventType: "edit", FilePath: ""},
+		{ID: "e3", EventType: "save", FilePath: "/workspace/main.go"},
+		{ID: "e4", EventType: "edit", FilePath: "/workspace/app.go"},
+	}
+
+	filtered := filterCodingEvents(events)
+	if len(filtered) != 2 {
+		t.Fatalf("expected 2 coding events, got %d", len(filtered))
+	}
+	if filtered[0].ID != "e1" || filtered[1].ID != "e4" {
+		t.Fatalf("unexpected filtered event IDs: %+v", filtered)
+	}
+}
+
 func newTestService(t *testing.T) (*ServiceImpl, *storage.Store) {
 	t.Helper()
 
