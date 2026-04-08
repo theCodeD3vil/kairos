@@ -18,6 +18,8 @@ const (
 	topSummaryLimit              = 5
 	dateLayout                   = "2006-01-02"
 	monthLayout                  = "2006-01"
+	noWorkspaceSentinel          = "no-workspace"
+	legacyWorkspaceSentinel      = "untitled-workspace"
 )
 
 type Service interface {
@@ -581,13 +583,14 @@ func buildProjectSummaries(sessions []contracts.Session) []contracts.ProjectSumm
 	total := totalMinutes(sessions)
 	aggregates := make(map[string]*projectAggregate)
 	for _, session := range sessions {
-		entry, ok := aggregates[session.ProjectName]
+		projectName := normalizeProjectName(session.ProjectName)
+		entry, ok := aggregates[projectName]
 		if !ok {
 			entry = &projectAggregate{
-				projectName: session.ProjectName,
+				projectName: projectName,
 				activeDays:  make(map[string]struct{}),
 			}
-			aggregates[session.ProjectName] = entry
+			aggregates[projectName] = entry
 		}
 		entry.totalMinutes += session.DurationMinutes
 		entry.sessionCount++
@@ -722,11 +725,20 @@ func buildMachineSummaries(sessions []contracts.Session, machineIndex map[string
 func decorateSessions(sessions []contracts.Session, machineIndex map[string]contracts.MachineInfo) []contracts.Session {
 	decorated := cloneSessions(sessions)
 	for idx := range decorated {
+		decorated[idx].ProjectName = normalizeProjectName(decorated[idx].ProjectName)
 		if machine, ok := machineIndex[decorated[idx].MachineID]; ok && machine.MachineName != "" {
 			decorated[idx].MachineName = machine.MachineName
 		}
 	}
 	return decorated
+}
+
+func normalizeProjectName(projectName string) string {
+	trimmed := strings.TrimSpace(projectName)
+	if strings.EqualFold(trimmed, noWorkspaceSentinel) || strings.EqualFold(trimmed, legacyWorkspaceSentinel) {
+		return noWorkspaceSentinel
+	}
+	return projectName
 }
 
 func cloneSessions(sessions []contracts.Session) []contracts.Session {

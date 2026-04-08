@@ -1,45 +1,18 @@
 # Kairos
 
-Kairos is a local-first coding activity tracker made of a Wails desktop app, a VS Code extension, and a shared contract package.
+Kairos is a local-first coding activity tracker with a desktop app and a VS Code extension.
 
-The current v1 scope is implemented around:
+## Overview
 
-- raw activity ingestion from the VS Code extension
-- SQLite persistence for events, machines, extension status, settings, and sessions
-- deterministic sessionization from persisted raw events
-- backend-backed page assembly for Overview, Sessions, Analytics, Calendar, and Settings
-- desktop-owned settings authority with extension settings synchronization
-- local-only extension transport over a loopback desktop server
-
-## Workspace Layout
-
-- `apps/desktop`: Go + Wails desktop host, backend services, SQLite storage, and packaged frontend
-- `apps/desktop/frontend`: React + TypeScript desktop UI
-- `apps/vscode-extension`: VS Code extension runtime and packaging surface
-- `packages/shared`: canonical shared TypeScript contracts published as `@kairos/shared`
-- `docs`: technical notes, hardening docs, and release checklists
-
-## Prerequisites
-
-- Node.js
-- pnpm
-- Go
-- Wails CLI for desktop dev or packaged desktop builds
-
-Install Wails when needed:
-
-```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
-```
+- Tracks coding activity from VS Code in real time.
+- Stores data locally in SQLite.
+- Builds sessions and analytics from raw activity events.
+- Shows Overview, Sessions, Analytics, Calendar, and Settings in the desktop app.
+- Keeps settings desktop-owned and synced to the extension.
 
 ## Install
 
-```bash
-pnpm install
-cd apps/desktop && go mod tidy
-```
-
-### macOS Desktop via Homebrew Cask
+### macOS
 
 ```bash
 brew tap theCodeD3vil/kairos https://github.com/theCodeD3vil/kairos
@@ -53,7 +26,95 @@ brew update
 brew upgrade --cask kairos
 ```
 
-## Development
+### macOS Security Prompt (Gatekeeper)
+
+Kairos is open source and publicly auditable. Apple may still block first launch because current releases are not signed and notarized with an Apple Developer certificate yet.
+
+When macOS says the app cannot be opened:
+
+1. Try opening Kairos once from Finder (this registers the blocked launch).
+2. Open `System Settings > Privacy & Security`.
+3. In the Security section, find the message about Kairos and click `Open Anyway`.
+4. Confirm by clicking `Open` in the final dialog.
+
+Alternative terminal method:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Kairos.app
+open /Applications/Kairos.app
+```
+
+Why this appears:
+
+- The warning is triggered by missing notarization/signing identity.
+- It is not, by itself, proof that the app is malware.
+
+### Troubleshooting on Update (macOS)
+
+After installing a new Kairos version, macOS may show the same warning again because each release is a new unsigned app build.
+
+If that happens:
+
+1. Launch once to trigger the block message.
+2. Use `System Settings > Privacy & Security > Open Anyway` again.
+3. If needed, re-run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Kairos.app
+open /Applications/Kairos.app
+```
+
+## Privacy
+
+- Local-first by default.
+- No cloud sync in v1.
+- Data is stored in your local desktop database.
+
+## Limitations
+
+- No cloud sync
+- No multi-user or profile support
+- No reports/export flows
+- No dedicated projects page
+- No advanced summary tables beyond sessions and page assembly
+
+## Documentation
+
+- Desktop runtime details: [`apps/desktop/README.md`](apps/desktop/README.md)
+- Settings system: [`docs/settings-system.md`](docs/settings-system.md)
+- Release checklist: [`docs/desktop-release-checklist.md`](docs/desktop-release-checklist.md)
+
+## Developer Contributions
+
+### Workspace Layout
+
+- `apps/desktop`: Go + Wails desktop host, backend services, SQLite storage, and packaged frontend
+- `apps/desktop/frontend`: React + TypeScript desktop UI
+- `apps/vscode-extension`: VS Code extension runtime and packaging surface
+- `packages/shared`: canonical shared TypeScript contracts published as `@kairos/shared`
+- `docs`: technical notes, hardening docs, and release checklists
+
+### Prerequisites
+
+- Node.js
+- pnpm
+- Go
+- Wails CLI for desktop dev or packaged desktop builds
+
+Install Wails when needed:
+
+```bash
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
+
+### Setup
+
+```bash
+pnpm install
+cd apps/desktop && go mod tidy
+```
+
+### Development
 
 Run the desktop frontend only:
 
@@ -75,7 +136,7 @@ make typecheck
 make desktop-release-check
 ```
 
-## Build
+### Build
 
 Build the shared package, desktop frontend, extension, and Go desktop host:
 
@@ -97,14 +158,14 @@ pnpm --filter kairos-vscode verify:release
 pnpm --filter kairos-vscode package:vsix
 ```
 
-Version/release foundations:
+### Release
 
-- product version marker: [`VERSION`](VERSION)
-- release strategy: [`docs/release-strategy.md`](docs/release-strategy.md)
-- release pipelines: [`docs/release-pipeline.md`](docs/release-pipeline.md)
-- desktop update model: [`docs/desktop-updates.md`](docs/desktop-updates.md)
+- Product version marker: [`VERSION`](VERSION)
+- Release strategy: [`docs/release-strategy.md`](docs/release-strategy.md)
+- Release pipelines: [`docs/release-pipeline.md`](docs/release-pipeline.md)
+- Desktop update model: [`docs/desktop-updates.md`](docs/desktop-updates.md)
 
-## Data Flow
+### Architecture
 
 1. The VS Code extension fetches effective desktop-owned settings from the local desktop server.
 2. The extension emits raw activity events to the desktop app over loopback transport.
@@ -113,19 +174,9 @@ Version/release foundations:
 5. View assembly services build Overview, Sessions, Analytics, Calendar, and Settings payloads from persisted state.
 6. The desktop frontend consumes those page-ready payloads through Wails bindings.
 
-## Storage
+### Environment
 
 - Default desktop database path: user config directory under `Kairos/kairos.sqlite3`
 - Override for development/tests: `KAIROS_DATABASE_PATH`
 - Local extension server host override: `KAIROS_LOCAL_SERVER_HOST`
 - Local extension server port override: `KAIROS_LOCAL_SERVER_PORT`
-
-## V1 Limitations
-
-- no cloud sync
-- no multi-user or profile support
-- no reports/export flows
-- no dedicated projects page
-- no advanced summary tables beyond sessions and page assembly
-
-See [`apps/desktop/README.md`](apps/desktop/README.md), [`docs/settings-system.md`](docs/settings-system.md), and [`docs/desktop-release-checklist.md`](docs/desktop-release-checklist.md) for release and runtime details.

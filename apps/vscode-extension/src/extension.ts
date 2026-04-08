@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import os from 'node:os';
-import path from 'node:path';
 
 import * as vscode from 'vscode';
 
@@ -22,6 +21,7 @@ const STATUS_REFRESH_INTERVAL_MS = 15000;
 const DESKTOP_BRIDGE_HOST = process.env.KAIROS_EXTENSION_BRIDGE_HOST ?? '127.0.0.1';
 const parsedBridgePort = Number.parseInt(process.env.KAIROS_EXTENSION_BRIDGE_PORT ?? '42138', 10);
 const DESKTOP_BRIDGE_PORT = Number.isFinite(parsedBridgePort) ? parsedBridgePort : 42138;
+const NO_WORKSPACE_SENTINEL = 'no-workspace';
 
 let runtime: KairosRuntime | undefined;
 
@@ -356,8 +356,8 @@ function toEditorContext(document: vscode.TextDocument | undefined): EditorConte
   }
 
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-  const workspaceId = workspaceFolder?.uri.fsPath ?? fallbackWorkspaceID(document);
-  const projectName = workspaceFolder?.name ?? fallbackProjectName(document, workspaceId);
+  const workspaceId = workspaceFolder?.uri.fsPath ?? fallbackWorkspaceID();
+  const projectName = workspaceFolder?.name ?? fallbackProjectName();
   const filePath = document.uri.scheme === 'file' ? document.uri.fsPath : undefined;
 
   return {
@@ -368,18 +368,20 @@ function toEditorContext(document: vscode.TextDocument | undefined): EditorConte
   };
 }
 
-function fallbackWorkspaceID(document: vscode.TextDocument): string {
-  if (document.uri.scheme === 'file' && document.uri.fsPath) {
-    return path.dirname(document.uri.fsPath);
+function fallbackWorkspaceID(): string {
+  const firstWorkspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (firstWorkspaceFolder) {
+    return firstWorkspaceFolder.uri.fsPath;
   }
-  return 'untitled-workspace';
+  return NO_WORKSPACE_SENTINEL;
 }
 
-function fallbackProjectName(document: vscode.TextDocument, workspaceID: string): string {
-  if (document.uri.scheme === 'file' && document.uri.fsPath) {
-    return path.basename(path.dirname(document.uri.fsPath));
+function fallbackProjectName(): string {
+  const firstWorkspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (firstWorkspaceFolder) {
+    return firstWorkspaceFolder.name;
   }
-  return path.basename(workspaceID) || 'untitled-project';
+  return NO_WORKSPACE_SENTINEL;
 }
 
 function formatError(error: unknown): string {

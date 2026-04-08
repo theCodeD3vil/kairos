@@ -48,8 +48,8 @@ const baseContext: EditorContext = {
 };
 
 const scmInputContext: EditorContext = {
-  workspaceId: 'untitled-workspace',
-  projectName: 'untitled-workspace',
+  workspaceId: 'no-workspace',
+  projectName: 'no-workspace',
   language: 'scminput',
 };
 

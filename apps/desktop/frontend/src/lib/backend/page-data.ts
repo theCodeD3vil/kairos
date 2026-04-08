@@ -40,9 +40,20 @@ type DisplayPreferences = {
 };
 
 const REDACTED_MACHINE_LABEL = 'redacted-machine';
+const NO_WORKSPACE_SENTINEL = 'no-workspace';
+const LEGACY_WORKSPACE_SENTINEL = 'untitled-workspace';
+const NO_WORKSPACE_DISPLAY_LABEL = 'No workspace';
 
 function normalizeLanguageLabel(language: string): string {
   return language === 'TypeScriptReact' ? 'React' : language;
+}
+
+function normalizeProjectDisplayLabel(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === NO_WORKSPACE_SENTINEL || normalized === LEGACY_WORKSPACE_SENTINEL) {
+    return NO_WORKSPACE_DISPLAY_LABEL;
+  }
+  return value;
 }
 
 const syncColorByStatus = {
@@ -476,10 +487,11 @@ function createProjectLabelMapper(obfuscate: boolean, sensitiveProjectNames: str
   );
 
   return (value: string) => {
+    const displayLabel = normalizeProjectDisplayLabel(value);
     const normalized = value.trim().toLowerCase();
     const shouldObfuscate = obfuscate && normalized !== '' && sensitiveSet.has(normalized);
     if (!shouldObfuscate) {
-      return value;
+      return displayLabel;
     }
 
     const existing = labels.get(value);

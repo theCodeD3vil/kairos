@@ -149,6 +149,54 @@ func TestGetAnalyticsDataSummarizesCurrentAndPreviousPeriod(t *testing.T) {
 	}
 }
 
+func TestProjectNameNormalizationCollapsesWorkspaceSentinels(t *testing.T) {
+	sessions := []contracts.Session{
+		{
+			ID:              "a",
+			Date:            "2026-04-01",
+			EndTime:         "2026-04-01T10:00:00Z",
+			DurationMinutes: 10,
+			ProjectName:     "untitled-workspace",
+		},
+		{
+			ID:              "b",
+			Date:            "2026-04-02",
+			EndTime:         "2026-04-02T10:00:00Z",
+			DurationMinutes: 20,
+			ProjectName:     " no-workspace ",
+		},
+		{
+			ID:              "c",
+			Date:            "2026-04-03",
+			EndTime:         "2026-04-03T10:00:00Z",
+			DurationMinutes: 30,
+			ProjectName:     "kairos-desktop",
+		},
+	}
+
+	summaries := buildProjectSummaries(sessions)
+	if len(summaries) != 2 {
+		t.Fatalf("expected 2 summary buckets after normalization, got %+v", summaries)
+	}
+	if summaries[0].ProjectName != noWorkspaceSentinel {
+		t.Fatalf("expected merged sentinel bucket %q, got %+v", noWorkspaceSentinel, summaries)
+	}
+	if summaries[0].TotalMinutes != 30 {
+		t.Fatalf("expected merged sentinel minutes 30, got %+v", summaries[0])
+	}
+
+	decorated := decorateSessions(sessions, map[string]contracts.MachineInfo{})
+	if decorated[0].ProjectName != noWorkspaceSentinel {
+		t.Fatalf("expected legacy sentinel to normalize, got %+v", decorated[0])
+	}
+	if decorated[1].ProjectName != noWorkspaceSentinel {
+		t.Fatalf("expected whitespace sentinel to normalize, got %+v", decorated[1])
+	}
+	if decorated[2].ProjectName != "kairos-desktop" {
+		t.Fatalf("expected regular project name unchanged, got %+v", decorated[2])
+	}
+}
+
 func TestViewMethodsReturnCoherentEmptyStates(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "kairos-empty.sqlite3")
 	sqliteStore, err := storage.Open(context.Background(), dbPath)
