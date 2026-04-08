@@ -2,6 +2,7 @@ import { HashRouter } from 'react-router-dom';
 import { DesktopBootstrapGate } from '@/app/DesktopBootstrapGate';
 import { DesktopDataProvider } from '@/app/DesktopDataContext';
 import { ErrorBoundary } from '@/app/ErrorBoundary';
+import { ThemeModeController } from '@/app/ThemeModeController';
 import { UpdateNotifier } from '@/app/UpdateNotifier';
 import { AppRoutes } from '@/app/routes';
 import { SyncStatusProvider } from '@/components/sync/SyncStatusProvider';
@@ -15,6 +16,7 @@ export default function App() {
           <SyncStatusProvider>
             <DesktopDataProvider>
               <DesktopBootstrapGate>
+                <ThemeModeController />
                 <UpdateNotifier />
                 <AppRoutes />
               </DesktopBootstrapGate>
@@ -25,4 +27,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-

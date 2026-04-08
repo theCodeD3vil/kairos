@@ -29,7 +29,7 @@ export function LiveRefreshIndicator({
   }, [pulseKey]);
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-[var(--surface-pill)] px-2.5 py-1 text-xs font-medium text-[var(--ink-accent)]">
+    <div className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--border)/0.7)] bg-[var(--surface-pill)] px-2.5 py-1 text-xs font-medium text-[var(--ink-accent)]">
       <motion.span
         className={cn(
           'h-2 w-2 rounded-full bg-[var(--ink-tertiary)] shadow-[0_0_0_0_rgba(0,0,0,0)]',

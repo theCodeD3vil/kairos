@@ -14,13 +14,7 @@ import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
-
-function formatMinutes(minutes: number) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
+import { formatDurationMinutes } from '@/lib/time-format';
 
 export function SessionsPage() {
   const rangeTouchedRef = useRef(false);
@@ -141,13 +135,13 @@ export function SessionsPage() {
               <article className="rounded-xl bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
                 <p className="text-xs text-[var(--ink-muted)]">Average session</p>
                 <p className="font-numeric mt-1 text-lg font-semibold text-[var(--ink-strong)]">
-                  {formatMinutes(screenData.averageSessionMinutes)}
+                  {formatDurationMinutes(screenData.averageSessionMinutes, 'short')}
                 </p>
               </article>
               <article className="rounded-xl bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
                 <p className="text-xs text-[var(--ink-muted)]">Longest session</p>
                 <p className="font-numeric mt-1 text-lg font-semibold text-[var(--ink-strong)]">
-                  {formatMinutes(screenData.longestSessionMinutes)}
+                  {formatDurationMinutes(screenData.longestSessionMinutes, 'short')}
                 </p>
               </article>
               <article className="rounded-xl bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
@@ -176,7 +170,7 @@ export function SessionsPage() {
                         <p className="mt-1 text-xs text-[var(--ink-tertiary)]">{session.language}</p>
                       </div>
                       <p className="font-numeric text-sm text-[var(--ink-label)]">
-                        {formatMinutes(session.durationMinutes)}
+                        {formatDurationMinutes(session.durationMinutes, 'short')}
                       </p>
                     </div>
                     <p className="font-numeric mt-1 text-xs text-[var(--ink-tertiary)]">{session.startAt}</p>

@@ -116,6 +116,7 @@ function emptyViewModel(): SettingsDefaults {
       machineDisplayName: 'Kairos',
       defaultDateRange: 'week',
       timeFormat: '24h',
+      themeMode: 'light',
       weekStartDay: 'Monday',
       landingPage: 'overview',
     },
@@ -228,6 +229,7 @@ function toGeneral(input: contracts.GeneralSettings): GeneralSettings {
     machineDisplayName: input.machineDisplayName,
     defaultDateRange: input.defaultDateRange as GeneralSettings['defaultDateRange'],
     timeFormat: input.timeFormat as GeneralSettings['timeFormat'],
+    themeMode: (input.themeMode as GeneralSettings['themeMode']) || 'light',
     weekStartDay: input.weekStartsOn === 'sunday' ? 'Sunday' : 'Monday',
     landingPage: input.preferredLandingPage as GeneralSettings['landingPage'],
   };
@@ -428,6 +430,7 @@ export async function saveGeneralSettings(input: GeneralSettings): Promise<Gener
         machineDisplayName: input.machineDisplayName,
         defaultDateRange: input.defaultDateRange,
         timeFormat: input.timeFormat,
+        themeMode: input.themeMode,
         weekStartsOn: input.weekStartDay === 'Sunday' ? 'sunday' : 'monday',
         preferredLandingPage: input.landingPage,
       });

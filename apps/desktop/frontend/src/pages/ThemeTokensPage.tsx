@@ -54,7 +54,7 @@ const glassTokens = [
 
 function ComponentPreview({ name, description, demo }: { name: string; description: string; demo: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-black/5 bg-white/80 p-4 shadow-[var(--shadow-inset-faint)]">
+    <div className="flex flex-col gap-2 rounded-2xl border border-[hsl(var(--border)/0.55)] bg-[var(--surface)] p-4 shadow-[var(--shadow-inset-faint)]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-[var(--ink-strong)]">{name}</p>
@@ -126,7 +126,7 @@ const componentPreviews = [
 
 function ColorSwatch({ token }: { token: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-black/5 bg-white/70 p-3 shadow-[var(--shadow-inset-faint)]">
+    <div className="flex flex-col gap-2 rounded-2xl border border-[hsl(var(--border)/0.55)] bg-[var(--surface)] p-3 shadow-[var(--shadow-inset-faint)]">
       <div className="h-14 w-full rounded-xl" style={{ backgroundColor: `var(--${token})` }} />
       <p className="text-sm font-medium text-[var(--ink-strong)]">{token}</p>
     </div>
@@ -135,8 +135,8 @@ function ColorSwatch({ token }: { token: string }) {
 
 function ShadowSwatch({ label, sample }: { label: string; sample: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-black/5 bg-white/70 p-3 shadow-[var(--shadow-inset-faint)]">
-      <div className={`h-14 w-full rounded-xl bg-white ${sample}`} />
+    <div className="flex flex-col gap-2 rounded-2xl border border-[hsl(var(--border)/0.55)] bg-[var(--surface)] p-3 shadow-[var(--shadow-inset-faint)]">
+      <div className={`h-14 w-full rounded-xl bg-[var(--surface-quiet)] ${sample}`} />
       <p className="text-sm font-medium text-[var(--ink-strong)]">{label}</p>
     </div>
   );
@@ -144,7 +144,7 @@ function ShadowSwatch({ label, sample }: { label: string; sample: string }) {
 
 function GlassSwatch({ label, sample }: { label: string; sample: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-black/5 bg-white/70 p-3 shadow-[var(--shadow-inset-faint)]">
+    <div className="flex flex-col gap-2 rounded-2xl border border-[hsl(var(--border)/0.55)] bg-[var(--surface)] p-3 shadow-[var(--shadow-inset-faint)]">
       <div className={`h-14 w-full rounded-xl ${sample} shadow-[var(--shadow-inset-soft)]`} />
       <p className="text-sm font-medium text-[var(--ink-strong)]">{label}</p>
     </div>

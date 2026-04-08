@@ -132,13 +132,13 @@ export function Navbar() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full! border-black/10 bg-white hover:bg-[var(--surface-subtle)] hover:border-[var(--surface-subtle)] text-[var(--ink-primary)]"
+              className="rounded-full! border-[hsl(var(--border)/0.7)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)] hover:border-[var(--surface-subtle)] text-[var(--ink-primary)]"
               onClick={handleNotificationsToggle}
             >
               <Bell size={16} />
               {unreadCount > 0 && (
                 <span
-                  className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full text-[9px] font-bold leading-none"
+                  className="pointer-events-none absolute right-0 top-0 grid h-4 min-w-[1rem] -translate-y-1/4 translate-x-1/4 place-items-center rounded-full px-1 text-[10px] font-bold leading-none ring-2 ring-[var(--surface-navbar)]"
                   style={{
                     background: 'hsl(var(--primary))',
                     color: 'hsl(var(--primary-foreground))',
@@ -166,4 +166,3 @@ export function Navbar() {
     </header>
   );
 }
-

@@ -22,6 +22,7 @@ import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { normalizeOverviewRange } from '@/components/overview/types';
 import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
+import { formatDurationMinutes } from '@/lib/time-format';
 
 const analyticsDefaultFilters: Filters = {
   range: 'week',
@@ -102,7 +103,7 @@ export function AnalyticsPage() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-full! border-black/10"
+            className="rounded-full! border-[hsl(var(--border)/0.7)]"
             disabled
           >
             Export CSV
@@ -221,8 +222,9 @@ export function AnalyticsPage() {
                   colors={[overviewChartPalette[0]]}
                   rotateLabelX={{ angle: -20, xAxisHeight: 70 }}
                   showGridLines
-                  valueFormatter={(value) => formatMinutes(Number(value))}
-                  yAxisWidth={44}
+                  valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+                  tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+                  seriesLabels={{ minutes: 'Time Spent' }}
                   height={240}
                 />
               )}
@@ -249,8 +251,9 @@ export function AnalyticsPage() {
                   colors={[overviewChartPalette[3]]}
                   rotateLabelX={{ angle: -20, xAxisHeight: 70 }}
                   showGridLines
-                  valueFormatter={(value) => formatMinutes(Number(value))}
-                  yAxisWidth={44}
+                  valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+                  tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+                  seriesLabels={{ minutes: 'Time Spent' }}
                   height={240}
                 />
               )}
@@ -302,8 +305,9 @@ export function AnalyticsPage() {
                 categories={['minutes']}
                 colors={[overviewChartPalette[4]]}
                 showGridLines
-                valueFormatter={(value) => formatMinutes(Number(value))}
-                yAxisWidth={44}
+                valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+                tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+                seriesLabels={{ minutes: 'Time Spent' }}
                 rotateLabelX={{ angle: -35, xAxisHeight: 90 }}
                 height={260}
               />

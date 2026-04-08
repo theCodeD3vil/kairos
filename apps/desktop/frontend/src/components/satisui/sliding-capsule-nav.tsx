@@ -48,11 +48,11 @@ export function SlidingCapsuleNav({
               <motion.div
                 layoutId={`${layoutId}-hover`}
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                className="absolute inset-0 z-0 rounded-full bg-transparent hover:bg-white/70"
+                className="absolute inset-0 z-0 rounded-full bg-transparent hover:bg-[var(--surface-subtle)]"
               />
             )}
 
-            <span className={`relative z-20 flex items-center gap-2 ${active ? 'text-white' : 'text-[var(--ink-accent-strong)]'}`}>
+            <span className={`relative z-20 flex items-center gap-2 ${active ? 'text-primary-foreground' : 'text-[var(--ink-accent-strong)]'}`}>
               {tab.icon}
               <span>{tab.title}</span>
             </span>

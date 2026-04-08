@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { CalendarDay } from '@/data/mockCalendar';
+import { formatDurationMinutes } from '@/lib/time-format';
 
 type CalendarMonthGridProps = {
   monthLabel: string;
@@ -10,13 +11,6 @@ type CalendarMonthGridProps = {
 };
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function formatMinutes(minutes: number) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
 
 export function CalendarMonthGrid({ monthLabel, days, onSelect, selectedDate, leadingEmpty }: CalendarMonthGridProps) {
   return (
@@ -52,7 +46,7 @@ export function CalendarMonthGrid({ monthLabel, days, onSelect, selectedDate, le
               {active ? (
                 <div className="mt-auto w-full rounded-md bg-[var(--surface-pill)] px-2 py-1 text-[10px] text-[var(--ink-secondary)]">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[var(--ink-strong)]">{formatMinutes(day.totalMinutes)}</span>
+                    <span className="font-medium text-[var(--ink-strong)]">{formatDurationMinutes(day.totalMinutes, 'short')}</span>
                     <span>{day.sessionCount} sess</span>
                   </div>
                   <p className="truncate text-[10px] text-[var(--ink-tertiary)]">{day.topProject}</p>

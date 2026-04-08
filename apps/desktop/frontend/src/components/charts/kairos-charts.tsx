@@ -58,8 +58,24 @@ type KairosAreaChartProps = {
   showGradient?: boolean;
   stack?: boolean;
   valueFormatter?: (value: number) => string;
+  tooltipValueFormatter?: (value: number) => string;
+  seriesLabels?: Partial<Record<string, string>>;
   yAxisWidth?: number;
 };
+
+function toDisplayLabel(value: string) {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function resolveSeriesLabel(name: string | number, labels?: Partial<Record<string, string>>) {
+  const key = String(name);
+  return labels?.[key] ?? toDisplayLabel(key);
+}
 
 export function KairosAreaChart({
   data,
@@ -67,13 +83,17 @@ export function KairosAreaChart({
   categories,
   colors,
   height = 208,
-  showLegend = false,
+  showLegend,
   showGridLines = true,
   showGradient = true,
   stack = false,
   valueFormatter = (v) => String(v),
-  yAxisWidth = 44,
+  tooltipValueFormatter = valueFormatter,
+  seriesLabels,
+  yAxisWidth = 56,
 }: KairosAreaChartProps) {
+  const shouldShowLegend = showLegend ?? categories.length > 1;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RechartsAreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -85,7 +105,7 @@ export function KairosAreaChart({
             </linearGradient>
           ))}
         </defs>
-        {showGridLines && <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.4} />}
+        {showGridLines && <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />}
         <XAxis
           dataKey={index}
           tick={{ fontSize: 12, fill: 'var(--ink-tertiary)' }}
@@ -103,11 +123,14 @@ export function KairosAreaChart({
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
           itemStyle={tooltipItemStyle}
-          formatter={(value: number) => [valueFormatter(value), undefined]}
+          formatter={(value: number, name: string | number) => [
+            tooltipValueFormatter(Number(value)),
+            resolveSeriesLabel(name, seriesLabels),
+          ]}
           cursor={{ stroke: 'var(--ink-tertiary)', strokeWidth: 1, strokeDasharray: '4 4' }}
           isAnimationActive={false}
         />
-        {showLegend && (
+        {shouldShowLegend && (
           <Legend
             iconType="circle"
             iconSize={8}
@@ -124,6 +147,7 @@ export function KairosAreaChart({
             strokeWidth={2}
             fill={showGradient ? `url(#gradient-${cat})` : colors[i % colors.length]}
             fillOpacity={showGradient ? 1 : 0.1}
+            name={resolveSeriesLabel(cat, seriesLabels)}
             animationDuration={900}
             dot={false}
             activeDot={{ r: 4, strokeWidth: 0, fill: colors[i % colors.length] }}
@@ -147,6 +171,8 @@ type KairosBarChartProps = {
   showLegend?: boolean;
   showGridLines?: boolean;
   valueFormatter?: (value: number) => string;
+  tooltipValueFormatter?: (value: number) => string;
+  seriesLabels?: Partial<Record<string, string>>;
   yAxisWidth?: number;
   rotateLabelX?: { angle: number; xAxisHeight?: number };
 };
@@ -157,16 +183,20 @@ export function KairosBarChart({
   categories,
   colors,
   height = 224,
-  showLegend = false,
+  showLegend,
   showGridLines = true,
   valueFormatter = (v) => String(v),
-  yAxisWidth = 44,
+  tooltipValueFormatter = valueFormatter,
+  seriesLabels,
+  yAxisWidth = 56,
   rotateLabelX,
 }: KairosBarChartProps) {
+  const shouldShowLegend = showLegend ?? categories.length > 1;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RechartsBarChart data={data} margin={{ top: 4, right: 4, bottom: rotateLabelX ? 20 : 0, left: 0 }}>
-        {showGridLines && <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.4} />}
+        {showGridLines && <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />}
         <XAxis
           dataKey={index}
           tick={{ fontSize: 12, fill: 'var(--ink-tertiary)' }}
@@ -187,11 +217,14 @@ export function KairosBarChart({
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
           itemStyle={tooltipItemStyle}
-          formatter={(value: number) => [valueFormatter(value), undefined]}
+          formatter={(value: number, name: string | number) => [
+            tooltipValueFormatter(Number(value)),
+            resolveSeriesLabel(name, seriesLabels),
+          ]}
           cursor={{ fill: 'var(--surface-subtle)', opacity: 0.5 }}
           isAnimationActive={false}
         />
-        {showLegend && (
+        {shouldShowLegend && (
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
         )}
         {categories.map((cat, i) => (
@@ -199,6 +232,7 @@ export function KairosBarChart({
             key={cat}
             dataKey={cat}
             fill={colors[i % colors.length]}
+            name={resolveSeriesLabel(cat, seriesLabels)}
             radius={[6, 6, 0, 0]}
             animationDuration={900}
             maxBarSize={48}
@@ -220,6 +254,7 @@ type KairosDonutChartProps = {
   colors: readonly string[];
   height?: number;
   valueFormatter?: (value: number) => string;
+  showLegend?: boolean;
 };
 
 export function KairosDonutChart({
@@ -229,7 +264,10 @@ export function KairosDonutChart({
   colors,
   height = 200,
   valueFormatter = (v) => String(v),
+  showLegend,
 }: KairosDonutChartProps) {
+  const shouldShowLegend = showLegend ?? data.length > 1;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RechartsPieChart>
@@ -253,9 +291,20 @@ export function KairosDonutChart({
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
           itemStyle={tooltipItemStyle}
-          formatter={(value: number) => [valueFormatter(value), undefined]}
+          formatter={(value: number, name: string | number) => [
+            valueFormatter(Number(value)),
+            toDisplayLabel(String(name)),
+          ]}
           isAnimationActive={false}
         />
+        {shouldShowLegend && (
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+            formatter={(value) => toDisplayLabel(String(value))}
+          />
+        )}
       </RechartsPieChart>
     </ResponsiveContainer>
   );

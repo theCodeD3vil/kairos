@@ -1,6 +1,7 @@
 import { KairosAreaChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
+import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 
 type OverviewSessionsTabProps = {
   snapshot: OverviewSnapshot;
@@ -24,18 +25,11 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
       value: Number((session.durationMinutes / 60).toFixed(2)),
     }));
 
-  function formatMinutes(minutes: number) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h === 0) return `${m}m`;
-    return `${h}h ${m}m`;
-  }
-
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SessionMetric title="Sessions" value={String(snapshot.sessionCount)} />
-        <SessionMetric title="Avg Session" value={formatMinutes(snapshot.averageSessionMinutes)} />
+        <SessionMetric title="Avg Session" value={formatDurationMinutes(snapshot.averageSessionMinutes, 'short')} />
         <SessionMetric title="Coding Days" value={String(snapshot.codingDaysThisWeek)} />
         <SessionMetric title="Last Active" value={snapshot.lastActiveAt} />
       </div>
@@ -49,7 +43,7 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
                 <div key={`${session.project}-${session.startAt}`} className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-[var(--ink-strong)]">{session.project}</span>
-                    <span className="font-numeric text-sm text-[var(--ink-label)]">{formatMinutes(session.durationMinutes)}</span>
+                    <span className="font-numeric text-sm text-[var(--ink-label)]">{formatDurationMinutes(session.durationMinutes, 'short')}</span>
                   </div>
                   <p className="font-numeric text-xs text-[var(--ink-tertiary)]">{session.startAt}</p>
                   <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
@@ -72,15 +66,15 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
               categories={['value']}
               colors={[overviewChartPalette[2]]}
               height={208}
-              showLegend={false}
               showGridLines
-              valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
-              yAxisWidth={44}
+              valueFormatter={(value) => formatDurationHours(Number(value), 'axis')}
+              tooltipValueFormatter={(value) => formatDurationHours(Number(value), 'long')}
+              seriesLabels={{ value: 'Session Duration' }}
             />
           </div>
           <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
             <p className="font-numeric text-sm font-semibold text-[var(--ink-strong)]">
-              {latestSession ? `${latestSession.project} · ${formatMinutes(latestSession.durationMinutes)}` : 'No recent activity'}
+              {latestSession ? `${latestSession.project} · ${formatDurationMinutes(latestSession.durationMinutes, 'short')}` : 'No recent activity'}
             </p>
           </div>
         </article>

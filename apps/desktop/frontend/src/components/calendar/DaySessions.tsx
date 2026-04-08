@@ -2,18 +2,12 @@ import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 import type { CalendarDayDetail } from '@/data/mockCalendar';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { LanguageIcon } from '@/lib/languageIcons';
-
-function formatMinutes(totalMinutes: number) {
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
+import { formatDurationMinutes } from '@/lib/time-format';
 
 export function DaySessions({ detail }: { detail: CalendarDayDetail }) {
   const columns: ColumnDef<(typeof detail.sessions)[number]>[] = [
     { id: 'start', header: 'Start', accessorKey: 'start', width: '90px' },
-    { id: 'duration', header: 'Duration', cell: (row) => formatMinutes(row.durationMinutes), width: '100px' },
+    { id: 'duration', header: 'Duration', cell: (row) => formatDurationMinutes(row.durationMinutes, 'short'), width: '100px' },
     { id: 'project', header: 'Project', accessorKey: 'project' },
     {
       id: 'language',

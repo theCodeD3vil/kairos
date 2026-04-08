@@ -90,13 +90,13 @@ export function CalendarPage() {
         <h1 className="text-2xl font-semibold text-[var(--ink-strong)]">Calendar</h1>
         <div className="flex items-center gap-2">
           <LiveRefreshIndicator pulseKey={refreshPulseKey} />
-          <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={handlePrevMonth}>
+          <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" onClick={handlePrevMonth}>
             Prev
           </Button>
           <Button variant="secondary" size="sm" className="rounded-full!" onClick={handleToday}>
             This Month
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={handleNextMonth}>
+          <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" onClick={handleNextMonth}>
             Next
           </Button>
         </div>

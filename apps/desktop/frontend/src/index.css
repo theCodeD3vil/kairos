@@ -85,6 +85,74 @@
     color-scheme: light;
   }
 
+  [data-theme='dark'] {
+    --background: 222 22% 8%;
+    --foreground: 210 20% 92%;
+    --card: 220 20% 11%;
+    --card-foreground: 210 20% 92%;
+    --popover: 220 20% 11%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 188 68% 56%;
+    --primary-foreground: 210 20% 8%;
+    --secondary: 64 64% 56%;
+    --secondary-foreground: 210 20% 8%;
+    --muted: 220 12% 18%;
+    --muted-foreground: 214 13% 72%;
+    --accent: 64 64% 56%;
+    --accent-foreground: 210 20% 8%;
+    --destructive: 0 74% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 13% 28%;
+    --input: 217 13% 26%;
+    --ring: 188 68% 56%;
+    --table-border: 217 13% 26%;
+    --table-header: 217 13% 18%;
+    --table-row-hover: 217 13% 20%;
+    --table-row-selected: 188 34% 22%;
+    --table-row-stripe: 217 13% 16%;
+    --table-sort-active: 188 68% 56%;
+    --surface-strong: #12161c;
+    --surface: #0f141a;
+    --surface-muted: #141b22;
+    --surface-subtle: #1a232d;
+    --surface-contrast: #1d2833;
+    --surface-pill: #1a242d;
+    --surface-soft: #1a222b;
+    --surface-shell: #0b1015;
+    --surface-navbar: #121820;
+    --surface-chip: #1b2731;
+    --surface-chip-hover: #233240;
+    --surface-quiet: #0f141a;
+    --surface-accent: #7f9743;
+    --surface-deep: #05070a;
+    --surface-deep-alt: #020408;
+    --ink-strong: #e9eef2;
+    --ink-strong-alt: #e6ecf2;
+    --ink-primary: #d7e0e6;
+    --ink-accent: #c8d7dc;
+    --ink-accent-strong: #bee0e5;
+    --ink-void: #f2f6f8;
+    --ink-void-muted: #e6edf2aa;
+    --ink-void-faint: #e6edf226;
+    --ink-secondary: #b9c5cd;
+    --ink-tertiary: #98a8b3;
+    --ink-warning: #e6bc58;
+    --ink-muted: #8e9da8;
+    --ink-soft: #81909c;
+    --ink-label: #b0bec8;
+    --ink-teal: #6fd4de;
+    --ink-night: #edf2f5;
+    --ink-night-soft: #ccd8e2;
+    --shadow-inset-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-inset-faint: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+    --shadow-glass: 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.5);
+    --glass-light: linear-gradient(180deg, rgba(30, 38, 47, 0.86), rgba(23, 30, 38, 0.78));
+    --glass-light-strong: linear-gradient(180deg, rgba(38, 47, 59, 0.92), rgba(29, 37, 47, 0.88));
+    --shadow-layered: 0 10px 34px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.08);
+    color-scheme: dark;
+  }
+
   * {
     @apply border-border;
   }

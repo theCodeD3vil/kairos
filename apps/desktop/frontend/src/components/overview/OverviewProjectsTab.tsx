@@ -3,6 +3,7 @@ import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 
 type OverviewProjectsTabProps = {
   snapshot: OverviewSnapshot;
@@ -51,13 +52,6 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
     recentActivityAt: project.recentActivityAt,
   }));
 
-  function formatMinutes(minutes: number) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h === 0) return `${m}m`;
-    return `${h}h ${m}m`;
-  }
-
   const projectColumns: ColumnDef<ProjectTableRow>[] = [
     {
       id: 'project',
@@ -67,7 +61,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         return (
           <span className="inline-flex items-center gap-2">
             <span
-              className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
+              className="inline-block h-3.5 w-3.5 rounded-[6px] border border-[hsl(var(--border)/0.55)]"
               style={{ backgroundColor: projectColor }}
               aria-hidden
             />
@@ -80,7 +74,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
     {
       id: 'minutes',
       header: 'Time Spent per Project',
-      cell: (row) => <span className="font-numeric">{formatMinutes(row.minutes)}</span>,
+      cell: (row) => <span className="font-numeric">{formatDurationMinutes(row.minutes, 'short')}</span>,
       align: 'right',
     },
     {
@@ -110,10 +104,10 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
               colors={chartColors}
               height={224}
               rotateLabelX={{ angle: -20, xAxisHeight: 60 }}
-              showLegend={false}
               showGridLines
-              valueFormatter={(value) => formatMinutes(Number(value))}
-              yAxisWidth={44}
+              valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+              tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+              seriesLabels={{ minutes: 'Time Spent' }}
             />
           </div>
         </article>
@@ -129,6 +123,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
                 colors={snapshot.machineDistribution.map((machine, index) => machine.color ?? overviewChartPalette[index % overviewChartPalette.length])}
                 height={176}
                 valueFormatter={(value) => `${value}%`}
+                showLegend
               />
             </div>
             <div className="mt-2 space-y-2">
@@ -136,13 +131,13 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
                 <div key={machine.machineName} className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-2 py-1.5">
                   <span className="text-xs font-medium text-[var(--ink-strong)] inline-flex items-center gap-2">
                     <span
-                      className="inline-block h-3.5 w-3.5 rounded-[6px] border border-black/5"
+                      className="inline-block h-3.5 w-3.5 rounded-[6px] border border-[hsl(var(--border)/0.55)]"
                       style={{ backgroundColor: machine.color ?? overviewChartPalette[0] }}
                       aria-hidden
                     />
                     {machine.machineName}
                   </span>
-                  <span className="font-numeric text-xs text-[var(--ink-label)]">{formatMinutes(machine.minutes)}</span>
+                  <span className="font-numeric text-xs text-[var(--ink-label)]">{formatDurationMinutes(machine.minutes, 'short')}</span>
                 </div>
               ))}
             </div>
@@ -154,7 +149,7 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
         <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Most Active Project</h3>
         <p className="mt-2 text-lg font-semibold text-[var(--ink-strong)]">{topProject.project}</p>
-        <p className="font-numeric mt-1 text-sm text-[var(--ink-secondary)]">{formatMinutes(topProject.minutes)} in selected range</p>
+        <p className="font-numeric mt-1 text-sm text-[var(--ink-secondary)]">{formatDurationMinutes(topProject.minutes, 'short')} in selected range</p>
         <p className="mt-3 text-sm text-[var(--ink-secondary)]">Recent Project Activity</p>
         <p className="font-numeric mt-1 font-medium text-[var(--ink-strong)]">{topProject.recentActivityAt}</p>
       </article>
@@ -172,8 +167,9 @@ export function OverviewProjectsTab({ snapshot }: OverviewProjectsTabProps) {
             height={208}
             showLegend
             showGridLines
-            valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
-            yAxisWidth={44}
+            valueFormatter={(value) => formatDurationHours(Number(value), 'axis')}
+            tooltipValueFormatter={(value) => formatDurationHours(Number(value), 'long')}
+            seriesLabels={Object.fromEntries(trendProjects.map((project) => [project.project, project.project]))}
           />
         </div>
       </article>

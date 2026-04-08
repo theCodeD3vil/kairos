@@ -4,6 +4,7 @@ export type GeneralSettings = {
   machineDisplayName: string;
   defaultDateRange: 'today' | 'week' | 'month' | 'custom';
   timeFormat: '12h' | '24h';
+  themeMode: 'light' | 'dark' | 'system';
   weekStartDay: 'Sunday' | 'Monday';
   landingPage: 'overview' | 'analytics' | 'calendar' | 'sessions';
 };
@@ -122,6 +123,7 @@ export const settingsDefaults: SettingsDefaults = {
     machineDisplayName: "Myke's MacBook Pro",
     defaultDateRange: 'week',
     timeFormat: '24h',
+    themeMode: 'light',
     weekStartDay: 'Monday',
     landingPage: 'overview',
   },

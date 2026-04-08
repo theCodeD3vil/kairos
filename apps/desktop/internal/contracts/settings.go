@@ -4,6 +4,7 @@ type GeneralSettings struct {
 	MachineDisplayName   string `json:"machineDisplayName"`
 	DefaultDateRange     string `json:"defaultDateRange"`
 	TimeFormat           string `json:"timeFormat"`
+	ThemeMode            string `json:"themeMode"`
 	WeekStartsOn         string `json:"weekStartsOn"`
 	PreferredLandingPage string `json:"preferredLandingPage"`
 }

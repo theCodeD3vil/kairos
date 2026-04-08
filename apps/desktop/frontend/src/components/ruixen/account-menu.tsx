@@ -64,7 +64,7 @@ export default function AccountMenu({ onAction }: AccountMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="flex hover:border-[var(--surface-subtle)] bg-white items-center gap-2 rounded-full border-border bg-background px-4 py-2 font-medium text-foreground hover:bg-muted"
+          className="flex items-center gap-2 rounded-full border-[hsl(var(--border)/0.7)] bg-[var(--surface)] px-4 py-2 font-medium text-foreground hover:border-[var(--surface-subtle)] hover:bg-muted"
         >
           <User className="h-5 w-5 text-foreground" />
           <span>Srinath G</span>

@@ -85,7 +85,7 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={syncStatus} />
-              <span className="rounded-md border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
+              <span className="rounded-md border border-[hsl(var(--border)/0.7)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
                 Bridge {snapshot.syncHealth.bridgeReachable ? 'Reachable' : 'Unreachable'}
               </span>
             </div>

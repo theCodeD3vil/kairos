@@ -44,9 +44,9 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
           Kairos
         </h1>
         <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full bg-[var(--secondary)] animate-pulse" />
-          <span className="size-2 rounded-full bg-[var(--secondary)]/60 animate-pulse [animation-delay:120ms]" />
-          <span className="size-2 rounded-full bg-[var(--secondary)]/35 animate-pulse [animation-delay:240ms]" />
+          <span className="size-2 rounded-full bg-[hsl(var(--secondary))] animate-pulse" />
+          <span className="size-2 rounded-full bg-[hsl(var(--secondary)/0.6)] animate-pulse [animation-delay:120ms]" />
+          <span className="size-2 rounded-full bg-[hsl(var(--secondary)/0.35)] animate-pulse [animation-delay:240ms]" />
         </div>
       </div>
     </motion.div>

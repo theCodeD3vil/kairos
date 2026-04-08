@@ -3,12 +3,10 @@ import { cn } from '@/lib/utils';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
 import { LanguageIcon } from '@/lib/languageIcons';
+import { formatDurationMinutes } from '@/lib/time-format';
 
 export function formatMinutes(totalMinutes: number) {
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
+  return formatDurationMinutes(totalMinutes, 'short');
 }
 
 type KpiProps = {
@@ -95,8 +93,9 @@ export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
               categories={['minutes']}
               colors={[overviewChartPalette[0]]}
               showGridLines
-              valueFormatter={(value) => formatMinutes(Number(value))}
-              yAxisWidth={44}
+              valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+              tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+              seriesLabels={{ minutes: 'Total Time' }}
               rotateLabelX={{ angle: -25, xAxisHeight: 60 }}
               height={224}
             />
@@ -115,10 +114,10 @@ export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
               categories={['minutes']}
               colors={[overviewChartPalette[1]]}
               height={224}
-              showLegend={false}
               showGridLines
-              valueFormatter={(value) => formatMinutes(Number(value))}
-              yAxisWidth={44}
+              valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+              tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+              seriesLabels={{ minutes: 'Total Time' }}
             />
           )}
         </div>
@@ -143,8 +142,9 @@ export function AnalyticsMachineList({ items }: MachineListProps) {
             categories={['minutes']}
             colors={[overviewChartPalette[2]]}
             showGridLines
-            valueFormatter={(value) => formatMinutes(Number(value))}
-            yAxisWidth={44}
+            valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
+            tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
+            seriesLabels={{ minutes: 'Total Time' }}
             height={240}
           />
         )}
@@ -173,6 +173,7 @@ export function AnalyticsDonut({
             category="share"
             colors={items.map((_, idx) => overviewChartPalette[idx % overviewChartPalette.length])}
             valueFormatter={(value) => `${value}%`}
+            showLegend
             height={200}
           />
         )}

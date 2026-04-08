@@ -434,6 +434,17 @@ export function SettingsPage() {
               ]}
             />
           </SettingsRow>
+          <SettingsRow label="Theme" helper="Controls app appearance across desktop screens.">
+            <SettingsSelect
+              value={general.themeMode}
+              onChange={(event) => updateGeneralState({ ...general, themeMode: event.target.value as typeof general.themeMode })}
+              options={[
+                { label: 'Light', value: 'light' },
+                { label: 'Dark', value: 'dark' },
+                { label: 'System', value: 'system' },
+              ]}
+            />
+          </SettingsRow>
           <SettingsRow label="Week start day" helper="Used for week-based views such as Overview trends and calendar logic.">
             <SettingsSelect
               value={general.weekStartDay}
@@ -702,7 +713,7 @@ export function SettingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full! border-black/10"
+                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
                     onClick={() => {
                       void (async () => {
                         try {
@@ -730,7 +741,7 @@ export function SettingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full! border-black/10"
+                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
                     disabled
                   >
                     View Workspaces
@@ -934,7 +945,11 @@ export function SettingsPage() {
                 <>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-full! border-[var(--destructive)] text-[var(--destructive)] hover:bg-[var(--destructive-muted)] hover:text-[var(--destructive)]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full! border-destructive/45 text-destructive hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive"
+                      >
                         Clear Local Data
                       </Button>
                     </AlertDialogTrigger>
@@ -948,7 +963,7 @@ export function SettingsPage() {
                       <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-full!">Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          className="bg-[var(--destructive)] text-white hover:bg-[var(--destructive)]/90 rounded-full!"
+                          className="rounded-full! !bg-destructive !text-destructive-foreground hover:!bg-destructive/90"
                           onClick={() => {
                             void (async () => {
                               try {
@@ -968,7 +983,7 @@ export function SettingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full! border-black/10"
+                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
                     onClick={() => {
                       void (async () => {
                         try {
@@ -984,7 +999,7 @@ export function SettingsPage() {
                   >
                     Export Data
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
+                  <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" disabled>
                     Import Data
                   </Button>
                 </>
@@ -1065,7 +1080,7 @@ export function SettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full! border-black/10"
+                  className="rounded-full! border-[hsl(var(--border)/0.7)]"
                   onClick={() => {
                     BrowserOpenURL(updateReleaseUrl);
                   }}
@@ -1077,7 +1092,7 @@ export function SettingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full! border-black/10"
+                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
                     onClick={() => setChangelogViewerOpen(true)}
                   >
                     View Changelog
@@ -1099,7 +1114,7 @@ export function SettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full! border-black/10"
+                  className="rounded-full! border-[hsl(var(--border)/0.7)]"
                   onClick={() => {
                     BrowserOpenURL(about.repositoryLabel);
                   }}
@@ -1110,7 +1125,7 @@ export function SettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full! border-black/10"
+                  className="rounded-full! border-[hsl(var(--border)/0.7)]"
                   onClick={() => {
                     BrowserOpenURL(about.releaseNotesLabel);
                   }}
@@ -1133,7 +1148,7 @@ export function SettingsPage() {
         <Button
           variant="outline"
           size="sm"
-          className="rounded-full! border-black/10"
+          className="rounded-full! border-[hsl(var(--border)/0.7)]"
           onClick={() => {
             void (async () => {
               try {

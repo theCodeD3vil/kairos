@@ -26,6 +26,7 @@ func defaultEditableSettings() editableDefaults {
 			MachineDisplayName:   machineDisplayName,
 			DefaultDateRange:     "week",
 			TimeFormat:           "24h",
+			ThemeMode:            "light",
 			WeekStartsOn:         "monday",
 			PreferredLandingPage: "overview",
 		},

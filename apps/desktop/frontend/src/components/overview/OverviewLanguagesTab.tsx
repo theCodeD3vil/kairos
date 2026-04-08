@@ -2,6 +2,7 @@ import { KairosDonutChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { LanguageIcon } from '@/lib/languageIcons';
+import { formatDurationMinutes } from '@/lib/time-format';
 
 type OverviewLanguagesTabProps = {
   snapshot: OverviewSnapshot;
@@ -25,6 +26,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
               colors={pieColors}
               height={224}
               valueFormatter={(value) => `${value}%`}
+              showLegend
             />
           </div>
         </article>
@@ -39,7 +41,7 @@ export function OverviewLanguagesTab({ snapshot }: OverviewLanguagesTabProps) {
                     <LanguageIcon language={language.language} size={18} />
                     {language.language}
                   </span>
-                  <span className="font-numeric text-sm text-[var(--ink-label)]">{Math.round(language.minutes / 60)}h</span>
+                  <span className="font-numeric text-sm text-[var(--ink-label)]">{formatDurationMinutes(language.minutes, 'short')}</span>
                 </div>
                 <p className="font-numeric mt-1 text-xs text-[var(--ink-tertiary)]">{language.share}% of coding time</p>
               </div>

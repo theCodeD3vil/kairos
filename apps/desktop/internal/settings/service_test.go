@@ -39,6 +39,7 @@ func TestPersistedSettingsOverrideDefaultsAndMissingSectionsFallback(t *testing.
 		MachineDisplayName:   "Focused Machine",
 		DefaultDateRange:     "today",
 		TimeFormat:           "12h",
+		ThemeMode:            "dark",
 		WeekStartsOn:         "sunday",
 		PreferredLandingPage: "analytics",
 	})
@@ -57,8 +58,47 @@ func TestPersistedSettingsOverrideDefaultsAndMissingSectionsFallback(t *testing.
 	if data.General.MachineDisplayName != "Focused Machine" {
 		t.Fatalf("expected persisted general override, got %+v", data.General)
 	}
+	if data.General.ThemeMode != "dark" {
+		t.Fatalf("expected persisted theme mode, got %q", data.General.ThemeMode)
+	}
 	if data.Extension.HeartbeatIntervalSeconds != 30 {
 		t.Fatalf("expected missing extension section to fall back to default, got %+v", data.Extension)
+	}
+}
+
+func TestUpdateGeneralSettingsRejectsInvalidThemeMode(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	_, err := service.UpdateGeneralSettings(context.Background(), contracts.GeneralSettings{
+		MachineDisplayName:   "Focused Machine",
+		DefaultDateRange:     "today",
+		TimeFormat:           "12h",
+		ThemeMode:            "nope",
+		WeekStartsOn:         "sunday",
+		PreferredLandingPage: "analytics",
+	})
+	if err == nil {
+		t.Fatal("expected validation error for invalid theme mode")
+	}
+}
+
+func TestGeneralSettingsWithoutThemeModeBackfillsLightForCompatibility(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.SetSettingsSection(context.Background(), SectionGeneral, `{"machineDisplayName":"Existing Machine","defaultDateRange":"week","timeFormat":"24h","weekStartsOn":"monday","preferredLandingPage":"overview"}`, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("seed general section failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if data.General.MachineDisplayName != "Existing Machine" {
+		t.Fatalf("expected existing machine display name, got %q", data.General.MachineDisplayName)
+	}
+	if data.General.ThemeMode != "light" {
+		t.Fatalf("expected backfilled light theme mode, got %q", data.General.ThemeMode)
 	}
 }
 

@@ -1,11 +1,5 @@
 import type { CalendarDayDetail } from '@/data/mockCalendar';
-
-function formatMinutes(totalMinutes: number) {
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
+import { formatDurationMinutes } from '@/lib/time-format';
 
 export function DayMachines({ detail }: { detail: CalendarDayDetail }) {
   return (
@@ -21,7 +15,7 @@ export function DayMachines({ detail }: { detail: CalendarDayDetail }) {
                 <p className="text-sm font-medium text-[var(--ink-strong)]">{machine.name}</p>
                 <p className="text-xs text-[var(--ink-tertiary)]">{machine.os}</p>
               </div>
-              <p className="font-numeric text-xs text-[var(--ink-secondary)]">{formatMinutes(machine.minutes)}</p>
+              <p className="font-numeric text-xs text-[var(--ink-secondary)]">{formatDurationMinutes(machine.minutes, 'short')}</p>
             </div>
           ))
         )}

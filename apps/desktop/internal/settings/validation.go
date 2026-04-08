@@ -11,8 +11,13 @@ func validateGeneral(input contracts.GeneralSettings) (contracts.GeneralSettings
 	input.MachineDisplayName = strings.TrimSpace(input.MachineDisplayName)
 	input.DefaultDateRange = strings.TrimSpace(strings.ToLower(input.DefaultDateRange))
 	input.TimeFormat = strings.TrimSpace(strings.ToLower(input.TimeFormat))
+	input.ThemeMode = strings.TrimSpace(strings.ToLower(input.ThemeMode))
 	input.WeekStartsOn = strings.TrimSpace(strings.ToLower(input.WeekStartsOn))
 	input.PreferredLandingPage = strings.TrimSpace(strings.ToLower(input.PreferredLandingPage))
+
+	if input.ThemeMode == "" {
+		input.ThemeMode = "light"
+	}
 
 	if input.MachineDisplayName == "" {
 		return contracts.GeneralSettings{}, fmt.Errorf("machineDisplayName is required")
@@ -21,6 +26,11 @@ func validateGeneral(input contracts.GeneralSettings) (contracts.GeneralSettings
 	case "12h", "24h":
 	default:
 		return contracts.GeneralSettings{}, fmt.Errorf("timeFormat must be 12h or 24h")
+	}
+	switch input.ThemeMode {
+	case "light", "dark", "system":
+	default:
+		return contracts.GeneralSettings{}, fmt.Errorf("themeMode must be light, dark, or system")
 	}
 	switch input.WeekStartsOn {
 	case "monday", "sunday":

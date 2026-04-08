@@ -48,7 +48,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
         onClick={() => setOpen((v) => !v)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-black/8 bg-[var(--glass-light)] px-3 py-1.5 text-xs font-medium text-[var(--ink-strong-alt)] shadow-[var(--shadow-glass)] backdrop-blur-[20px]"
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light)] px-3 py-1.5 text-xs font-medium text-[var(--ink-strong-alt)] shadow-[var(--shadow-glass)] backdrop-blur-[20px]"
       >
         <span>{label}</span>
         <motion.svg
@@ -62,7 +62,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
           strokeLinejoin="round"
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className="text-black/45"
+          className="text-[var(--ink-tertiary)]"
         >
           <path d="M6 9l6 6 6-6" />
         </motion.svg>
@@ -75,7 +75,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] rounded-xl border border-black/8 bg-[var(--glass-light-strong)] p-1 shadow-[var(--shadow-layered)] backdrop-blur-[20px]"
+            className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] rounded-xl border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light-strong)] p-1 shadow-[var(--shadow-layered)] backdrop-blur-[20px]"
           >
             {items.map((item) => (
               <motion.button
@@ -89,7 +89,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 className={cn(
-                  'flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-black/5',
+                  'flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-subtle)]',
                   item.destructive ? 'text-red-500' : 'text-[var(--ink-strong-alt)]',
                 )}
               >

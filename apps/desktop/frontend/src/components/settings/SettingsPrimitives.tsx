@@ -62,7 +62,7 @@ export function SettingsInput(props: React.InputHTMLAttributes<HTMLInputElement>
     <input
       {...props}
       className={cn(
-        'h-10 w-full min-w-[220px] max-w-sm rounded-[10px] border border-black/8 bg-[var(--glass-light)] px-3 text-sm text-[var(--ink-strong-alt)] outline-none shadow-[var(--shadow-glass)]',
+        'h-10 w-full min-w-[220px] max-w-sm rounded-[10px] border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light)] px-3 text-sm text-[var(--ink-strong-alt)] outline-none shadow-[var(--shadow-glass)]',
         'placeholder:text-[var(--ink-tertiary)] focus:border-[var(--ink-accent)]',
         props.className,
       )}
@@ -78,7 +78,7 @@ export function SettingsSelect(
     <select
       {...rest}
       className={cn(
-        'h-10 w-full min-w-[220px] max-w-sm rounded-[10px] border border-black/8 bg-[var(--glass-light)] px-3 text-sm text-[var(--ink-strong-alt)] outline-none shadow-[var(--shadow-glass)]',
+        'h-10 w-full min-w-[220px] max-w-sm rounded-[10px] border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light)] px-3 text-sm text-[var(--ink-strong-alt)] outline-none shadow-[var(--shadow-glass)]',
         'focus:border-[var(--ink-accent)]',
         className,
       )}
@@ -116,7 +116,7 @@ export function SettingsToggle({
         'inline-flex  items-center justify-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
         checked
           ? 'border-transparent bg-secondary text-secondary-foreground'
-          : 'border-black/10 bg-[var(--surface-chip)] text-[var(--ink-accent)]',
+          : 'border-[hsl(var(--border)/0.7)] bg-[var(--surface-chip)] text-[var(--ink-accent)]',
         disabled ? 'cursor-not-allowed opacity-50' : '',
       )}
     >
@@ -200,7 +200,7 @@ export function SettingsStatusPanel({
 
 export function ResetButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="outline" size="sm" className="rounded-full! border-black/10" onClick={onClick}>
+    <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" onClick={onClick}>
       Reset
     </Button>
   );

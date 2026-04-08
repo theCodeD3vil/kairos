@@ -535,6 +535,7 @@ export namespace contracts {
 	    machineDisplayName: string;
 	    defaultDateRange: string;
 	    timeFormat: string;
+	    themeMode: string;
 	    weekStartsOn: string;
 	    preferredLandingPage: string;
 	
@@ -547,6 +548,7 @@ export namespace contracts {
 	        this.machineDisplayName = source["machineDisplayName"];
 	        this.defaultDateRange = source["defaultDateRange"];
 	        this.timeFormat = source["timeFormat"];
+	        this.themeMode = source["themeMode"];
 	        this.weekStartsOn = source["weekStartsOn"];
 	        this.preferredLandingPage = source["preferredLandingPage"];
 	    }

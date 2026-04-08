@@ -9,19 +9,13 @@ import {
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
 };
 
 const areaChartColors = [...overviewChartPalette];
-
-function formatMinutes(minutes: number) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
 
 function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
@@ -135,10 +129,10 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-4">
-        <CodingTimeTodayCard value={formatMinutes(snapshot.todayMinutes)} />
-        <CodingTimeWeekCard value={formatMinutes(snapshot.weekMinutes)} />
+        <CodingTimeTodayCard value={formatDurationMinutes(snapshot.todayMinutes, 'short')} />
+        <CodingTimeWeekCard value={formatDurationMinutes(snapshot.weekMinutes, 'short')} />
         <SessionsCard value={String(snapshot.sessionCount)} />
-        <AvgSessionCard value={formatMinutes(snapshot.averageSessionMinutes)} />
+        <AvgSessionCard value={formatDurationMinutes(snapshot.averageSessionMinutes, 'short')} />
       </div>
 
       <div className="grid gap-3 xl:grid-cols-2">
@@ -151,10 +145,10 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
               categories={['value']}
               colors={areaChartColors}
               height={208}
-              showLegend={false}
               showGridLines
-              valueFormatter={(value) => `${Number(value).toFixed(1)}h`}
-              yAxisWidth={44}
+              valueFormatter={(value) => formatDurationHours(Number(value), 'axis')}
+              tooltipValueFormatter={(value) => formatDurationHours(Number(value), 'long')}
+              seriesLabels={{ value: 'Total Time' }}
             />
           </div>
         </article>
@@ -216,7 +210,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={syncStatus} />
-              <span className="rounded-md border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
+              <span className="rounded-md border border-[hsl(var(--border)/0.7)] px-2 py-0.5 text-xs text-[var(--ink-secondary)]">
                 Bridge {snapshot.syncHealth.bridgeReachable ? 'Reachable' : 'Unreachable'}
               </span>
             </div>
