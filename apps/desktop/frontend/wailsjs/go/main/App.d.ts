@@ -7,6 +7,8 @@ import {storage} from '../models';
 
 export function CheckForDesktopUpdate():Promise<updates.CheckResult>;
 
+export function ClearLocalData():Promise<void>;
+
 export function GetAnalyticsData(arg1:string):Promise<contracts.AnalyticsData>;
 
 export function GetAutostartRegistrationStatus():Promise<main.autostartRegistrationStatus>;

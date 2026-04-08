@@ -343,6 +343,18 @@ func (a *App) CheckForDesktopUpdate() (updates.CheckResult, error) {
 	return a.updateService.CheckForUpdate(a.requestContext()), nil
 }
 
+func (a *App) ClearLocalData() error {
+	if a.initErr != nil {
+		return a.initErr
+	}
+	err := a.sqliteStore.ClearLocalData(a.requestContext())
+	if err == nil {
+		a.emitDataChanged("sessions")
+		a.emitDataChanged("events")
+	}
+	return err
+}
+
 func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {
 	if a.initErr != nil {
 		return contracts.SettingsData{}, a.initErr

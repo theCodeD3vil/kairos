@@ -8,6 +8,18 @@ import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ClearLocalData } from '../../wailsjs/go/main/App';
 import { ExclusionEditor } from '@/components/settings/ExclusionEditor';
 import {
   ResetButton,
@@ -878,9 +890,39 @@ export function SettingsPage() {
               label="Local data"
               actions={
                 <>
-                  <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
-                    Clear Local Data
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-full! border-[var(--destructive)] text-[var(--destructive)] hover:bg-[var(--destructive-muted)] hover:text-[var(--destructive)]">
+                        Clear Local Data
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-[20px]!">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action is <strong>irreversible</strong>. It will permanently delete your local tracking history from the database. Make sure you have exported your data as a backup if you wish to keep a copy.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-full!">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-[var(--destructive)] text-white hover:bg-[var(--destructive)]/90 rounded-full!"
+                          onClick={() => {
+                            void (async () => {
+                              try {
+                                await ClearLocalData();
+                                success('Data Cleared', 'Your local tracking history has been permanently deleted.');
+                              } catch (err: unknown) {
+                                error('Clear Data Failed', err instanceof Error ? err.message : String(err));
+                              }
+                            })();
+                          }}
+                        >
+                          Yes, delete data
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <Button variant="outline" size="sm" className="rounded-full! border-black/10" disabled>
                     Export Data
                   </Button>

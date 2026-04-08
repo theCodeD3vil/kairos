@@ -6,6 +6,10 @@ export function CheckForDesktopUpdate() {
   return window['go']['main']['App']['CheckForDesktopUpdate']();
 }
 
+export function ClearLocalData() {
+  return window['go']['main']['App']['ClearLocalData']();
+}
+
 export function GetAnalyticsData(arg1) {
   return window['go']['main']['App']['GetAnalyticsData'](arg1);
 }

@@ -107,3 +107,32 @@ func (s *Store) Path() string {
 
 	return s.path
 }
+
+func (s *Store) ClearLocalData(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin clear data tx: %w", err)
+	}
+
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM events;`); err != nil {
+		return fmt.Errorf("delete events: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions;`); err != nil {
+		return fmt.Errorf("delete sessions: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit clear data tx: %w", err)
+	}
+
+	// Reclaim space natively after a clear
+	if _, err := s.db.ExecContext(ctx, `VACUUM;`); err != nil {
+		log.Printf("storage: vacuum after clear data failed (non-fatal): %v", err)
+	}
+
+	return nil
+}
