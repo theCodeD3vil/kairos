@@ -12,6 +12,20 @@ Kairos is a local-first coding activity tracker with a desktop app and a VS Code
 
 ## Install
 
+### Linux
+
+Kairos Linux builds are published on GitHub Releases as `.deb` packages.
+Current Linux install validation is on Debian/Ubuntu-based distributions.
+
+1. Open the latest release: `https://github.com/theCodeD3vil/kairos/releases/latest`
+2. Download the Linux `.deb` desktop artifact.
+3. Install the package:
+
+```bash
+sudo dpkg -i kairos-linux-v<version>.deb
+sudo apt-get install -f
+```
+
 ### macOS
 
 ```bash
@@ -62,6 +76,16 @@ If that happens:
 ```bash
 xattr -dr com.apple.quarantine /Applications/Kairos.app
 open /Applications/Kairos.app
+```
+
+### VS Code Extension
+
+Install from VSIX:
+
+```bash
+pnpm install
+pnpm --filter kairos-vscode package:vsix
+code --install-extension apps/vscode-extension/dist/kairos-vscode-<version>.vsix
 ```
 
 ## Privacy

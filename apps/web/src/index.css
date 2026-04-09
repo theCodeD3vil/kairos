@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-title: 'Syne', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-numeric: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --background: 200 20% 95%;
+    --foreground: 210 18% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 18% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 18% 14%;
+    --primary: 188 71% 20%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 64 68% 64%;
+    --secondary-foreground: 188 71% 20%;
+    --muted: 180 9% 92%;
+    --muted-foreground: 210 10% 42%;
+    --accent: 64 68% 64%;
+    --accent-foreground: 188 71% 20%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 180 8% 84%;
+    --input: 180 8% 88%;
+    --ring: 188 71% 20%;
+    --surface-shell: #eceeee;
+    --surface-navbar: #f4f6f5;
+    --surface-chip: #dfe4e2;
+    --surface-chip-hover: #d5dbd8;
+    --ink-strong: #1d2428;
+    --ink-secondary: #566568;
+    --ink-muted: #607073;
+    --surface-accent: #cde367;
+    --shadow-layered: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.06);
+    --glass-light: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.62));
+    --radius: 0.9rem;
+    color-scheme: light;
+  }
+
+  [data-theme='dark'] {
+    --background: 222 22% 8%;
+    --foreground: 210 20% 92%;
+    --card: 220 20% 11%;
+    --card-foreground: 210 20% 92%;
+    --popover: 220 20% 11%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 188 68% 56%;
+    --primary-foreground: 210 20% 8%;
+    --secondary: 64 64% 56%;
+    --secondary-foreground: 210 20% 8%;
+    --muted: 220 12% 18%;
+    --muted-foreground: 214 13% 72%;
+    --accent: 64 64% 56%;
+    --accent-foreground: 210 20% 8%;
+    --destructive: 0 74% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 13% 28%;
+    --input: 217 13% 26%;
+    --ring: 188 68% 56%;
+    --surface-shell: #0b1015;
+    --surface-navbar: #121820;
+    --surface-chip: #1b2731;
+    --surface-chip-hover: #233240;
+    --ink-strong: #e9eef2;
+    --ink-secondary: #b9c5cd;
+    --ink-muted: #8e9da8;
+    --surface-accent: #7f9743;
+    --shadow-layered: 0 10px 34px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.08);
+    --glass-light: linear-gradient(180deg, rgba(30, 38, 47, 0.86), rgba(23, 30, 38, 0.78));
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply min-h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+    background-color: hsl(var(--background));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-title);
+    letter-spacing: -0.01em;
+  }
+
+  .font-numeric {
+    font-family: var(--font-numeric);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .subtle-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.14) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.14) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
