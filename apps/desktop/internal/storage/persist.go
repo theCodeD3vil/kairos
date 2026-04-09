@@ -9,8 +9,14 @@ import (
 )
 
 type PersistResult struct {
+	EventOutcomes  []EventPersistOutcome
 	InsertedEvents []contracts.ActivityEvent
 	Warnings       []string
+}
+
+type EventPersistOutcome struct {
+	Event    contracts.ActivityEvent
+	Inserted bool
 }
 
 func (s *Store) PersistIngestionBatch(
@@ -28,10 +34,11 @@ func (s *Store) PersistIngestionBatch(
 		_ = tx.Rollback()
 	}()
 
-	insertedEvents, warnings, err := insertEventsTx(ctx, tx, events, ingestedAt)
+	eventOutcomes, warnings, err := insertEventsTx(ctx, tx, events, ingestedAt)
 	if err != nil {
 		return PersistResult{}, err
 	}
+	insertedEvents := insertedEventsFromOutcomes(eventOutcomes)
 	if err := upsertMachineTx(ctx, tx, machine, ingestedAt); err != nil {
 		return PersistResult{}, err
 	}
@@ -43,6 +50,7 @@ func (s *Store) PersistIngestionBatch(
 	}
 
 	return PersistResult{
+		EventOutcomes:  eventOutcomes,
 		InsertedEvents: insertedEvents,
 		Warnings:       warnings,
 	}, nil
@@ -75,7 +83,7 @@ func (s *Store) PersistEmptyIngestionHeartbeat(
 	return nil
 }
 
-func insertEventsTx(ctx context.Context, tx *sql.Tx, events []contracts.ActivityEvent, ingestedAt string) ([]contracts.ActivityEvent, []string, error) {
+func insertEventsTx(ctx context.Context, tx *sql.Tx, events []contracts.ActivityEvent, ingestedAt string) ([]EventPersistOutcome, []string, error) {
 	if len(events) == 0 {
 		return nil, nil, nil
 	}
@@ -90,7 +98,7 @@ func insertEventsTx(ctx context.Context, tx *sql.Tx, events []contracts.Activity
 	}
 	defer stmt.Close()
 
-	inserted := make([]contracts.ActivityEvent, 0, len(events))
+	outcomes := make([]EventPersistOutcome, 0, len(events))
 	warnings := make([]string, 0)
 	for _, event := range events {
 		result, err := stmt.ExecContext(
@@ -115,14 +123,21 @@ func insertEventsTx(ctx context.Context, tx *sql.Tx, events []contracts.Activity
 			return nil, nil, fmt.Errorf("read rows affected for event %s: %w", event.ID, err)
 		}
 		if rowsAffected == 0 {
+			outcomes = append(outcomes, EventPersistOutcome{
+				Event:    event,
+				Inserted: false,
+			})
 			warnings = append(warnings, fmt.Sprintf("duplicate event id %q ignored", event.ID))
 			continue
 		}
 
-		inserted = append(inserted, event)
+		outcomes = append(outcomes, EventPersistOutcome{
+			Event:    event,
+			Inserted: true,
+		})
 	}
 
-	return inserted, warnings, nil
+	return outcomes, warnings, nil
 }
 
 func upsertMachineTx(ctx context.Context, tx *sql.Tx, machine contracts.MachineInfo, lastSeenAt string) error {
@@ -168,6 +183,18 @@ func upsertMachineTx(ctx context.Context, tx *sql.Tx, machine contracts.MachineI
 	}
 
 	return nil
+}
+
+func insertedEventsFromOutcomes(outcomes []EventPersistOutcome) []contracts.ActivityEvent {
+	inserted := make([]contracts.ActivityEvent, 0, len(outcomes))
+	for _, outcome := range outcomes {
+		if !outcome.Inserted {
+			continue
+		}
+		inserted = append(inserted, outcome.Event)
+	}
+
+	return inserted
 }
 
 func upsertExtensionStatusTx(ctx context.Context, tx *sql.Tx, status contracts.ExtensionStatus, updatedAt string) error {

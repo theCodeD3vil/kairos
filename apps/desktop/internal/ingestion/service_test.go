@@ -31,6 +31,108 @@ func TestIngestEventsAcceptsValidBatch(t *testing.T) {
 	if response.RejectedCount != 0 {
 		t.Fatalf("expected 0 rejected events, got %d", response.RejectedCount)
 	}
+	if len(response.Results) != len(request.Events) {
+		t.Fatalf("expected per-event results for all events, got %d", len(response.Results))
+	}
+	for _, result := range response.Results {
+		if result.Status != contracts.IngestEventStatusAccepted {
+			t.Fatalf("expected accepted result status, got %+v", result)
+		}
+	}
+}
+
+func TestIngestEventsPerEventResultsIncludeAcceptedDuplicateAndPermanentReject(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Events = []contracts.ActivityEvent{
+		{
+			ID:          "evt-1",
+			Timestamp:   "2026-04-05T09:00:00Z",
+			EventType:   "edit",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		},
+		{
+			ID:          "evt-1",
+			Timestamp:   "2026-04-05T09:01:00Z",
+			EventType:   "edit",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		},
+		{
+			ID:          "evt-3",
+			Timestamp:   "not-a-timestamp",
+			EventType:   "edit",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		},
+	}
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if response.AcceptedCount != 1 {
+		t.Fatalf("expected 1 accepted event, got %d", response.AcceptedCount)
+	}
+	if response.RejectedCount != 2 {
+		t.Fatalf("expected 2 rejected events, got %d", response.RejectedCount)
+	}
+	if len(response.Results) != 3 {
+		t.Fatalf("expected 3 per-event results, got %d", len(response.Results))
+	}
+
+	if response.Results[0].EventID != "evt-1" || response.Results[0].Status != contracts.IngestEventStatusAccepted || response.Results[0].Code != "persisted" {
+		t.Fatalf("unexpected first result: %+v", response.Results[0])
+	}
+	if response.Results[1].EventID != "evt-1" || response.Results[1].Status != contracts.IngestEventStatusDuplicate || response.Results[1].Code != "duplicate_event_id" {
+		t.Fatalf("unexpected second result: %+v", response.Results[1])
+	}
+	if response.Results[2].EventID != "evt-3" || response.Results[2].Status != contracts.IngestEventStatusRejectedPermanent || response.Results[2].Code != "invalid_event" {
+		t.Fatalf("unexpected third result: %+v", response.Results[2])
+	}
+}
+
+func TestIngestEventsPartialBatchResultsPreserveInputOrdering(t *testing.T) {
+	service := newTestService(t)
+	request := validRequest()
+	request.Events = []contracts.ActivityEvent{
+		request.Events[0],
+		{
+			ID:          "evt-bad",
+			Timestamp:   "bad",
+			EventType:   "edit",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		},
+		request.Events[1],
+	}
+
+	response, err := service.IngestEvents(context.Background(), request)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if len(response.Results) != 3 {
+		t.Fatalf("expected 3 per-event results, got %d", len(response.Results))
+	}
+	if response.Results[0].EventID != request.Events[0].ID || response.Results[0].Status != contracts.IngestEventStatusAccepted {
+		t.Fatalf("unexpected first result ordering: %+v", response.Results[0])
+	}
+	if response.Results[1].EventID != request.Events[1].ID || response.Results[1].Status != contracts.IngestEventStatusRejectedPermanent {
+		t.Fatalf("unexpected second result ordering: %+v", response.Results[1])
+	}
+	if response.Results[2].EventID != request.Events[2].ID || response.Results[2].Status != contracts.IngestEventStatusAccepted {
+		t.Fatalf("unexpected third result ordering: %+v", response.Results[2])
+	}
 }
 
 func TestIngestEventsPartiallyRejectsInvalidBatch(t *testing.T) {
@@ -303,6 +405,11 @@ func TestTrackingDisabledRejectsProcessing(t *testing.T) {
 	if response.AcceptedCount != 0 || response.RejectedCount != 2 {
 		t.Fatalf("expected tracking-disabled batch to reject processing, got %+v", response)
 	}
+	for _, result := range response.Results {
+		if result.Status != contracts.IngestEventStatusRejectedPermanent || result.Code != "tracking_disabled" {
+			t.Fatalf("expected tracking-disabled permanent rejects, got %+v", result)
+		}
+	}
 
 	stats, err := service.GetIngestionStats(context.Background())
 	if err != nil {
@@ -310,6 +417,57 @@ func TestTrackingDisabledRejectsProcessing(t *testing.T) {
 	}
 	if stats.TotalAcceptedEvents != 0 {
 		t.Fatalf("expected no accepted persisted events, got %d", stats.TotalAcceptedEvents)
+	}
+}
+
+func TestHandshakeExtensionIncludesProtocolMetadata(t *testing.T) {
+	service := newTestService(t)
+	request := contracts.ExtensionHandshakeRequest{
+		Machine: contracts.MachineInfo{
+			MachineID:   "machine-1",
+			MachineName: "Kairos Mac",
+			OSPlatform:  "darwin",
+		},
+		Extension: contracts.ExtensionInfo{
+			Editor:           "vscode",
+			EditorVersion:    "1.99.0",
+			ExtensionVersion: "0.1.0",
+		},
+	}
+
+	response, err := service.HandshakeExtension(context.Background(), request)
+	if err != nil {
+		t.Fatalf("handshake failed: %v", err)
+	}
+	if response.DesktopInstanceID == "" {
+		t.Fatal("expected desktop instance id in handshake response")
+	}
+	if response.ProtocolVersion != 2 {
+		t.Fatalf("expected protocol version 2, got %d", response.ProtocolVersion)
+	}
+	if !response.Capabilities.PerEventIngestionResults || !response.Capabilities.SettingsSnapshotMirror {
+		t.Fatalf("expected handshake capabilities, got %+v", response.Capabilities)
+	}
+	if response.Limits.MaxBatchEvents != config.MaxEventsPerBatch {
+		t.Fatalf("expected max batch events %d, got %d", config.MaxEventsPerBatch, response.Limits.MaxBatchEvents)
+	}
+	if response.Limits.MaxRequestBytes != config.MaxRequestBodyBytes {
+		t.Fatalf("expected max request bytes %d, got %d", config.MaxRequestBodyBytes, response.Limits.MaxRequestBytes)
+	}
+	if response.SettingsVersion == "" {
+		t.Fatal("expected non-empty settings version")
+	}
+	if response.SettingsUpdatedAt != "1970-01-01T00:00:00Z" {
+		t.Fatalf("expected fallback settings updated at, got %q", response.SettingsUpdatedAt)
+	}
+
+	// Instance id should be stable across handshakes.
+	second, err := service.HandshakeExtension(context.Background(), request)
+	if err != nil {
+		t.Fatalf("second handshake failed: %v", err)
+	}
+	if second.DesktopInstanceID != response.DesktopInstanceID {
+		t.Fatalf("expected stable desktop instance id, got %q and %q", response.DesktopInstanceID, second.DesktopInstanceID)
 	}
 }
 

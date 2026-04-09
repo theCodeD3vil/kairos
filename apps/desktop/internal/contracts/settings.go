@@ -83,8 +83,24 @@ type ExtensionHandshakeRequest struct {
 }
 
 type ExtensionHandshakeResponse struct {
-	Settings        ExtensionEffectiveSettings `json:"settings"`
-	ServerTimestamp string                     `json:"serverTimestamp"`
+	DesktopInstanceID string                     `json:"desktopInstanceId"`
+	ProtocolVersion   int                        `json:"protocolVersion"`
+	Capabilities      ExtensionCapabilities      `json:"capabilities"`
+	Limits            ExtensionProtocolLimits    `json:"limits"`
+	Settings          ExtensionEffectiveSettings `json:"settings"`
+	SettingsVersion   string                     `json:"settingsVersion"`
+	SettingsUpdatedAt string                     `json:"settingsUpdatedAt"`
+	ServerTimestamp   string                     `json:"serverTimestamp"`
+}
+
+type ExtensionCapabilities struct {
+	PerEventIngestionResults bool `json:"perEventIngestionResults"`
+	SettingsSnapshotMirror   bool `json:"settingsSnapshotMirror"`
+}
+
+type ExtensionProtocolLimits struct {
+	MaxBatchEvents  int   `json:"maxBatchEvents"`
+	MaxRequestBytes int64 `json:"maxRequestBytes"`
 }
 
 type ExtensionStatus struct {

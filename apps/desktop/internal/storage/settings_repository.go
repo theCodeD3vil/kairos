@@ -75,3 +75,10 @@ func (s *Store) ListSettingsSections(ctx context.Context) ([]string, error) {
 
 	return sections, nil
 }
+
+func (s *Store) GetLatestSettingsUpdatedAt(ctx context.Context) (string, error) {
+	return nullableStringQuery(ctx, s.db, `
+		SELECT MAX(updated_at)
+		FROM settings_sections
+	`)
+}

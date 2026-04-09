@@ -14,15 +14,15 @@ func TestMigrationsRunOnFreshDatabase(t *testing.T) {
 
 	if count, err := countQuery(context.Background(), store.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 4 {
-		t.Fatalf("expected 4 migrations, got %d", count)
+	} else if count != 5 {
+		t.Fatalf("expected 5 migrations, got %d", count)
 	}
 
 	status, err := store.GetMigrationStatus(context.Background())
 	if err != nil {
 		t.Fatalf("get migration status: %v", err)
 	}
-	if status.CurrentVersion != "004_settings.sql" {
+	if status.CurrentVersion != "005_desktop_metadata.sql" {
 		t.Fatalf("expected latest migration version, got %q", status.CurrentVersion)
 	}
 }
@@ -47,8 +47,8 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 
 	if count, err := countQuery(ctx, second.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 4 {
-		t.Fatalf("expected 4 migration records after rerun, got %d", count)
+	} else if count != 5 {
+		t.Fatalf("expected 5 migration records after rerun, got %d", count)
 	}
 }
 
@@ -270,6 +270,55 @@ func TestSettingsRepositoryCRUDWorks(t *testing.T) {
 		t.Fatalf("get deleted section failed: %v", err)
 	} else if found {
 		t.Fatal("expected deleted section to be absent")
+	}
+}
+
+func TestGetOrCreateDesktopInstanceIDIsStable(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	first, err := store.GetOrCreateDesktopInstanceID(ctx)
+	if err != nil {
+		t.Fatalf("get or create desktop instance id failed: %v", err)
+	}
+	if first == "" {
+		t.Fatal("expected non-empty desktop instance id")
+	}
+
+	second, err := store.GetOrCreateDesktopInstanceID(ctx)
+	if err != nil {
+		t.Fatalf("second get or create desktop instance id failed: %v", err)
+	}
+	if second != first {
+		t.Fatalf("expected stable desktop instance id, got %q and %q", first, second)
+	}
+}
+
+func TestGetLatestSettingsUpdatedAtHandlesEmptyAndFilledState(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	empty, err := store.GetLatestSettingsUpdatedAt(ctx)
+	if err != nil {
+		t.Fatalf("get latest settings updated at on empty store failed: %v", err)
+	}
+	if empty != "" {
+		t.Fatalf("expected empty updated_at for empty settings sections, got %q", empty)
+	}
+
+	if err := store.SetSettingsSection(ctx, "general", `{"machineDisplayName":"Kairos"}`, "2026-04-07T12:00:00Z"); err != nil {
+		t.Fatalf("set general settings section failed: %v", err)
+	}
+	if err := store.SetSettingsSection(ctx, "tracking", `{"trackingEnabled":true}`, "2026-04-07T12:30:00Z"); err != nil {
+		t.Fatalf("set tracking settings section failed: %v", err)
+	}
+
+	latest, err := store.GetLatestSettingsUpdatedAt(ctx)
+	if err != nil {
+		t.Fatalf("get latest settings updated at failed: %v", err)
+	}
+	if latest != "2026-04-07T12:30:00Z" {
+		t.Fatalf("expected latest updated_at to be 2026-04-07T12:30:00Z, got %q", latest)
 	}
 }
 

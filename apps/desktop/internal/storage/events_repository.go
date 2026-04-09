@@ -18,10 +18,11 @@ func (s *Store) InsertEvents(ctx context.Context, events []contracts.ActivityEve
 		_ = tx.Rollback()
 	}()
 
-	inserted, warnings, err := insertEventsTx(ctx, tx, events, ingestedAt)
+	outcomes, warnings, err := insertEventsTx(ctx, tx, events, ingestedAt)
 	if err != nil {
 		return nil, nil, err
 	}
+	inserted := insertedEventsFromOutcomes(outcomes)
 
 	if err := tx.Commit(); err != nil {
 		return nil, nil, fmt.Errorf("commit insert events: %w", err)

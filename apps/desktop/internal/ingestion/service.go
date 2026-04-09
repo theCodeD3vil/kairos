@@ -2,6 +2,9 @@ package ingestion
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -13,6 +16,18 @@ import (
 	"github.com/michaelnji/kairos/apps/desktop/internal/config"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
+)
+
+const (
+	extensionProtocolVersion                = 2
+	defaultSettingsUpdatedAt                = "1970-01-01T00:00:00Z"
+	ingestResultCodePersisted               = "persisted"
+	ingestResultCodeDuplicateEventID        = "duplicate_event_id"
+	ingestResultCodeInvalidEvent            = "invalid_event"
+	ingestResultCodeTrackingDisabled        = "tracking_disabled"
+	ingestResultCodeEventTypeDisabled       = "event_type_disabled"
+	ingestResultCodeExcludedBySettings      = "excluded_by_settings"
+	ingestResultCodeRejectedByDesktopPolicy = "rejected_by_desktop_policy"
 )
 
 type Service interface {
@@ -75,13 +90,22 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 	}
 
 	accepted := make([]contracts.ActivityEvent, 0, len(request.Events))
+	acceptedResultIndices := make([]int, 0, len(request.Events))
+	results := make([]contracts.IngestEventResult, 0, len(request.Events))
 	warnings := append([]string{}, machineWarnings...)
 	warnings = append(warnings, extensionWarnings...)
 
 	for index, rawEvent := range request.Events {
 		event, eventWarnings, err := validateEvent(rawEvent, machine.MachineID)
 		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("event[%d]: %s", index, err.Error()))
+			message := err.Error()
+			warnings = append(warnings, fmt.Sprintf("event[%d]: %s", index, message))
+			results = append(results, contracts.IngestEventResult{
+				EventID: strings.TrimSpace(rawEvent.ID),
+				Status:  contracts.IngestEventStatusRejectedPermanent,
+				Code:    ingestResultCodeInvalidEvent,
+				Message: message,
+			})
 			continue
 		}
 
@@ -89,15 +113,39 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 			warnings = append(warnings, fmt.Sprintf("event[%d]: %s", index, warning))
 		}
 
-		event, runtimeWarnings, shouldAccept := applyRuntimeSettings(event, machine, settingsData)
+		event, runtimeWarnings, shouldAccept, runtimeRejectCode := applyRuntimeSettings(event, machine, settingsData)
 		for _, warning := range runtimeWarnings {
 			warnings = append(warnings, fmt.Sprintf("event[%d]: %s", index, warning))
 		}
-		if !settingsData.Tracking.TrackingEnabled || !shouldAccept {
+		if !settingsData.Tracking.TrackingEnabled {
+			results = append(results, contracts.IngestEventResult{
+				EventID: event.ID,
+				Status:  contracts.IngestEventStatusRejectedPermanent,
+				Code:    ingestResultCodeTrackingDisabled,
+				Message: "tracking is disabled by desktop settings",
+			})
+			continue
+		}
+		if !shouldAccept {
+			if runtimeRejectCode == "" {
+				runtimeRejectCode = ingestResultCodeRejectedByDesktopPolicy
+			}
+			results = append(results, contracts.IngestEventResult{
+				EventID: event.ID,
+				Status:  contracts.IngestEventStatusRejectedPermanent,
+				Code:    runtimeRejectCode,
+				Message: firstNonEmpty(runtimeWarnings...),
+			})
 			continue
 		}
 
 		accepted = append(accepted, event)
+		acceptedResultIndices = append(acceptedResultIndices, len(results))
+		results = append(results, contracts.IngestEventResult{
+			EventID: event.ID,
+			Status:  contracts.IngestEventStatusAccepted,
+			Code:    ingestResultCodePersisted,
+		})
 	}
 
 	if !settingsData.Tracking.TrackingEnabled {
@@ -115,6 +163,10 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 		)
 		if err != nil {
 			log.Printf("ingestion: persist batch failed: %v", err)
+			return contracts.IngestEventsResponse{}, err
+		}
+		if err := applyPersistenceOutcomes(results, acceptedResultIndices, persistResult.EventOutcomes); err != nil {
+			log.Printf("ingestion: classify persistence outcomes failed: %v", err)
 			return contracts.IngestEventsResponse{}, err
 		}
 		persisted = persistResult.InsertedEvents
@@ -151,6 +203,7 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 	response := contracts.IngestEventsResponse{
 		AcceptedCount:   len(persisted),
 		RejectedCount:   rejectedCount,
+		Results:         results,
 		ServerTimestamp: serverTime,
 	}
 	if len(warnings) > 0 {
@@ -221,10 +274,39 @@ func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.
 	if err != nil {
 		return contracts.ExtensionHandshakeResponse{}, err
 	}
+	settingsVersion, err := hashSettingsPayload(settingsPayload)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+
+	settingsUpdatedAt, err := s.store.GetLatestSettingsUpdatedAt(ctx)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
+	if settingsUpdatedAt == "" {
+		settingsUpdatedAt = defaultSettingsUpdatedAt
+	}
+
+	desktopInstanceID, err := s.store.GetOrCreateDesktopInstanceID(ctx)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
 
 	return contracts.ExtensionHandshakeResponse{
-		Settings:        settingsPayload,
-		ServerTimestamp: serverTime,
+		DesktopInstanceID: desktopInstanceID,
+		ProtocolVersion:   extensionProtocolVersion,
+		Capabilities: contracts.ExtensionCapabilities{
+			PerEventIngestionResults: true,
+			SettingsSnapshotMirror:   true,
+		},
+		Limits: contracts.ExtensionProtocolLimits{
+			MaxBatchEvents:  config.MaxEventsPerBatch,
+			MaxRequestBytes: config.MaxRequestBodyBytes,
+		},
+		Settings:          settingsPayload,
+		SettingsVersion:   settingsVersion,
+		SettingsUpdatedAt: settingsUpdatedAt,
+		ServerTimestamp:   serverTime,
 	}, nil
 }
 
@@ -356,26 +438,26 @@ func validateEvent(event contracts.ActivityEvent, requestMachineID string) (cont
 	return clean, warnings, nil
 }
 
-func applyRuntimeSettings(event contracts.ActivityEvent, machine contracts.MachineInfo, settingsData contracts.SettingsData) (contracts.ActivityEvent, []string, bool) {
+func applyRuntimeSettings(event contracts.ActivityEvent, machine contracts.MachineInfo, settingsData contracts.SettingsData) (contracts.ActivityEvent, []string, bool, string) {
 	warnings := make([]string, 0)
 
 	if isExcludedEvent(event, machine, settingsData.Exclusions) {
 		warnings = append(warnings, "excluded by desktop settings")
-		return contracts.ActivityEvent{}, warnings, false
+		return contracts.ActivityEvent{}, warnings, false, ingestResultCodeExcludedBySettings
 	}
 
 	switch event.EventType {
 	case "open":
 		if !settingsData.Extension.TrackFileOpenEvents {
-			return contracts.ActivityEvent{}, warnings, false
+			return contracts.ActivityEvent{}, warnings, false, ingestResultCodeEventTypeDisabled
 		}
 	case "save":
 		if !settingsData.Extension.TrackSaveEvents {
-			return contracts.ActivityEvent{}, warnings, false
+			return contracts.ActivityEvent{}, warnings, false, ingestResultCodeEventTypeDisabled
 		}
 	case "edit":
 		if !settingsData.Extension.TrackEditEvents {
-			return contracts.ActivityEvent{}, warnings, false
+			return contracts.ActivityEvent{}, warnings, false, ingestResultCodeEventTypeDisabled
 		}
 	}
 
@@ -412,7 +494,7 @@ func applyRuntimeSettings(event contracts.ActivityEvent, machine contracts.Machi
 		}
 	}
 
-	return event, warnings, true
+	return event, warnings, true, ""
 }
 
 func sanitizeEvent(event contracts.ActivityEvent) contracts.ActivityEvent {
@@ -603,4 +685,54 @@ func clampOptionalString(value string, max int) string {
 		return value
 	}
 	return value[:max]
+}
+
+func applyPersistenceOutcomes(results []contracts.IngestEventResult, acceptedResultIndices []int, outcomes []storage.EventPersistOutcome) error {
+	if len(acceptedResultIndices) != len(outcomes) {
+		return fmt.Errorf("accepted/result mismatch: %d accepted slots vs %d outcomes", len(acceptedResultIndices), len(outcomes))
+	}
+
+	for index, outcome := range outcomes {
+		resultIndex := acceptedResultIndices[index]
+		if resultIndex < 0 || resultIndex >= len(results) {
+			return fmt.Errorf("accepted result index out of range: %d", resultIndex)
+		}
+
+		if outcome.Inserted {
+			results[resultIndex] = contracts.IngestEventResult{
+				EventID: outcome.Event.ID,
+				Status:  contracts.IngestEventStatusAccepted,
+				Code:    ingestResultCodePersisted,
+			}
+			continue
+		}
+
+		results[resultIndex] = contracts.IngestEventResult{
+			EventID: outcome.Event.ID,
+			Status:  contracts.IngestEventStatusDuplicate,
+			Code:    ingestResultCodeDuplicateEventID,
+		}
+	}
+
+	return nil
+}
+
+func hashSettingsPayload(settingsPayload contracts.ExtensionEffectiveSettings) (string, error) {
+	raw, err := json.Marshal(settingsPayload)
+	if err != nil {
+		return "", fmt.Errorf("marshal extension settings payload for hash: %w", err)
+	}
+
+	digest := sha256.Sum256(raw)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+
+	return ""
 }

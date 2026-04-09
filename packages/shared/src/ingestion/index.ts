@@ -3,6 +3,8 @@ export type {
   ActivityEventType,
   ExtensionInfo,
   IngestEventsRequest,
+  IngestEventResult,
+  IngestEventStatus,
   IngestEventsResponse,
   IngestionStats,
   MachineInfo,

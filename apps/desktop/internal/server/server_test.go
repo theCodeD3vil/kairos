@@ -15,12 +15,24 @@ import (
 func TestHandshakeEndpointReturnsSettings(t *testing.T) {
 	service := &stubIngestionService{
 		handshakeResponse: contracts.ExtensionHandshakeResponse{
+			DesktopInstanceID: "desktop-instance-1",
+			ProtocolVersion:   2,
+			Capabilities: contracts.ExtensionCapabilities{
+				PerEventIngestionResults: true,
+				SettingsSnapshotMirror:   true,
+			},
+			Limits: contracts.ExtensionProtocolLimits{
+				MaxBatchEvents:  500,
+				MaxRequestBytes: 1 << 20,
+			},
 			Settings: contracts.ExtensionEffectiveSettings{
 				TrackingEnabled:          true,
 				SendHeartbeatEvents:      true,
 				HeartbeatIntervalSeconds: 30,
 			},
-			ServerTimestamp: "2026-04-06T10:00:00Z",
+			SettingsVersion:   "settings-hash",
+			SettingsUpdatedAt: "2026-04-06T09:59:00Z",
+			ServerTimestamp:   "2026-04-06T10:00:00Z",
 		},
 	}
 
@@ -49,6 +61,23 @@ func TestHandshakeEndpointReturnsSettings(t *testing.T) {
 	}
 	if service.handshakeCalls != 1 {
 		t.Fatalf("expected handshake to be called once, got %d", service.handshakeCalls)
+	}
+
+	var response contracts.ExtensionHandshakeResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode handshake response: %v", err)
+	}
+	if response.DesktopInstanceID == "" || response.ProtocolVersion != 2 {
+		t.Fatalf("expected protocol metadata in handshake response, got %+v", response)
+	}
+	if !response.Capabilities.PerEventIngestionResults || !response.Capabilities.SettingsSnapshotMirror {
+		t.Fatalf("expected handshake capabilities, got %+v", response.Capabilities)
+	}
+	if response.Limits.MaxBatchEvents <= 0 || response.Limits.MaxRequestBytes <= 0 {
+		t.Fatalf("expected handshake limits, got %+v", response.Limits)
+	}
+	if response.SettingsVersion == "" || response.SettingsUpdatedAt == "" {
+		t.Fatalf("expected settings version metadata, got %+v", response)
 	}
 }
 
@@ -83,6 +112,36 @@ func TestIngestionEndpointReturnsInternalServerErrorForUnexpectedFailure(t *test
 
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", recorder.Code)
+	}
+}
+
+func TestHandshakeEndpointRejectsUnknownFields(t *testing.T) {
+	service := &stubIngestionService{}
+
+	body := []byte(`{"machine":{"machineId":"machine-1","machineName":"Kairos","osPlatform":"darwin"},"extension":{"editor":"vscode"},"unknown":"field"}`)
+	request := httptest.NewRequest(http.MethodPost, "/v1/extension/handshake", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	NewHandler(service, DefaultConfig()).ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", recorder.Code)
+	}
+}
+
+func TestIngestionEndpointRejectsUnknownFields(t *testing.T) {
+	service := &stubIngestionService{}
+
+	body := []byte(`{"machine":{"machineId":"machine-1","machineName":"Kairos","osPlatform":"darwin"},"extension":{"editor":"vscode"},"events":[{"id":"evt-1","timestamp":"2026-04-06T10:00:00Z","eventType":"edit","machineId":"machine-1","workspaceId":"workspace","projectName":"kairos","language":"typescript","unknown":"field"}]}`)
+	request := httptest.NewRequest(http.MethodPost, "/v1/ingestion/events", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	NewHandler(service, DefaultConfig()).ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", recorder.Code)
 	}
 }
 

@@ -34,10 +34,27 @@ type IngestEventsRequest struct {
 }
 
 type IngestEventsResponse struct {
-	AcceptedCount   int      `json:"acceptedCount"`
-	RejectedCount   int      `json:"rejectedCount"`
-	Warnings        []string `json:"warnings,omitempty"`
-	ServerTimestamp string   `json:"serverTimestamp"`
+	AcceptedCount   int                 `json:"acceptedCount"`
+	RejectedCount   int                 `json:"rejectedCount"`
+	Warnings        []string            `json:"warnings,omitempty"`
+	Results         []IngestEventResult `json:"results"`
+	ServerTimestamp string              `json:"serverTimestamp"`
+}
+
+type IngestEventStatus string
+
+const (
+	IngestEventStatusAccepted          IngestEventStatus = "accepted"
+	IngestEventStatusDuplicate         IngestEventStatus = "duplicate"
+	IngestEventStatusRejectedTemporary IngestEventStatus = "rejected_temporary"
+	IngestEventStatusRejectedPermanent IngestEventStatus = "rejected_permanent"
+)
+
+type IngestEventResult struct {
+	EventID string            `json:"eventId"`
+	Status  IngestEventStatus `json:"status"`
+	Code    string            `json:"code"`
+	Message string            `json:"message,omitempty"`
 }
 
 type IngestionStats struct {

@@ -81,7 +81,19 @@ async function createDesktopMockServer(): Promise<http.Server> {
       response.statusCode = 200;
       response.setHeader('Content-Type', 'application/json');
       response.end(JSON.stringify({
+        desktopInstanceId: 'desktop-instance-1',
+        protocolVersion: 2,
+        capabilities: {
+          perEventIngestionResults: true,
+          settingsSnapshotMirror: true,
+        },
+        limits: {
+          maxBatchEvents: 500,
+          maxRequestBytes: 1048576,
+        },
         settings: getDefaultEffectiveSettings(),
+        settingsVersion: 'settings-hash',
+        settingsUpdatedAt: new Date().toISOString(),
         serverTimestamp: new Date().toISOString(),
       }));
       return;
@@ -94,6 +106,7 @@ async function createDesktopMockServer(): Promise<http.Server> {
         acceptedCount: 0,
         rejectedCount: 0,
         warnings: [],
+        results: [],
         serverTimestamp: new Date().toISOString(),
       }));
       return;

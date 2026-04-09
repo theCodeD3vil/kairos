@@ -39,7 +39,21 @@ export type IngestEventsResponse = {
   acceptedCount: number;
   rejectedCount: number;
   warnings?: string[];
+  results: IngestEventResult[];
   serverTimestamp: string;
+};
+
+export type IngestEventStatus =
+  | 'accepted'
+  | 'duplicate'
+  | 'rejected_temporary'
+  | 'rejected_permanent';
+
+export type IngestEventResult = {
+  eventId: string;
+  status: IngestEventStatus;
+  code: string;
+  message?: string;
 };
 
 export type IngestionStats = {

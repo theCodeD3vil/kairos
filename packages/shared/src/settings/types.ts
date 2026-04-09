@@ -81,8 +81,24 @@ export type ExtensionHandshakeRequest = {
 };
 
 export type ExtensionHandshakeResponse = {
+  desktopInstanceId: string;
+  protocolVersion: number;
+  capabilities: ExtensionCapabilities;
+  limits: ExtensionProtocolLimits;
   settings: ExtensionEffectiveSettings;
+  settingsVersion: string;
+  settingsUpdatedAt: string;
   serverTimestamp: string;
+};
+
+export type ExtensionCapabilities = {
+  perEventIngestionResults: boolean;
+  settingsSnapshotMirror: boolean;
+};
+
+export type ExtensionProtocolLimits = {
+  maxBatchEvents: number;
+  maxRequestBytes: number;
 };
 
 export type ExtensionStatus = {

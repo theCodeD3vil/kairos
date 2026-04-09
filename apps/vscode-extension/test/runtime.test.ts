@@ -343,7 +343,19 @@ class FakeDesktopClient implements DesktopClient {
     }
 
     return {
+      desktopInstanceId: 'desktop-instance-1',
+      protocolVersion: 2,
+      capabilities: {
+        perEventIngestionResults: true,
+        settingsSnapshotMirror: true,
+      },
+      limits: {
+        maxBatchEvents: 500,
+        maxRequestBytes: 1048576,
+      },
       settings: this.settings,
+      settingsVersion: 'settings-hash',
+      settingsUpdatedAt: '2026-04-06T09:59:00Z',
       serverTimestamp: new Date('2026-04-06T10:00:00Z').toISOString(),
     };
   }
@@ -362,6 +374,11 @@ class FakeDesktopClient implements DesktopClient {
     return {
       acceptedCount: request.events.length,
       rejectedCount: 0,
+      results: request.events.map((event: IngestEventsRequest['events'][number]) => ({
+        eventId: event.id,
+        status: 'accepted' as const,
+        code: 'persisted',
+      })),
       serverTimestamp: new Date('2026-04-06T10:00:00Z').toISOString(),
     };
   }
