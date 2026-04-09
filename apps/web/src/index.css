@@ -83,6 +83,10 @@
     @apply min-h-full;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
@@ -106,6 +110,45 @@
 }
 
 @layer components {
+  .glass-shell {
+    background: var(--glass-light);
+    box-shadow: var(--shadow-layered);
+  }
+
+  .surface-dashed {
+    border: 1px dashed hsl(var(--border) / 0.85);
+    background: hsl(var(--background) / 0.7);
+    border-radius: 0.95rem;
+  }
+
+  .surface-dashed:hover {
+    border-style: solid;
+    border-color: hsl(var(--primary) / 0.65);
+  }
+
+  .dock-link {
+    display: inline-flex;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.875rem;
+    color: var(--ink-secondary);
+    transition: background-color 200ms ease-out, color 200ms ease-out;
+  }
+
+  .dock-link:hover {
+    background: hsl(var(--background) / 0.85);
+    color: var(--ink-strong);
+  }
+
+  .dock-link-active {
+    background: hsl(var(--primary) / 0.22);
+    color: var(--ink-strong);
+  }
+
   .subtle-grid {
     background-image:
       linear-gradient(to right, hsl(var(--border) / 0.14) 1px, transparent 1px),

@@ -39,7 +39,7 @@ describe('App landing page', () => {
     expect(view.textContent).toContain('Install');
     expect(view.textContent).toContain('FAQ');
     expect(view.textContent).toContain('brew install --cask kairos');
-    expect(view.textContent).toContain('code --install-extension apps/vscode-extension/dist/kairos-vscode-<version>.vsix');
+    expect(view.textContent).toContain('code --install-extension kairos-vscode-<version>.vsix');
   });
 
   it('wires primary CTA links from centralized config', () => {
@@ -55,18 +55,21 @@ describe('App landing page', () => {
     const view = renderApp();
     const toggle = view.querySelector('[data-testid="theme-toggle"]') as HTMLButtonElement | null;
 
-    expect(toggle?.textContent).toContain('Theme: System');
+    expect(toggle?.textContent).not.toContain('Theme:');
+    expect(toggle?.getAttribute('title')).toContain('System');
 
     act(() => {
       toggle?.click();
     });
 
-    expect(toggle?.textContent).toContain('Theme: Light');
+    expect(toggle?.getAttribute('title')).toContain('Light');
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull();
 
     act(() => {
       toggle?.click();
     });
 
-    expect(toggle?.textContent).toContain('Theme: Dark');
+    expect(toggle?.getAttribute('title')).toContain('Dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 });

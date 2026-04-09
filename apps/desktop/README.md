@@ -1,101 +1,79 @@
 # Kairos Desktop
 
-Kairos Desktop is the local host for v1. It owns the SQLite database, settings authority, session rebuilds, page-data assembly, and the loopback server used by the VS Code extension.
+Kairos Desktop is the main app for tracking your coding time.
 
-## Run In Development
+## Overview
 
-From the repo root:
+- Tracks coding time automatically.
+- Works offline.
+- Shows your activity in simple daily and weekly views.
+- Connects with the Kairos VS Code extension.
+
+## Install
+
+### macOS
+
+```bash
+brew tap theCodeD3vil/kairos https://github.com/theCodeD3vil/kairos
+brew install --cask kairos
+```
+
+### Linux
+
+1. Open the latest release: `https://github.com/theCodeD3vil/kairos/releases/latest`
+2. Download the `.deb` file
+3. Install it:
+
+```bash
+sudo dpkg -i kairos-linux-v<version>.deb
+sudo apt-get install -f
+```
+
+## Use
+
+1. Open Kairos Desktop.
+2. Install the Kairos VS Code extension.
+3. Keep desktop running while you code.
+4. Review your activity in Kairos.
+
+## Privacy
+
+- Your data stays on your computer.
+- No cloud sync in v1.
+
+## Troubleshooting
+
+- If VS Code looks disconnected, open the extension command palette and reconnect.
+- If macOS blocks first launch, open `System Settings > Privacy & Security` and click `Open Anyway`.
+
+## Current Limitations
+
+- No cloud sync yet
+- No export reports yet
+- No multi-user profiles yet
+
+## For Contributors
+
+### Run
+
+From repo root:
 
 ```bash
 make desktop-dev
 ```
 
-Or from this directory:
+Or from this folder:
 
 ```bash
 wails dev
 ```
 
-The desktop frontend dev server runs through Vite and the Go backend runs through Wails.
+### Build
 
-## Backend Initialization
-
-Startup order is:
-
-1. open SQLite
-2. run migrations
-3. initialize settings service
-4. initialize ingestion, sessionization, and view services
-5. start the local extension server
-6. start Wails
-
-If SQLite or migrations fail, startup fails fast before the frontend binds to the backend.
-
-## Local Storage
-
-Default database path:
-
-- macOS/Linux/Windows config directory under `Kairos/kairos.sqlite3`
-
-Development/test overrides:
-
-- `KAIROS_DATABASE_PATH`
-- `KAIROS_LOCAL_SERVER_HOST`
-- `KAIROS_LOCAL_SERVER_PORT`
-
-The local extension server binds to `127.0.0.1` by default.
-
-## Data Flow
-
-1. The VS Code extension handshakes with the local desktop server.
-2. The desktop app returns effective extension settings owned by the desktop settings service.
-3. The extension sends raw activity batches.
-4. The desktop backend validates and persists raw events, machines, and extension status.
-5. Session rebuilds derive persisted sessions from raw events.
-6. View services assemble real page payloads for the desktop frontend.
-
-## Build
-
-Repo root:
+From repo root:
 
 ```bash
 make desktop-release-check
 make desktop-release-build
 make desktop-release-artifacts KAIROS_VERSION=$(cat VERSION)
 ```
-
-`make desktop-release-build` isolates packaging from live local state by overriding:
-
-- `KAIROS_DATABASE_PATH` to a build-local SQLite file
-- `KAIROS_LOCAL_SERVER_PORT=0` to avoid loopback port collisions during `wails build`
-
-Direct Wails build:
-
-```bash
-wails build
-```
-
-Release metadata for desktop builds is injected with `-ldflags` in release workflows and exposed in Settings → About.
-
-Update behavior in v1:
-
-- checks GitHub Releases metadata
-- compares current vs latest version
-- surfaces availability in Settings → About
-- opens release download page for manual install
-- does not auto-replace binaries in-place
-
-## V1 Implemented
-
-- Overview, Sessions, Analytics, Calendar, and Settings pages backed by real backend data
-- persisted settings with desktop-owned defaults
-- extension status, machine tracking, and ingestion stats
-- deterministic session rebuilds from persisted raw events
-
-## V1 Deferred
-
-- cloud sync
-- reports/export flows
-- destructive storage actions from the Settings page
-- dedicated projects page
-- advanced caching/materialized summaries
