@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,16 +15,50 @@ func TestMigrationsRunOnFreshDatabase(t *testing.T) {
 
 	if count, err := countQuery(context.Background(), store.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 5 {
-		t.Fatalf("expected 5 migrations, got %d", count)
+	} else if count != 6 {
+		t.Fatalf("expected 6 migrations, got %d", count)
 	}
 
 	status, err := store.GetMigrationStatus(context.Background())
 	if err != nil {
 		t.Fatalf("get migration status: %v", err)
 	}
-	if status.CurrentVersion != "005_desktop_metadata.sql" {
+	if status.CurrentVersion != "006_extension_status_enrichment.sql" {
 		t.Fatalf("expected latest migration version, got %q", status.CurrentVersion)
+	}
+
+	rows, err := store.db.QueryContext(context.Background(), `PRAGMA table_info(extension_status)`)
+	if err != nil {
+		t.Fatalf("read extension_status schema: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = rows.Close()
+	})
+	columns := map[string]bool{}
+	for rows.Next() {
+		var cid int
+		var name string
+		var columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			t.Fatalf("scan extension_status schema row: %v", err)
+		}
+		columns[name] = true
+	}
+	for _, required := range []string{
+		"editor_version",
+		"pending_event_count",
+		"oldest_pending_event_at",
+		"quarantined_event_count",
+		"outbox_size_bytes",
+		"last_successful_sync_at",
+		"desktop_instance_seen",
+	} {
+		if !columns[required] {
+			t.Fatalf("expected extension_status column %q to exist after migration", required)
+		}
 	}
 }
 
@@ -47,8 +82,55 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 
 	if count, err := countQuery(ctx, second.db, `SELECT COUNT(*) FROM schema_migrations`); err != nil {
 		t.Fatalf("count migrations: %v", err)
-	} else if count != 5 {
-		t.Fatalf("expected 5 migration records after rerun, got %d", count)
+	} else if count != 6 {
+		t.Fatalf("expected 6 migration records after rerun, got %d", count)
+	}
+}
+
+func TestMigrationsUpgradeFromLegacyVersionOnReopen(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "legacy-upgrade.sqlite3")
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open legacy sqlite database: %v", err)
+	}
+	store := &Store{
+		db:   db,
+		path: dbPath,
+	}
+
+	migrations, err := loadMigrations(migrationFiles)
+	if err != nil {
+		t.Fatalf("load migrations: %v", err)
+	}
+	if len(migrations) < 6 {
+		t.Fatalf("expected at least 6 migrations, got %d", len(migrations))
+	}
+	if err := store.runMigrations(ctx, migrations[:5]); err != nil {
+		t.Fatalf("apply legacy migrations failed: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close legacy store failed: %v", err)
+	}
+
+	upgraded, err := Open(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("open upgraded store failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = upgraded.Close()
+	})
+
+	status, err := upgraded.GetMigrationStatus(ctx)
+	if err != nil {
+		t.Fatalf("get migration status after upgrade: %v", err)
+	}
+	if status.CurrentVersion != "006_extension_status_enrichment.sql" {
+		t.Fatalf("expected latest migration after upgrade, got %q", status.CurrentVersion)
+	}
+	if status.AppliedMigrationCount != 6 {
+		t.Fatalf("expected 6 applied migrations after upgrade, got %d", status.AppliedMigrationCount)
 	}
 }
 
@@ -135,13 +217,23 @@ func TestExtensionStatusUpsertAndReadWorks(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 
+	pendingCount := 12
+	quarantinedCount := 3
+	outboxSizeBytes := int64(32768)
 	status := contracts.ExtensionStatus{
-		Installed:        true,
-		Connected:        true,
-		Editor:           "vscode",
-		ExtensionVersion: "0.1.0",
-		LastEventAt:      "2026-04-05T10:00:00Z",
-		LastHandshakeAt:  "2026-04-05T10:30:00Z",
+		Installed:             true,
+		Connected:             true,
+		Editor:                "vscode",
+		EditorVersion:         "1.99.0",
+		ExtensionVersion:      "0.1.0",
+		LastEventAt:           "2026-04-05T10:00:00Z",
+		LastHandshakeAt:       "2026-04-05T10:30:00Z",
+		PendingEventCount:     &pendingCount,
+		OldestPendingEventAt:  "2026-04-05T09:59:00Z",
+		QuarantinedEventCount: &quarantinedCount,
+		OutboxSizeBytes:       &outboxSizeBytes,
+		LastSuccessfulSyncAt:  "2026-04-05T10:25:00Z",
+		DesktopInstanceSeen:   "desktop-instance-1",
 	}
 	if err := store.UpsertExtensionStatus(ctx, status, "2026-04-05T10:30:00Z"); err != nil {
 		t.Fatalf("upsert extension status failed: %v", err)
@@ -157,6 +249,34 @@ func TestExtensionStatusUpsertAndReadWorks(t *testing.T) {
 	}
 	if found.ExtensionVersion != "0.1.0" {
 		t.Fatalf("expected version 0.1.0, got %q", found.ExtensionVersion)
+	}
+	if found.EditorVersion != "1.99.0" || found.PendingEventCount == nil || *found.PendingEventCount != pendingCount {
+		t.Fatalf("expected enriched extension status persistence, got %+v", found)
+	}
+	if found.QuarantinedEventCount == nil || *found.QuarantinedEventCount != quarantinedCount {
+		t.Fatalf("expected quarantined count %d, got %+v", quarantinedCount, found)
+	}
+	if found.OutboxSizeBytes == nil || *found.OutboxSizeBytes != outboxSizeBytes {
+		t.Fatalf("expected outbox size bytes %d, got %+v", outboxSizeBytes, found)
+	}
+
+	// Backward-compatible partial updates should not clear previously reported optional metrics.
+	if err := store.UpsertExtensionStatus(ctx, contracts.ExtensionStatus{
+		Installed: true,
+		Connected: true,
+		Editor:    "vscode",
+	}, "2026-04-05T11:00:00Z"); err != nil {
+		t.Fatalf("partial upsert extension status failed: %v", err)
+	}
+	updated, err := store.GetExtensionStatus(ctx, "vscode")
+	if err != nil {
+		t.Fatalf("get updated extension status failed: %v", err)
+	}
+	if updated.PendingEventCount == nil || *updated.PendingEventCount != pendingCount {
+		t.Fatalf("expected pending count to be retained on partial update, got %+v", updated)
+	}
+	if updated.OutboxSizeBytes == nil || *updated.OutboxSizeBytes != outboxSizeBytes {
+		t.Fatalf("expected outbox size to be retained on partial update, got %+v", updated)
 	}
 }
 

@@ -104,12 +104,19 @@ type ExtensionProtocolLimits struct {
 }
 
 type ExtensionStatus struct {
-	Installed        bool   `json:"installed"`
-	Connected        bool   `json:"connected"`
-	Editor           string `json:"editor"`
-	ExtensionVersion string `json:"extensionVersion,omitempty"`
-	LastEventAt      string `json:"lastEventAt,omitempty"`
-	LastHandshakeAt  string `json:"lastHandshakeAt,omitempty"`
+	Installed             bool   `json:"installed"`
+	Connected             bool   `json:"connected"`
+	Editor                string `json:"editor"`
+	EditorVersion         string `json:"editorVersion,omitempty"`
+	ExtensionVersion      string `json:"extensionVersion,omitempty"`
+	LastEventAt           string `json:"lastEventAt,omitempty"`
+	LastHandshakeAt       string `json:"lastHandshakeAt,omitempty"`
+	PendingEventCount     *int   `json:"pendingEventCount,omitempty"`
+	OldestPendingEventAt  string `json:"oldestPendingEventAt,omitempty"`
+	QuarantinedEventCount *int   `json:"quarantinedEventCount,omitempty"`
+	OutboxSizeBytes       *int64 `json:"outboxSizeBytes,omitempty"`
+	LastSuccessfulSyncAt  string `json:"lastSuccessfulSyncAt,omitempty"`
+	DesktopInstanceSeen   string `json:"desktopInstanceSeen,omitempty"`
 }
 
 type SystemInfo struct {

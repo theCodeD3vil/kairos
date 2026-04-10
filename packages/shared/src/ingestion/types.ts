@@ -27,6 +27,16 @@ export type ExtensionInfo = {
   editor: 'vscode';
   editorVersion?: string;
   extensionVersion?: string;
+  statusReport?: ExtensionStatusReport;
+};
+
+export type ExtensionStatusReport = {
+  pendingEventCount?: number;
+  oldestPendingEventAt?: string;
+  quarantinedEventCount?: number;
+  outboxSizeBytes?: number;
+  lastSuccessfulSyncAt?: string;
+  desktopInstanceSeen?: string;
 };
 
 export type IngestEventsRequest = {

@@ -157,7 +157,7 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 		persistResult, err := s.store.PersistIngestionBatch(
 			ctx,
 			machine,
-			buildExtensionStatus(extension, accepted, serverTime),
+			buildExtensionStatus(extension, accepted, serverTime, ""),
 			accepted,
 			serverTime,
 		)
@@ -184,7 +184,7 @@ func (s *ServiceImpl) IngestEvents(ctx context.Context, request contracts.Ingest
 		if err := s.store.PersistEmptyIngestionHeartbeat(
 			ctx,
 			machine,
-			buildExtensionStatus(extension, nil, serverTime),
+			buildExtensionStatus(extension, nil, serverTime, ""),
 			serverTime,
 		); err != nil {
 			log.Printf("ingestion: persist heartbeat metadata failed: %v", err)
@@ -254,11 +254,15 @@ func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.
 	if err != nil {
 		return contracts.ExtensionHandshakeResponse{}, err
 	}
+	desktopInstanceID, err := s.store.GetOrCreateDesktopInstanceID(ctx)
+	if err != nil {
+		return contracts.ExtensionHandshakeResponse{}, err
+	}
 
 	if err := s.store.PersistEmptyIngestionHeartbeat(
 		ctx,
 		machine,
-		buildExtensionStatus(extension, nil, serverTime),
+		buildExtensionStatus(extension, nil, serverTime, desktopInstanceID),
 		serverTime,
 	); err != nil {
 		log.Printf("ingestion: extension handshake persist failed: %v", err)
@@ -285,11 +289,6 @@ func (s *ServiceImpl) HandshakeExtension(ctx context.Context, request contracts.
 	}
 	if settingsUpdatedAt == "" {
 		settingsUpdatedAt = defaultSettingsUpdatedAt
-	}
-
-	desktopInstanceID, err := s.store.GetOrCreateDesktopInstanceID(ctx)
-	if err != nil {
-		return contracts.ExtensionHandshakeResponse{}, err
 	}
 
 	return contracts.ExtensionHandshakeResponse{
@@ -631,21 +630,102 @@ func sanitizeExtension(extension contracts.ExtensionInfo) (contracts.ExtensionIn
 		clean.ExtensionVersion = truncated
 		warnings = append(warnings, "extension.extensionVersion truncated to max allowed length")
 	}
+	cleanStatusReport, statusWarnings, err := sanitizeExtensionStatusReport(extension.StatusReport)
+	if err != nil {
+		return contracts.ExtensionInfo{}, nil, err
+	}
+	clean.StatusReport = cleanStatusReport
+	warnings = append(warnings, statusWarnings...)
 
 	return clean, warnings, nil
 }
 
-func buildExtensionStatus(extension contracts.ExtensionInfo, accepted []contracts.ActivityEvent, serverTime string) contracts.ExtensionStatus {
+func sanitizeExtensionStatusReport(report *contracts.ExtensionStatusReport) (*contracts.ExtensionStatusReport, []string, error) {
+	if report == nil {
+		return nil, nil, nil
+	}
+
+	warnings := make([]string, 0)
+	clean := &contracts.ExtensionStatusReport{
+		OldestPendingEventAt: strings.TrimSpace(report.OldestPendingEventAt),
+		LastSuccessfulSyncAt: strings.TrimSpace(report.LastSuccessfulSyncAt),
+		DesktopInstanceSeen:  strings.TrimSpace(report.DesktopInstanceSeen),
+	}
+
+	if report.PendingEventCount != nil {
+		if *report.PendingEventCount < 0 {
+			return nil, nil, &ValidationError{Message: "invalid ingest request: extension.statusReport.pendingEventCount must be >= 0"}
+		}
+		value := *report.PendingEventCount
+		clean.PendingEventCount = &value
+	}
+	if report.QuarantinedEventCount != nil {
+		if *report.QuarantinedEventCount < 0 {
+			return nil, nil, &ValidationError{Message: "invalid ingest request: extension.statusReport.quarantinedEventCount must be >= 0"}
+		}
+		value := *report.QuarantinedEventCount
+		clean.QuarantinedEventCount = &value
+	}
+	if report.OutboxSizeBytes != nil {
+		if *report.OutboxSizeBytes < 0 {
+			return nil, nil, &ValidationError{Message: "invalid ingest request: extension.statusReport.outboxSizeBytes must be >= 0"}
+		}
+		value := *report.OutboxSizeBytes
+		clean.OutboxSizeBytes = &value
+	}
+
+	if clean.OldestPendingEventAt != "" {
+		if _, err := time.Parse(time.RFC3339, clean.OldestPendingEventAt); err != nil {
+			warnings = append(warnings, "extension.statusReport.oldestPendingEventAt ignored: invalid RFC3339 timestamp")
+			clean.OldestPendingEventAt = ""
+		}
+	}
+	if clean.LastSuccessfulSyncAt != "" {
+		if _, err := time.Parse(time.RFC3339, clean.LastSuccessfulSyncAt); err != nil {
+			warnings = append(warnings, "extension.statusReport.lastSuccessfulSyncAt ignored: invalid RFC3339 timestamp")
+			clean.LastSuccessfulSyncAt = ""
+		}
+	}
+	if truncated, didTruncate := trimAndClampOptional(clean.DesktopInstanceSeen, config.MaxMachineIDLength); didTruncate {
+		clean.DesktopInstanceSeen = truncated
+		warnings = append(warnings, "extension.statusReport.desktopInstanceSeen truncated to max allowed length")
+	}
+
+	if clean.PendingEventCount == nil &&
+		clean.QuarantinedEventCount == nil &&
+		clean.OutboxSizeBytes == nil &&
+		clean.OldestPendingEventAt == "" &&
+		clean.LastSuccessfulSyncAt == "" &&
+		clean.DesktopInstanceSeen == "" {
+		return nil, warnings, nil
+	}
+
+	return clean, warnings, nil
+}
+
+func buildExtensionStatus(extension contracts.ExtensionInfo, accepted []contracts.ActivityEvent, serverTime string, desktopInstanceFallback string) contracts.ExtensionStatus {
 	status := contracts.ExtensionStatus{
 		Installed:        true,
 		Connected:        true,
 		Editor:           clampRequiredString(strings.TrimSpace(extension.Editor), config.MaxEditorLength),
+		EditorVersion:    clampOptionalString(strings.TrimSpace(extension.EditorVersion), config.MaxEditorVersionLength),
 		ExtensionVersion: clampOptionalString(strings.TrimSpace(extension.ExtensionVersion), config.MaxExtensionVersionLength),
 		LastHandshakeAt:  serverTime,
 	}
 
 	if len(accepted) > 0 {
 		status.LastEventAt = latestEventTimestamp(accepted)
+	}
+	if extension.StatusReport != nil {
+		status.PendingEventCount = cloneIntPointer(extension.StatusReport.PendingEventCount)
+		status.OldestPendingEventAt = strings.TrimSpace(extension.StatusReport.OldestPendingEventAt)
+		status.QuarantinedEventCount = cloneIntPointer(extension.StatusReport.QuarantinedEventCount)
+		status.OutboxSizeBytes = cloneInt64Pointer(extension.StatusReport.OutboxSizeBytes)
+		status.LastSuccessfulSyncAt = strings.TrimSpace(extension.StatusReport.LastSuccessfulSyncAt)
+		status.DesktopInstanceSeen = clampOptionalString(strings.TrimSpace(extension.StatusReport.DesktopInstanceSeen), config.MaxMachineIDLength)
+	}
+	if status.DesktopInstanceSeen == "" {
+		status.DesktopInstanceSeen = clampOptionalString(strings.TrimSpace(desktopInstanceFallback), config.MaxMachineIDLength)
 	}
 
 	return status
@@ -735,4 +815,20 @@ func firstNonEmpty(values ...string) string {
 	}
 
 	return ""
+}
+
+func cloneIntPointer(value *int) *int {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
+}
+
+func cloneInt64Pointer(value *int64) *int64 {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }

@@ -14,6 +14,20 @@ func nullIfEmpty(value string) any {
 	return value
 }
 
+func nullIfNilInt(value *int) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullIfNilInt64(value *int64) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
 func boolToInt(value bool) int {
 	if value {
 		return 1
@@ -59,4 +73,20 @@ func nullableStringQuery(ctx context.Context, db *sql.DB, query string) (string,
 	}
 
 	return value.String, nil
+}
+
+func copyIntPointer(value *int) *int {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
+}
+
+func copyInt64Pointer(value *int64) *int64 {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }

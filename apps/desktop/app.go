@@ -1017,11 +1017,18 @@ func (a *App) emitDataChanged(kind string) {
 }
 
 type extensionBridgeStatusResponse struct {
-	ConnectionState  string `json:"connectionState"`
-	ExtensionVersion string `json:"extensionVersion"`
-	LastHandshakeAt  string `json:"lastHandshakeAt"`
-	LastSuccessfulAt string `json:"lastSuccessfulSendAt"`
-	LastEventAt      string `json:"lastEventAt"`
+	ConnectionState       string `json:"connectionState"`
+	EditorVersion         string `json:"editorVersion"`
+	ExtensionVersion      string `json:"extensionVersion"`
+	LastHandshakeAt       string `json:"lastHandshakeAt"`
+	LastSuccessfulAt      string `json:"lastSuccessfulSendAt"`
+	LastSuccessfulSyncAt  string `json:"lastSuccessfulSyncAt"`
+	LastEventAt           string `json:"lastEventAt"`
+	PendingEventCount     *int   `json:"pendingEventCount,omitempty"`
+	OldestPendingEventAt  string `json:"oldestPendingEventAt,omitempty"`
+	QuarantinedEventCount *int   `json:"quarantinedEventCount,omitempty"`
+	OutboxSizeBytes       *int64 `json:"outboxSizeBytes,omitempty"`
+	DesktopInstanceSeen   string `json:"desktopInstanceSeen,omitempty"`
 }
 
 func (a *App) probeVSCodeExtension(method string, path string) (contracts.ExtensionStatus, error) {
@@ -1043,12 +1050,19 @@ func (a *App) probeVSCodeExtension(method string, path string) (contracts.Extens
 	}
 
 	next := contracts.ExtensionStatus{
-		Installed:        true,
-		Connected:        strings.EqualFold(response.ConnectionState, "connected"),
-		Editor:           "vscode",
-		ExtensionVersion: coalesceString(response.ExtensionVersion, current.ExtensionVersion),
-		LastHandshakeAt:  coalesceString(response.LastHandshakeAt, current.LastHandshakeAt),
-		LastEventAt:      coalesceString(response.LastEventAt, coalesceString(response.LastSuccessfulAt, current.LastEventAt)),
+		Installed:             true,
+		Connected:             strings.EqualFold(response.ConnectionState, "connected"),
+		Editor:                "vscode",
+		EditorVersion:         coalesceString(response.EditorVersion, current.EditorVersion),
+		ExtensionVersion:      coalesceString(response.ExtensionVersion, current.ExtensionVersion),
+		LastHandshakeAt:       coalesceString(response.LastHandshakeAt, current.LastHandshakeAt),
+		LastEventAt:           coalesceString(response.LastEventAt, coalesceString(response.LastSuccessfulAt, current.LastEventAt)),
+		PendingEventCount:     coalesceIntPointer(response.PendingEventCount, current.PendingEventCount),
+		OldestPendingEventAt:  coalesceString(response.OldestPendingEventAt, current.OldestPendingEventAt),
+		QuarantinedEventCount: coalesceIntPointer(response.QuarantinedEventCount, current.QuarantinedEventCount),
+		OutboxSizeBytes:       coalesceInt64Pointer(response.OutboxSizeBytes, current.OutboxSizeBytes),
+		LastSuccessfulSyncAt:  coalesceString(response.LastSuccessfulSyncAt, current.LastSuccessfulSyncAt),
+		DesktopInstanceSeen:   coalesceString(response.DesktopInstanceSeen, current.DesktopInstanceSeen),
 	}
 
 	if err := a.persistExtensionStatus(next); err != nil {
@@ -1108,4 +1122,28 @@ func coalesceString(primary string, fallback string) string {
 		return primary
 	}
 	return fallback
+}
+
+func coalesceIntPointer(primary *int, fallback *int) *int {
+	if primary != nil {
+		value := *primary
+		return &value
+	}
+	if fallback == nil {
+		return nil
+	}
+	value := *fallback
+	return &value
+}
+
+func coalesceInt64Pointer(primary *int64, fallback *int64) *int64 {
+	if primary != nil {
+		value := *primary
+		return &value
+	}
+	if fallback == nil {
+		return nil
+	}
+	value := *fallback
+	return &value
 }

@@ -40,6 +40,8 @@ type ServiceImpl struct {
 
 type sessionCandidate struct {
 	machineID string
+	workspace string
+	project   string
 	date      string
 	startAt   time.Time
 	endAt     time.Time
@@ -116,12 +118,12 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 	if err != nil {
 		return contracts.SessionRebuildResult{}, err
 	}
-	codingEvents := filterCodingEvents(events)
+	sessionEvents := filterSessionEvents(events)
 
 	sessions := []contracts.Session{}
 	if runtimeSettings.trackSessionBoundaries {
 		sessions, err = s.buildSessions(
-			codingEvents,
+			sessionEvents,
 			runtimeSettings.idleThreshold,
 			runtimeSettings.mergeThreshold,
 			runtimeSettings.idleDetectionEnabled,
@@ -137,7 +139,7 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 	}
 
 	return contracts.SessionRebuildResult{
-		ProcessedEventCount: len(codingEvents),
+		ProcessedEventCount: len(sessionEvents),
 		CreatedSessionCount: len(sessions),
 		StartDate:           startDate,
 		EndDate:             endDate,
@@ -145,19 +147,25 @@ func (s *ServiceImpl) RebuildSessionsForRange(ctx context.Context, startDate str
 	}, nil
 }
 
-func filterCodingEvents(events []contracts.ActivityEvent) []contracts.ActivityEvent {
+func filterSessionEvents(events []contracts.ActivityEvent) []contracts.ActivityEvent {
 	filtered := make([]contracts.ActivityEvent, 0, len(events))
 	for _, event := range events {
-		if event.EventType != "edit" {
-			continue
-		}
-		if event.FilePath == "" {
+		if !isSessionContributingEventType(event.EventType) {
 			continue
 		}
 		filtered = append(filtered, event)
 	}
 
 	return filtered
+}
+
+func isSessionContributingEventType(eventType string) bool {
+	switch eventType {
+	case "edit", "save", "heartbeat":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *ServiceImpl) ListRecentSessions(ctx context.Context, limit int) ([]contracts.Session, error) {
@@ -219,6 +227,8 @@ func (s *ServiceImpl) buildInitialSessions(events []contracts.ActivityEvent, idl
 			}
 			current = &sessionCandidate{
 				machineID: event.MachineID,
+				workspace: event.WorkspaceID,
+				project:   event.ProjectName,
 				date:      eventDate,
 				startAt:   eventTime,
 				endAt:     eventTime,
@@ -281,6 +291,12 @@ func shouldSplitSession(
 	if current.machineID != event.MachineID {
 		return true
 	}
+	if current.workspace != event.WorkspaceID {
+		return true
+	}
+	if current.project != event.ProjectName {
+		return true
+	}
 	if current.date != eventDate {
 		return true
 	}
@@ -301,6 +317,12 @@ func mergeAdjacentSessions(candidates []sessionCandidate, mergeThreshold time.Du
 		}
 		if candidates[i].machineID != candidates[j].machineID {
 			return candidates[i].machineID < candidates[j].machineID
+		}
+		if candidates[i].workspace != candidates[j].workspace {
+			return candidates[i].workspace < candidates[j].workspace
+		}
+		if candidates[i].project != candidates[j].project {
+			return candidates[i].project < candidates[j].project
 		}
 		if !candidates[i].startAt.Equal(candidates[j].startAt) {
 			return candidates[i].startAt.Before(candidates[j].startAt)
@@ -328,7 +350,10 @@ func canMergeSessions(left sessionCandidate, right sessionCandidate, mergeThresh
 	if left.machineID != right.machineID || left.date != right.date {
 		return false
 	}
-	if left.dominantProject() != right.dominantProject() {
+	if left.workspace != right.workspace {
+		return false
+	}
+	if left.project != right.project {
 		return false
 	}
 	gap := right.startAt.Sub(left.endAt)
@@ -343,8 +368,9 @@ func buildSession(candidate sessionCandidate) contracts.Session {
 		durationMinutes = 1
 	}
 
-	idSeed := fmt.Sprintf("%s|%s|%s|%s|%s|%d",
+	idSeed := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%d",
 		candidate.machineID,
+		candidate.workspace,
 		candidate.date,
 		candidate.startAt.UTC().Format(time.RFC3339),
 		candidate.endAt.UTC().Format(time.RFC3339),

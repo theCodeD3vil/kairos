@@ -131,6 +131,38 @@ func TestSessionsDoNotMergeAcrossProjects(t *testing.T) {
 	}
 }
 
+func TestSessionsDoNotMergeAcrossWorkspacesEvenWhenProjectMatches(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		eventWith("e1", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "edit", "/workspace-1/main.go"),
+		eventWith("e2", "2026-04-05T09:03:00Z", "m1", "workspace-2", "kairos", "go", "edit", "/workspace-2/main.go"),
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 2 {
+		t.Fatalf("expected workspace-separated sessions to remain split, got %d", result.CreatedSessionCount)
+	}
+}
+
+func TestSessionsAreCreatedWithoutFilePath(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		eventWith("e1", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "edit", ""),
+		eventWith("e2", "2026-04-05T09:03:00Z", "m1", "workspace-1", "kairos", "go", "save", ""),
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 1 {
+		t.Fatalf("expected one session without file paths, got %d", result.CreatedSessionCount)
+	}
+}
+
 func TestDominantProjectSelectionWorks(t *testing.T) {
 	service, store := newTestService(t)
 	mustInsertEvents(t, store, []contracts.ActivityEvent{
@@ -356,6 +388,49 @@ func TestLanguageSelectionAfterMergeIsDeterministic(t *testing.T) {
 	}
 }
 
+func TestMixedEventTypeContributionBehavior(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		eventWith("e1", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "edit", ""),
+		eventWith("e2", "2026-04-05T09:02:00Z", "m1", "workspace-1", "kairos", "go", "save", ""),
+		eventWith("e3", "2026-04-05T09:04:00Z", "m1", "workspace-1", "kairos", "go", "heartbeat", ""),
+		eventWith("e4", "2026-04-05T09:06:00Z", "m1", "workspace-1", "kairos", "go", "open", ""),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	sessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list sessions failed: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected one mixed-event session, got %d", len(sessions))
+	}
+	if sessions[0].SourceEventCount != 3 {
+		t.Fatalf("expected edit/save/heartbeat only to contribute, got %d", sessions[0].SourceEventCount)
+	}
+	if sessions[0].DurationMinutes != 4 {
+		t.Fatalf("expected open event not to extend session duration, got %d", sessions[0].DurationMinutes)
+	}
+}
+
+func TestPrivacyMaskedAndHiddenFilePathCasesStillCreateSessions(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		eventWith("e1", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "edit", "main.go"), // masked path
+		eventWith("e2", "2026-04-05T09:03:00Z", "m1", "workspace-1", "kairos", "go", "edit", ""),        // hidden path
+	})
+
+	result, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("rebuild failed: %v", err)
+	}
+	if result.CreatedSessionCount != 1 {
+		t.Fatalf("expected one session for masked/hidden file path mix, got %d", result.CreatedSessionCount)
+	}
+}
+
 func TestRunningRebuildTwiceIsDeterministic(t *testing.T) {
 	service, store := newTestService(t)
 	mustInsertEvents(t, store, []contracts.ActivityEvent{
@@ -391,19 +466,55 @@ func TestRunningRebuildTwiceIsDeterministic(t *testing.T) {
 	}
 }
 
-func TestFilterCodingEventsKeepsOnlyEditEventsWithFilePath(t *testing.T) {
+func TestRebuildDeterministicWithReplayStyleMixedEventHistory(t *testing.T) {
+	service, store := newTestService(t)
+	mustInsertEvents(t, store, []contracts.ActivityEvent{
+		eventWith("e3", "2026-04-05T09:02:00Z", "m1", "workspace-1", "kairos", "go", "save", ""),
+		eventWith("e1", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "heartbeat", ""),
+		eventWith("e2", "2026-04-05T09:00:00Z", "m1", "workspace-1", "kairos", "go", "edit", ""),
+		eventWith("e4", "2026-04-05T09:04:00Z", "m1", "workspace-1", "kairos", "go", "open", ""),
+	})
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("first rebuild failed: %v", err)
+	}
+	firstSessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list first rebuild sessions failed: %v", err)
+	}
+
+	if _, err := service.RebuildSessionsForDate(context.Background(), "2026-04-05"); err != nil {
+		t.Fatalf("second rebuild failed: %v", err)
+	}
+	secondSessions, err := service.ListSessionsForDate(context.Background(), "2026-04-05")
+	if err != nil {
+		t.Fatalf("list second rebuild sessions failed: %v", err)
+	}
+
+	if len(firstSessions) != len(secondSessions) {
+		t.Fatalf("expected same session count across replay rebuilds, got %d and %d", len(firstSessions), len(secondSessions))
+	}
+	for index := range firstSessions {
+		if firstSessions[index] != secondSessions[index] {
+			t.Fatalf("expected deterministic replay rebuild output, got %+v and %+v", firstSessions[index], secondSessions[index])
+		}
+	}
+}
+
+func TestFilterSessionEventsKeepsConfiguredContributingEventTypes(t *testing.T) {
 	events := []contracts.ActivityEvent{
 		{ID: "e1", EventType: "edit", FilePath: "/workspace/main.go"},
 		{ID: "e2", EventType: "edit", FilePath: ""},
-		{ID: "e3", EventType: "save", FilePath: "/workspace/main.go"},
-		{ID: "e4", EventType: "edit", FilePath: "/workspace/app.go"},
+		{ID: "e3", EventType: "save", FilePath: ""},
+		{ID: "e4", EventType: "heartbeat", FilePath: ""},
+		{ID: "e5", EventType: "open", FilePath: "/workspace/app.go"},
 	}
 
-	filtered := filterCodingEvents(events)
-	if len(filtered) != 2 {
-		t.Fatalf("expected 2 coding events, got %d", len(filtered))
+	filtered := filterSessionEvents(events)
+	if len(filtered) != 4 {
+		t.Fatalf("expected 4 session events, got %d", len(filtered))
 	}
-	if filtered[0].ID != "e1" || filtered[1].ID != "e4" {
+	if filtered[0].ID != "e1" || filtered[1].ID != "e2" || filtered[2].ID != "e3" || filtered[3].ID != "e4" {
 		t.Fatalf("unexpected filtered event IDs: %+v", filtered)
 	}
 }
@@ -440,14 +551,27 @@ func mustInsertEvents(t *testing.T, store *storage.Store, events []contracts.Act
 }
 
 func event(id string, timestamp string, machineID string, project string, language string) contracts.ActivityEvent {
+	return eventWith(id, timestamp, machineID, "workspace-1", project, language, "edit", "/workspace-1/main.go")
+}
+
+func eventWith(
+	id string,
+	timestamp string,
+	machineID string,
+	workspaceID string,
+	project string,
+	language string,
+	eventType string,
+	filePath string,
+) contracts.ActivityEvent {
 	return contracts.ActivityEvent{
 		ID:          id,
 		Timestamp:   timestamp,
-		EventType:   "edit",
+		EventType:   eventType,
 		MachineID:   machineID,
-		WorkspaceID: "workspace-1",
+		WorkspaceID: workspaceID,
 		ProjectName: project,
 		Language:    language,
-		FilePath:    "/workspace-1/main.go",
+		FilePath:    filePath,
 	}
 }

@@ -457,10 +457,33 @@ export namespace contracts {
 		    return a;
 		}
 	}
+	export class ExtensionStatusReport {
+	    pendingEventCount?: number;
+	    oldestPendingEventAt?: string;
+	    quarantinedEventCount?: number;
+	    outboxSizeBytes?: number;
+	    lastSuccessfulSyncAt?: string;
+	    desktopInstanceSeen?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExtensionStatusReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pendingEventCount = source["pendingEventCount"];
+	        this.oldestPendingEventAt = source["oldestPendingEventAt"];
+	        this.quarantinedEventCount = source["quarantinedEventCount"];
+	        this.outboxSizeBytes = source["outboxSizeBytes"];
+	        this.lastSuccessfulSyncAt = source["lastSuccessfulSyncAt"];
+	        this.desktopInstanceSeen = source["desktopInstanceSeen"];
+	    }
+	}
 	export class ExtensionInfo {
 	    editor: string;
 	    editorVersion?: string;
 	    extensionVersion?: string;
+	    statusReport?: ExtensionStatusReport;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExtensionInfo(source);
@@ -471,7 +494,26 @@ export namespace contracts {
 	        this.editor = source["editor"];
 	        this.editorVersion = source["editorVersion"];
 	        this.extensionVersion = source["extensionVersion"];
+	        this.statusReport = this.convertValues(source["statusReport"], ExtensionStatusReport);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ExtensionSettings {
 	    autoConnect: boolean;
@@ -513,9 +555,16 @@ export namespace contracts {
 	    installed: boolean;
 	    connected: boolean;
 	    editor: string;
+	    editorVersion?: string;
 	    extensionVersion?: string;
 	    lastEventAt?: string;
 	    lastHandshakeAt?: string;
+	    pendingEventCount?: number;
+	    oldestPendingEventAt?: string;
+	    quarantinedEventCount?: number;
+	    outboxSizeBytes?: number;
+	    lastSuccessfulSyncAt?: string;
+	    desktopInstanceSeen?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExtensionStatus(source);
@@ -526,11 +575,19 @@ export namespace contracts {
 	        this.installed = source["installed"];
 	        this.connected = source["connected"];
 	        this.editor = source["editor"];
+	        this.editorVersion = source["editorVersion"];
 	        this.extensionVersion = source["extensionVersion"];
 	        this.lastEventAt = source["lastEventAt"];
 	        this.lastHandshakeAt = source["lastHandshakeAt"];
+	        this.pendingEventCount = source["pendingEventCount"];
+	        this.oldestPendingEventAt = source["oldestPendingEventAt"];
+	        this.quarantinedEventCount = source["quarantinedEventCount"];
+	        this.outboxSizeBytes = source["outboxSizeBytes"];
+	        this.lastSuccessfulSyncAt = source["lastSuccessfulSyncAt"];
+	        this.desktopInstanceSeen = source["desktopInstanceSeen"];
 	    }
 	}
+	
 	export class GeneralSettings {
 	    machineDisplayName: string;
 	    defaultDateRange: string;
@@ -551,6 +608,24 @@ export namespace contracts {
 	        this.themeMode = source["themeMode"];
 	        this.weekStartsOn = source["weekStartsOn"];
 	        this.preferredLandingPage = source["preferredLandingPage"];
+	    }
+	}
+	export class IngestEventResult {
+	    eventId: string;
+	    status: string;
+	    code: string;
+	    message?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IngestEventResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.eventId = source["eventId"];
+	        this.status = source["status"];
+	        this.code = source["code"];
+	        this.message = source["message"];
 	    }
 	}
 	export class MachineInfo {
@@ -613,6 +688,7 @@ export namespace contracts {
 	    acceptedCount: number;
 	    rejectedCount: number;
 	    warnings?: string[];
+	    results: IngestEventResult[];
 	    serverTimestamp: string;
 	
 	    static createFrom(source: any = {}) {
@@ -624,8 +700,27 @@ export namespace contracts {
 	        this.acceptedCount = source["acceptedCount"];
 	        this.rejectedCount = source["rejectedCount"];
 	        this.warnings = source["warnings"];
+	        this.results = this.convertValues(source["results"], IngestEventResult);
 	        this.serverTimestamp = source["serverTimestamp"];
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class IngestionStats {
 	    totalAcceptedEvents: number;

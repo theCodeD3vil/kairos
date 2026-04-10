@@ -22,9 +22,19 @@ type MachineInfo struct {
 }
 
 type ExtensionInfo struct {
-	Editor           string `json:"editor"`
-	EditorVersion    string `json:"editorVersion,omitempty"`
-	ExtensionVersion string `json:"extensionVersion,omitempty"`
+	Editor           string                 `json:"editor"`
+	EditorVersion    string                 `json:"editorVersion,omitempty"`
+	ExtensionVersion string                 `json:"extensionVersion,omitempty"`
+	StatusReport     *ExtensionStatusReport `json:"statusReport,omitempty"`
+}
+
+type ExtensionStatusReport struct {
+	PendingEventCount     *int   `json:"pendingEventCount,omitempty"`
+	OldestPendingEventAt  string `json:"oldestPendingEventAt,omitempty"`
+	QuarantinedEventCount *int   `json:"quarantinedEventCount,omitempty"`
+	OutboxSizeBytes       *int64 `json:"outboxSizeBytes,omitempty"`
+	LastSuccessfulSyncAt  string `json:"lastSuccessfulSyncAt,omitempty"`
+	DesktopInstanceSeen   string `json:"desktopInstanceSeen,omitempty"`
 }
 
 type IngestEventsRequest struct {

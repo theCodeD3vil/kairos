@@ -41,6 +41,11 @@ export function buildStatusBarTooltip(snapshot: RuntimeStatusSnapshot): string {
   if (snapshot.queueSize > 0 || snapshot.displayState === 'buffering') {
     lines.push(`- Buffered events: **${snapshot.queueSize}**`);
   }
+  lines.push(`- Outbox size: **${formatBytes(snapshot.outboxSizeBytes)}**`);
+  lines.push(`- Outbox state: **${describeOutboxThresholdState(snapshot.outboxThresholdState)}**`);
+  if (snapshot.captureBlockedByHardCap) {
+    lines.push('- Capture blocked: **Outbox hard cap reached**');
+  }
 
   lines.push(`- Machine: **${escapeMarkdown(snapshot.machineName)}**`);
 
@@ -170,6 +175,32 @@ function formatTimestamp(value: string): string {
   }
 
   return escapeMarkdown(parsed.toLocaleString());
+}
+
+function describeOutboxThresholdState(state: RuntimeStatusSnapshot['outboxThresholdState']): string {
+  switch (state) {
+    case 'hard':
+      return 'Hard cap';
+    case 'warning':
+      return 'Warning threshold';
+    case 'soft':
+      return 'Soft threshold';
+    case 'normal':
+    default:
+      return 'Normal';
+  }
+}
+
+function formatBytes(bytes: number): string {
+  const kibibyte = 1024;
+  const mebibyte = kibibyte * 1024;
+  if (bytes < kibibyte) {
+    return `${bytes} B`;
+  }
+  if (bytes < mebibyte) {
+    return `${(bytes / kibibyte).toFixed(1)} KiB`;
+  }
+  return `${(bytes / mebibyte).toFixed(1)} MiB`;
 }
 
 function escapeMarkdown(value: string): string {

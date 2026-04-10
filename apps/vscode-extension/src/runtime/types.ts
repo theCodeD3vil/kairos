@@ -10,6 +10,8 @@ import type {
   ExtensionHandshakeRequest,
   ExtensionHandshakeResponse,
 } from '@kairos/shared/settings';
+import type { OutboxThresholdState } from './outbox-limits';
+import type { OutboxStorageHandle } from './storage';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'retrying' | 'offline-buffering';
 export type StatusDisplayState =
@@ -59,9 +61,11 @@ export interface RuntimeEnvironment {
 
 export type RuntimeOptions = {
   client: DesktopClient;
+  storage: OutboxStorageHandle;
   observer: RuntimeObserver;
   scheduler: RuntimeScheduler;
   environment: RuntimeEnvironment;
+  installationID: string;
   initialSettings?: ExtensionEffectiveSettings;
 };
 
@@ -78,10 +82,17 @@ export type RuntimeStatusSnapshot = {
   heartbeatIntervalSeconds: number;
   filePathMode: ExtensionEffectiveSettings['filePathMode'];
   machineName: string;
+  editorVersion?: string;
   extensionVersion?: string;
   lastHandshakeAt?: string;
   lastSuccessfulSendAt?: string;
   lastEventAt?: string;
+  outboxSizeBytes: number;
+  outboxThresholdState: OutboxThresholdState;
+  captureBlockedByHardCap: boolean;
+  outboxSoftThresholdBytes: number;
+  outboxWarningThresholdBytes: number;
+  outboxHardCapBytes: number;
 };
 
 export type PendingBatch = {

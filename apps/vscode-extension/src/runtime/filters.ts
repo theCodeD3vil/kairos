@@ -4,7 +4,6 @@ import type { ActivityEvent, ActivityEventType, MachineInfo } from '@kairos/shar
 import type { ExclusionsSettings, ExtensionEffectiveSettings } from '@kairos/shared/settings';
 
 import {
-  DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
   MAX_ARCH_LENGTH,
   MAX_EDITOR_VERSION_LENGTH,
   MAX_EVENT_ID_LENGTH,
@@ -23,36 +22,11 @@ import {
   REDACTED_PROJECT_NAME,
   REDACTED_WORKSPACE_ID,
 } from './constants';
+import {
+  cloneDefaultEffectiveSettings,
+  DEFAULT_EFFECTIVE_SETTINGS,
+} from './settings/defaults';
 import type { EditorContext } from './types';
-
-const DEFAULT_EFFECTIVE_SETTINGS: ExtensionEffectiveSettings = {
-  trackingEnabled: true,
-  idleDetectionEnabled: true,
-  idleTimeoutMinutes: 15,
-  sessionMergeThresholdMinutes: 5,
-  localOnlyMode: true,
-  filePathMode: 'masked',
-  exclusions: {
-    folders: [],
-    projectNames: [],
-    workspacePatterns: [],
-    fileExtensions: [],
-    machines: [],
-  },
-  autoConnect: true,
-  sendHeartbeatEvents: false,
-  heartbeatIntervalSeconds: DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
-  sendProjectMetadata: true,
-  sendLanguageMetadata: true,
-  sendMachineAttribution: true,
-  respectDesktopExclusions: true,
-  bufferEventsWhenOffline: true,
-  retryConnectionAutomatically: true,
-  trackOnlyWhenFocused: false,
-  trackFileOpenEvents: false,
-  trackSaveEvents: false,
-  trackEditEvents: true,
-};
 
 export type GateDecision = {
   allowed: boolean;
@@ -62,12 +36,7 @@ export type GateDecision = {
 const NON_CODING_LANGUAGE_IDS = new Set(['scminput']);
 
 export function getDefaultEffectiveSettings(): ExtensionEffectiveSettings {
-  return {
-    ...DEFAULT_EFFECTIVE_SETTINGS,
-    exclusions: {
-      ...DEFAULT_EFFECTIVE_SETTINGS.exclusions,
-    },
-  };
+  return cloneDefaultEffectiveSettings();
 }
 
 export function sanitizeEffectiveSettings(settings?: ExtensionEffectiveSettings): ExtensionEffectiveSettings {
@@ -104,6 +73,7 @@ export function sanitizeEffectiveSettings(settings?: ExtensionEffectiveSettings)
     trackFileOpenEvents: settings.trackFileOpenEvents,
     trackSaveEvents: settings.trackSaveEvents,
     trackEditEvents: settings.trackEditEvents,
+    outboxHardCapBytes: sanitizeOptionalPositiveInteger(settings.outboxHardCapBytes),
   };
 }
 
@@ -327,6 +297,19 @@ function sanitizePositiveInteger(value: number, fallback: number): number {
   const normalized = Math.trunc(value);
   if (normalized < 1) {
     return fallback;
+  }
+
+  return normalized;
+}
+
+function sanitizeOptionalPositiveInteger(value: number | undefined): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return undefined;
+  }
+
+  const normalized = Math.trunc(value);
+  if (normalized < 1) {
+    return undefined;
   }
 
   return normalized;

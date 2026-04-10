@@ -86,7 +86,7 @@ func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsDa
 	systemInfo.MachineName = general.MachineDisplayName
 	systemInfo.ExtensionVersion = extensionStatus.ExtensionVersion
 
-	dataStorage, err := s.buildDataStorageInfo(ctx)
+	dataStorage, err := s.buildDataStorageInfo(ctx, extensionStatus)
 	if err != nil {
 		return contracts.SettingsData{}, err
 	}
@@ -308,12 +308,14 @@ func (s *ServiceImpl) loadAppBehavior(ctx context.Context, fallback contracts.Ap
 	})
 }
 
-func (s *ServiceImpl) buildDataStorageInfo(ctx context.Context) (contracts.DataStorageInfo, error) {
-	pendingEventCount := 0
+func (s *ServiceImpl) buildDataStorageInfo(ctx context.Context, extensionStatus contracts.ExtensionStatus) (contracts.DataStorageInfo, error) {
 	info := contracts.DataStorageInfo{
-		LocalDataPath:     "",
-		DatabaseStatus:    s.databaseStatus,
-		PendingEventCount: &pendingEventCount,
+		LocalDataPath:  "",
+		DatabaseStatus: s.databaseStatus,
+	}
+	if extensionStatus.PendingEventCount != nil {
+		value := *extensionStatus.PendingEventCount
+		info.PendingEventCount = &value
 	}
 
 	if s.store == nil {

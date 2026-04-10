@@ -40,6 +40,8 @@ test('buildStatusBarTooltip includes the main runtime detail fields', () => {
   assert.match(tooltip, /State: \*\*Offline buffering\*\*/);
   assert.match(tooltip, /Connection: \*\*Buffering offline\*\*/);
   assert.match(tooltip, /Buffered events: \*\*7\*\*/);
+  assert.match(tooltip, /Outbox size:/);
+  assert.match(tooltip, /Outbox state:/);
   assert.match(tooltip, /Last handshake:/);
   assert.match(tooltip, /Last successful send:/);
   assert.match(tooltip, /Last event:/);
@@ -84,6 +86,12 @@ function createSnapshot(overrides: Partial<RuntimeStatusSnapshot>): RuntimeStatu
     lastHandshakeAt: undefined,
     lastSuccessfulSendAt: undefined,
     lastEventAt: undefined,
+    outboxSizeBytes: 0,
+    outboxThresholdState: 'normal',
+    captureBlockedByHardCap: false,
+    outboxSoftThresholdBytes: 100 * 1024 * 1024,
+    outboxWarningThresholdBytes: 250 * 1024 * 1024,
+    outboxHardCapBytes: 500 * 1024 * 1024,
     ...overrides,
   };
 }

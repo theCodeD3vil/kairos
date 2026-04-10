@@ -200,20 +200,36 @@ func insertedEventsFromOutcomes(outcomes []EventPersistOutcome) []contracts.Acti
 func upsertExtensionStatusTx(ctx context.Context, tx *sql.Tx, status contracts.ExtensionStatus, updatedAt string) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO extension_status (
-			editor, connected, extension_version, last_event_at, last_handshake_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?)
+			editor, connected, extension_version, editor_version, last_event_at, last_handshake_at,
+			pending_event_count, oldest_pending_event_at, quarantined_event_count, outbox_size_bytes,
+			last_successful_sync_at, desktop_instance_seen, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(editor) DO UPDATE SET
 			connected = excluded.connected,
-			extension_version = excluded.extension_version,
-			last_event_at = excluded.last_event_at,
-			last_handshake_at = excluded.last_handshake_at,
+			extension_version = COALESCE(excluded.extension_version, extension_status.extension_version),
+			editor_version = COALESCE(excluded.editor_version, extension_status.editor_version),
+			last_event_at = COALESCE(excluded.last_event_at, extension_status.last_event_at),
+			last_handshake_at = COALESCE(excluded.last_handshake_at, extension_status.last_handshake_at),
+			pending_event_count = COALESCE(excluded.pending_event_count, extension_status.pending_event_count),
+			oldest_pending_event_at = COALESCE(excluded.oldest_pending_event_at, extension_status.oldest_pending_event_at),
+			quarantined_event_count = COALESCE(excluded.quarantined_event_count, extension_status.quarantined_event_count),
+			outbox_size_bytes = COALESCE(excluded.outbox_size_bytes, extension_status.outbox_size_bytes),
+			last_successful_sync_at = COALESCE(excluded.last_successful_sync_at, extension_status.last_successful_sync_at),
+			desktop_instance_seen = COALESCE(excluded.desktop_instance_seen, extension_status.desktop_instance_seen),
 			updated_at = excluded.updated_at
 	`,
 		status.Editor,
 		boolToInt(status.Connected),
 		nullIfEmpty(status.ExtensionVersion),
+		nullIfEmpty(status.EditorVersion),
 		nullIfEmpty(status.LastEventAt),
 		nullIfEmpty(status.LastHandshakeAt),
+		nullIfNilInt(status.PendingEventCount),
+		nullIfEmpty(status.OldestPendingEventAt),
+		nullIfNilInt(status.QuarantinedEventCount),
+		nullIfNilInt64(status.OutboxSizeBytes),
+		nullIfEmpty(status.LastSuccessfulSyncAt),
+		nullIfEmpty(status.DesktopInstanceSeen),
 		updatedAt,
 	)
 	if err != nil {

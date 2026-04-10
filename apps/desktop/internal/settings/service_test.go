@@ -233,15 +233,28 @@ func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
 
 func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 	service, store := newTestSettingsService(t)
+	service.now = func() time.Time {
+		return time.Date(2026, time.April, 8, 12, 0, 20, 0, time.UTC)
+	}
 
 	recordedAt := "2026-04-08T12:00:00Z"
+	pendingEventCount := 7
+	quarantinedEventCount := 2
+	outboxSizeBytes := int64(4096)
 	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
-		Installed:        true,
-		Connected:        true,
-		Editor:           "vscode",
-		ExtensionVersion: "1.2.3",
-		LastEventAt:      "2026-04-08T09:00:00Z",
-		LastHandshakeAt:  recordedAt,
+		Installed:             true,
+		Connected:             true,
+		Editor:                "vscode",
+		EditorVersion:         "1.99.0",
+		ExtensionVersion:      "1.2.3",
+		LastEventAt:           "2026-04-08T09:00:00Z",
+		LastHandshakeAt:       recordedAt,
+		PendingEventCount:     &pendingEventCount,
+		OldestPendingEventAt:  "2026-04-08T08:40:00Z",
+		QuarantinedEventCount: &quarantinedEventCount,
+		OutboxSizeBytes:       &outboxSizeBytes,
+		LastSuccessfulSyncAt:  "2026-04-08T11:59:00Z",
+		DesktopInstanceSeen:   "desktop-instance-1",
 	}, recordedAt); err != nil {
 		t.Fatalf("upsert extension status failed: %v", err)
 	}
@@ -270,14 +283,32 @@ func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 	if data.ExtensionStatus.Editor != "vscode" || !data.ExtensionStatus.Connected {
 		t.Fatalf("expected persisted extension status, got %+v", data.ExtensionStatus)
 	}
+	if data.ExtensionStatus.EditorVersion != "1.99.0" || data.ExtensionStatus.PendingEventCount == nil || *data.ExtensionStatus.PendingEventCount != 7 {
+		t.Fatalf("expected enriched extension status values, got %+v", data.ExtensionStatus)
+	}
 	if data.DataStorage.LocalDataPath != store.Path() || data.DataStorage.DatabaseStatus != "ready" {
 		t.Fatalf("expected populated storage info, got %+v", data.DataStorage)
+	}
+	if data.DataStorage.PendingEventCount == nil || *data.DataStorage.PendingEventCount != pendingEventCount {
+		t.Fatalf("expected data storage pending count from extension status, got %+v", data.DataStorage)
 	}
 	if data.DataStorage.LastProcessedAt != recordedAt {
 		t.Fatalf("expected last processed at %q, got %q", recordedAt, data.DataStorage.LastProcessedAt)
 	}
 	if data.System.MachineID == "" || data.System.MachineName == "" {
 		t.Fatalf("expected system machine identity, got %+v", data.System)
+	}
+}
+
+func TestGetSettingsDataLeavesPendingCountUnsetWithoutReportedBacklog(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+	if data.DataStorage.PendingEventCount != nil {
+		t.Fatalf("expected pending event count to remain unset without extension report, got %+v", data.DataStorage)
 	}
 }
 

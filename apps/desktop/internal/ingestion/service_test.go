@@ -219,8 +219,20 @@ func TestMachineUpsertPreservesExistingOptionalFields(t *testing.T) {
 
 func TestExtensionStatusUpdatesAfterIngestion(t *testing.T) {
 	service := newTestService(t)
+	pendingEventCount := 5
+	quarantinedEventCount := 1
+	outboxSizeBytes := int64(2048)
+	request := validRequest()
+	request.Extension.StatusReport = &contracts.ExtensionStatusReport{
+		PendingEventCount:     &pendingEventCount,
+		OldestPendingEventAt:  "2026-04-05T10:00:00Z",
+		QuarantinedEventCount: &quarantinedEventCount,
+		OutboxSizeBytes:       &outboxSizeBytes,
+		LastSuccessfulSyncAt:  "2026-04-05T12:40:00Z",
+		DesktopInstanceSeen:   "desktop-instance-1",
+	}
 
-	if _, err := service.IngestEvents(context.Background(), validRequest()); err != nil {
+	if _, err := service.IngestEvents(context.Background(), request); err != nil {
 		t.Fatalf("ingest failed: %v", err)
 	}
 
@@ -235,6 +247,15 @@ func TestExtensionStatusUpdatesAfterIngestion(t *testing.T) {
 
 	if status.LastEventAt != "2026-04-05T10:30:00Z" {
 		t.Fatalf("expected last event at latest timestamp, got %q", status.LastEventAt)
+	}
+	if status.PendingEventCount == nil || *status.PendingEventCount != pendingEventCount {
+		t.Fatalf("expected pending event count %d, got %+v", pendingEventCount, status)
+	}
+	if status.OutboxSizeBytes == nil || *status.OutboxSizeBytes != outboxSizeBytes {
+		t.Fatalf("expected outbox size bytes %d, got %+v", outboxSizeBytes, status)
+	}
+	if status.LastSuccessfulSyncAt != "2026-04-05T12:40:00Z" {
+		t.Fatalf("expected last successful sync at to persist, got %q", status.LastSuccessfulSyncAt)
 	}
 }
 
@@ -422,6 +443,9 @@ func TestTrackingDisabledRejectsProcessing(t *testing.T) {
 
 func TestHandshakeExtensionIncludesProtocolMetadata(t *testing.T) {
 	service := newTestService(t)
+	pendingEventCount := 3
+	quarantinedEventCount := 1
+	outboxSizeBytes := int64(1024)
 	request := contracts.ExtensionHandshakeRequest{
 		Machine: contracts.MachineInfo{
 			MachineID:   "machine-1",
@@ -432,6 +456,13 @@ func TestHandshakeExtensionIncludesProtocolMetadata(t *testing.T) {
 			Editor:           "vscode",
 			EditorVersion:    "1.99.0",
 			ExtensionVersion: "0.1.0",
+			StatusReport: &contracts.ExtensionStatusReport{
+				PendingEventCount:     &pendingEventCount,
+				OldestPendingEventAt:  "2026-04-05T11:50:00Z",
+				QuarantinedEventCount: &quarantinedEventCount,
+				OutboxSizeBytes:       &outboxSizeBytes,
+				LastSuccessfulSyncAt:  "2026-04-05T11:58:00Z",
+			},
 		},
 	}
 
@@ -468,6 +499,20 @@ func TestHandshakeExtensionIncludesProtocolMetadata(t *testing.T) {
 	}
 	if second.DesktopInstanceID != response.DesktopInstanceID {
 		t.Fatalf("expected stable desktop instance id, got %q and %q", response.DesktopInstanceID, second.DesktopInstanceID)
+	}
+
+	status, err := service.GetExtensionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("get extension status after handshake failed: %v", err)
+	}
+	if status.EditorVersion != "1.99.0" {
+		t.Fatalf("expected editor version in extension status, got %+v", status)
+	}
+	if status.PendingEventCount == nil || *status.PendingEventCount != pendingEventCount {
+		t.Fatalf("expected pending event count %d after handshake, got %+v", pendingEventCount, status)
+	}
+	if status.DesktopInstanceSeen != response.DesktopInstanceID {
+		t.Fatalf("expected desktop instance seen %q, got %+v", response.DesktopInstanceID, status)
 	}
 }
 

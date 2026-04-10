@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 
 import { HTTPDesktopClient } from './runtime/client';
 import { KairosRuntime } from './runtime/runtime';
+import { openOutboxStorage, resolveOutboxDatabasePath } from './runtime/storage';
 import type { EditorContext, RuntimeObserver, RuntimeScheduler, RuntimeStatusSnapshot } from './runtime/types';
 import {
   buildStatusBarText,
@@ -17,6 +18,7 @@ import {
 } from './statusbar';
 
 const MACHINE_ID_KEY = 'kairos.machineId';
+const INSTALLATION_ID_KEY = 'kairos.installationId';
 const STATUS_REFRESH_INTERVAL_MS = 15000;
 const DESKTOP_BRIDGE_HOST = process.env.KAIROS_EXTENSION_BRIDGE_HOST ?? '127.0.0.1';
 const parsedBridgePort = Number.parseInt(process.env.KAIROS_EXTENSION_BRIDGE_PORT ?? '42138', 10);
@@ -78,8 +80,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   };
 
   const machineId = await ensureMachineID(context);
+  const installationID = await ensureInstallationID(context);
+  const outboxDatabasePath = resolveOutboxDatabasePath({ context });
+  const outboxStorage = await openOutboxStorage({ databasePath: outboxDatabasePath });
   runtime = new KairosRuntime({
     client: new HTTPDesktopClient(),
+    storage: outboxStorage,
     observer,
     scheduler,
     environment: {
@@ -99,7 +105,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         extensionVersion,
       },
     },
+    installationID,
   });
+  observer.logInfo(`Outbox storage initialized at ${outboxDatabasePath}`);
 
   latestStatus = runtime.getStatusSnapshot();
   renderStatusBar(statusBar, latestStatus);
@@ -217,6 +225,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         clearInterval(statusTicker);
       },
     },
+    {
+      dispose() {
+        void outboxStorage.close();
+      },
+    },
   );
 
   await runtime.updateActiveEditor(toEditorContext(vscode.window.activeTextEditor?.document));
@@ -327,10 +340,13 @@ function writeHealthResponse(response: http.ServerResponse, snapshot: RuntimeSta
   response.statusCode = 200;
   response.end(JSON.stringify({
     connectionState: snapshot.connectionState,
+    editorVersion: snapshot.editorVersion,
     extensionVersion: snapshot.extensionVersion,
     lastHandshakeAt: snapshot.lastHandshakeAt,
     lastSuccessfulSendAt: snapshot.lastSuccessfulSendAt,
+    lastSuccessfulSyncAt: snapshot.lastSuccessfulSendAt,
     lastEventAt: snapshot.lastEventAt,
+    pendingEventCount: snapshot.queueSize,
   }));
 }
 
@@ -347,6 +363,17 @@ async function ensureMachineID(context: vscode.ExtensionContext): Promise<string
 
   const generated = crypto.randomUUID();
   await context.globalState.update(MACHINE_ID_KEY, generated);
+  return generated;
+}
+
+async function ensureInstallationID(context: vscode.ExtensionContext): Promise<string> {
+  const existing = context.globalState.get<string>(INSTALLATION_ID_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const generated = crypto.randomUUID();
+  await context.globalState.update(INSTALLATION_ID_KEY, generated);
   return generated;
 }
 

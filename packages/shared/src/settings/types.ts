@@ -50,6 +50,7 @@ export type ExtensionSettings = {
   trackFileOpenEvents: boolean;
   trackSaveEvents: boolean;
   trackEditEvents: boolean;
+  outboxHardCapBytes?: number;
 };
 
 export type ExtensionEffectiveSettings = {
@@ -73,6 +74,7 @@ export type ExtensionEffectiveSettings = {
   trackFileOpenEvents: boolean;
   trackSaveEvents: boolean;
   trackEditEvents: boolean;
+  outboxHardCapBytes?: number;
 };
 
 export type ExtensionHandshakeRequest = {
@@ -105,9 +107,16 @@ export type ExtensionStatus = {
   installed: boolean;
   connected: boolean;
   editor: 'vscode';
+  editorVersion?: string;
   extensionVersion?: string;
   lastEventAt?: string;
   lastHandshakeAt?: string;
+  pendingEventCount?: number;
+  oldestPendingEventAt?: string;
+  quarantinedEventCount?: number;
+  outboxSizeBytes?: number;
+  lastSuccessfulSyncAt?: string;
+  desktopInstanceSeen?: string;
 };
 
 export type SystemInfo = {

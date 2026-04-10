@@ -1,27 +1,27 @@
-import type { ActivityEvent, ActivityEventType } from '@kairos/shared/ingestion';
-import type { ExtensionEffectiveSettings } from '@kairos/shared/settings';
+import type { ActivityEventType } from '@kairos/shared/ingestion';
+import type { ExtensionEffectiveSettings, ExtensionHandshakeResponse } from '@kairos/shared/settings';
 
 import {
   INITIAL_RETRY_DELAY_MS,
-  MAX_BATCH_SIZE,
-  MAX_BUFFERED_EVENTS,
   MAX_RETRY_DELAY_MS,
 } from './constants';
 import {
   createActivityEvent,
-  getDefaultEffectiveSettings,
   isCodingContext,
   isExcludedContext,
-  sanitizeEffectiveSettings,
   sanitizeMachine,
   shapeContextForEmission,
   shouldEmitEvent,
 } from './filters';
+import {
+  DEFAULT_OUTBOX_THRESHOLDS,
+  type OutboxLimitStatus,
+} from './outbox-limits';
+import { ExtensionSettingsMirror } from './settings/mirror';
+import { OutboxSyncWorker } from './sync-worker';
 import type {
   ConnectionState,
-  DesktopClient,
   EditorContext,
-  PendingBatch,
   RuntimeObserver,
   RuntimeOptions,
   RuntimeSchedulerHandle,
@@ -32,16 +32,17 @@ import type {
 const FILE_DWELL_THRESHOLD_MS = 15_000;
 
 export class KairosRuntime {
-  private readonly client: DesktopClient;
   private readonly observer: RuntimeObserver;
   private readonly scheduler: RuntimeOptions['scheduler'];
   private readonly environment: RuntimeOptions['environment'];
+  private readonly installationID: string;
+  private readonly syncWorker: OutboxSyncWorker;
+  private readonly settingsMirror: ExtensionSettingsMirror;
 
-  private settings: ExtensionEffectiveSettings;
   private state: ConnectionState = 'disconnected';
   private focused = true;
   private activeContext?: EditorContext;
-  private pendingEvents: ActivityEvent[] = [];
+  private queueSize = 0;
   private flushing = false;
   private disposed = false;
   private heartbeatHandle?: RuntimeSchedulerHandle;
@@ -57,21 +58,50 @@ export class KairosRuntime {
   private lastEventAt?: string;
   private activeContextKey?: string;
   private qualifiedContextKey?: string;
+  private lastHandshakeResponse?: ExtensionHandshakeResponse;
+  private outboxLimitStatus: OutboxLimitStatus = {
+    estimatedSizeBytes: 0,
+    thresholdState: 'normal',
+    captureBlockedByHardCap: false,
+    thresholds: DEFAULT_OUTBOX_THRESHOLDS,
+  };
 
   constructor(options: RuntimeOptions) {
-    this.client = options.client;
     this.observer = options.observer;
     this.scheduler = options.scheduler;
     this.environment = options.environment;
-    this.settings = sanitizeEffectiveSettings(options.initialSettings ?? getDefaultEffectiveSettings());
+    this.installationID = options.installationID;
+    this.settingsMirror = new ExtensionSettingsMirror({
+      storage: options.storage,
+      observer: options.observer,
+      now: options.environment.now,
+      initialSettings: options.initialSettings,
+    });
     this.trackedDateKey = toDateKey(this.environment.now());
+    this.syncWorker = new OutboxSyncWorker({
+      client: options.client,
+      storage: options.storage,
+      scheduler: options.scheduler,
+      observer: options.observer,
+      environment: options.environment,
+    });
   }
 
   async start(): Promise<void> {
     try {
+      await this.settingsMirror.initialize();
+
+      const recovered = await this.syncWorker.recoverStaleSendingRows();
+      if (recovered > 0) {
+        this.observer.logInfo(`Recovered ${recovered} sending outbox row(s) to pending on startup`);
+      }
+      await this.refreshOutboxHealth();
+      this.publishStatus();
+
       await this.connectAndSync();
-    } catch {
+    } catch (error) {
       // Initial activation should degrade gracefully when the desktop app is unavailable.
+      this.observer.logWarn(`Runtime start degraded gracefully: ${formatError(error)}`);
     }
   }
 
@@ -80,6 +110,7 @@ export class KairosRuntime {
     this.heartbeatHandle?.cancel();
     this.retryHandle?.cancel();
     this.dwellHandle?.cancel();
+    this.syncWorker.dispose();
   }
 
   getConnectionState(): ConnectionState {
@@ -87,11 +118,11 @@ export class KairosRuntime {
   }
 
   getBufferedEventCount(): number {
-    return this.pendingEvents.length;
+    return this.queueSize;
   }
 
   getSettings(): ExtensionEffectiveSettings {
-    return this.settings;
+    return this.effectiveSettings;
   }
 
   getStatusSnapshot(): RuntimeStatusSnapshot {
@@ -162,11 +193,10 @@ export class KairosRuntime {
     this.setState('connecting', 'Connecting');
 
     try {
-      const response = await this.client.handshake({
-        machine: this.environment.machine,
-        extension: this.environment.extension,
-      });
-      this.settings = sanitizeEffectiveSettings(response.settings);
+      const response = await this.syncWorker.performHandshake();
+      await this.settingsMirror.applyHandshake(response);
+
+      this.lastHandshakeResponse = response;
       this.lastHandshakeAt = response.serverTimestamp;
       this.retryDelayMs = INITIAL_RETRY_DELAY_MS;
       this.retryHandle?.cancel();
@@ -174,10 +204,12 @@ export class KairosRuntime {
       this.setState('connected', 'Connected');
       this.observer.logInfo('Kairos desktop settings synchronized');
       this.resetHeartbeatSchedule();
+      await this.refreshOutboxHealth();
       await this.flushQueue();
     } catch (error) {
       this.observer.logWarn(`Failed to synchronize with Kairos desktop: ${formatError(error)}`);
       this.resetHeartbeatSchedule();
+      await this.refreshOutboxHealth();
       this.handleConnectionFailure('handshake failed');
       throw error;
     }
@@ -194,13 +226,14 @@ export class KairosRuntime {
       return;
     }
 
-    const decision = shouldEmitEvent(eventType, this.settings, this.focused);
+    const settings = this.effectiveSettings;
+    const decision = shouldEmitEvent(eventType, settings, this.focused);
     if (!decision.allowed) {
       this.observer.logInfo(`Skipped ${eventType} event: ${decision.reason}`);
       return;
     }
 
-    if (this.settings.respectDesktopExclusions && isExcludedContext(context, this.environment.machine, this.settings.exclusions)) {
+    if (settings.respectDesktopExclusions && isExcludedContext(context, this.environment.machine, settings.exclusions)) {
       this.observer.logInfo(`Skipped ${eventType} event: excluded by desktop settings`);
       return;
     }
@@ -217,19 +250,35 @@ export class KairosRuntime {
       }
     }
 
-    const shapedContext = shapeContextForEmission(context, this.settings);
+    const shapedContext = shapeContextForEmission(context, settings);
     const event = createActivityEvent(
       eventType,
       shapedContext,
-      sanitizeMachine(this.environment.machine, this.settings.sendMachineAttribution),
+      sanitizeMachine(this.environment.machine, settings.sendMachineAttribution),
       this.environment.now(),
       this.environment.randomID(),
     );
 
-    this.pendingEvents.push(event);
+    const enqueueOutcome = await this.syncWorker.enqueueEvent(event, {
+      workspaceID: shapedContext.workspaceId,
+      workspaceName: shapedContext.projectName,
+      projectIDHint: shapedContext.projectName,
+      installationID: this.installationID,
+      settings,
+    });
+    this.applyOutboxLimitStatus(enqueueOutcome.health.limitStatus);
+    this.queueSize = enqueueOutcome.health.queueSize;
+    if (enqueueOutcome.kind === 'blocked_hard_cap') {
+      this.observer.logWarn(
+        `Skipped ${eventType} event: outbox hard cap reached (${formatBytes(this.outboxLimitStatus.thresholds.hardCapBytes)})`,
+      );
+      this.publishStatus();
+      await this.flushQueueOrBuffer();
+      return;
+    }
+
     this.lastEventAt = event.timestamp;
-    this.enforceQueueBounds();
-    if (this.state === 'connected' || this.settings.bufferEventsWhenOffline) {
+    if (this.state === 'connected' || settings.bufferEventsWhenOffline) {
       this.recordTrackedActivity(eventType, new Date(event.timestamp));
     }
     this.publishStatus();
@@ -237,20 +286,18 @@ export class KairosRuntime {
   }
 
   private async flushQueueOrBuffer(): Promise<void> {
-    if (this.pendingEvents.length === 0) {
+    if (this.queueSize === 0) {
       return;
     }
 
     if (this.state !== 'connected') {
-      if (this.settings.bufferEventsWhenOffline) {
-        this.setState('offline-buffering', `Buffered ${this.pendingEvents.length} event(s)`);
+      if (this.effectiveSettings.bufferEventsWhenOffline) {
+        this.setState('offline-buffering', `Buffered ${this.queueSize} event(s)`);
         this.scheduleRetryIfNeeded();
         return;
       }
 
-      const dropped = this.pendingEvents.length;
-      this.pendingEvents = [];
-      this.observer.logWarn(`Dropped ${dropped} event(s) because desktop is unavailable and buffering is disabled`);
+      this.setState(this.effectiveSettings.retryConnectionAutomatically ? 'retrying' : 'disconnected', 'desktop unavailable');
       this.scheduleRetryIfNeeded();
       return;
     }
@@ -259,39 +306,26 @@ export class KairosRuntime {
   }
 
   private async flushQueue(): Promise<void> {
-    if (this.flushing || this.pendingEvents.length === 0 || this.state !== 'connected' || this.disposed) {
+    if (this.flushing || this.queueSize === 0 || this.state !== 'connected' || this.disposed) {
+      return;
+    }
+    if (!this.lastHandshakeResponse) {
       return;
     }
 
     this.flushing = true;
     try {
-      while (this.pendingEvents.length > 0) {
-        const batch = this.pendingEvents.slice(0, MAX_BATCH_SIZE);
-        const request: PendingBatch = {
-          machine: sanitizeMachine(this.environment.machine, this.settings.sendMachineAttribution),
-          extension: this.environment.extension,
-          events: batch,
-        };
+      const outcome = await this.syncWorker.replayPendingEvents(this.lastHandshakeResponse);
+      await this.refreshOutboxHealth();
 
-        try {
-          const response = await this.client.ingestEvents(request);
-          this.pendingEvents.splice(0, batch.length);
-          this.lastSuccessfulSendAt = response.serverTimestamp;
+      if (outcome.kind === 'error') {
+        this.observer.logWarn(`Failed to replay outbox batch: ${outcome.message}`);
+        this.handleConnectionFailure('event delivery failed');
+        return;
+      }
 
-          if (response.warnings?.length) {
-            this.observer.logWarn(`Desktop warnings: ${response.warnings.join(' | ')}`);
-          }
-
-          if (response.acceptedCount !== batch.length || response.rejectedCount > 0) {
-            this.observer.logWarn(
-              `Ingestion batch result: accepted=${response.acceptedCount} rejected=${response.rejectedCount}`,
-            );
-          }
-        } catch (error) {
-          this.observer.logWarn(`Failed to send activity batch: ${formatError(error)}`);
-          this.handleConnectionFailure('event delivery failed');
-          return;
-        }
+      if (outcome.deliveredAt) {
+        this.lastSuccessfulSendAt = outcome.deliveredAt;
       }
 
       this.setState('connected', 'Connected');
@@ -305,19 +339,19 @@ export class KairosRuntime {
     this.heartbeatHandle?.cancel();
     this.heartbeatHandle = undefined;
 
-    if (this.disposed || !this.settings.sendHeartbeatEvents) {
+    if (this.disposed || !this.effectiveSettings.sendHeartbeatEvents) {
       return;
     }
 
     this.heartbeatHandle = this.scheduler.setInterval(() => {
       void this.emitHeartbeat();
-    }, this.settings.heartbeatIntervalSeconds * 1000);
+    }, this.effectiveSettings.heartbeatIntervalSeconds * 1000);
   }
 
   private handleConnectionFailure(reason: string): void {
-    if (this.pendingEvents.length > 0 && this.settings.bufferEventsWhenOffline) {
-      this.setState('offline-buffering', `Buffered ${this.pendingEvents.length} event(s)`);
-    } else if (this.settings.retryConnectionAutomatically) {
+    if (this.queueSize > 0 && this.effectiveSettings.bufferEventsWhenOffline) {
+      this.setState('offline-buffering', `Buffered ${this.queueSize} event(s)`);
+    } else if (this.effectiveSettings.retryConnectionAutomatically) {
       this.setState('retrying', reason);
     } else {
       this.setState('disconnected', reason);
@@ -327,7 +361,7 @@ export class KairosRuntime {
   }
 
   private scheduleRetryIfNeeded(): void {
-    if (!this.settings.retryConnectionAutomatically || this.disposed || this.retryHandle) {
+    if (!this.effectiveSettings.retryConnectionAutomatically || this.disposed || this.retryHandle) {
       return;
     }
 
@@ -341,18 +375,44 @@ export class KairosRuntime {
         }
       });
     }, delayMs);
-    this.setState(this.pendingEvents.length > 0 && this.settings.bufferEventsWhenOffline ? 'offline-buffering' : 'retrying', `Retrying in ${Math.round(delayMs / 1000)}s`);
+    this.setState(
+      this.queueSize > 0 && this.effectiveSettings.bufferEventsWhenOffline ? 'offline-buffering' : 'retrying',
+      `Retrying in ${Math.round(delayMs / 1000)}s`,
+    );
   }
 
-  private enforceQueueBounds(): void {
-    if (this.pendingEvents.length <= MAX_BUFFERED_EVENTS) {
+  private async refreshOutboxHealth(): Promise<void> {
+    const health = await this.syncWorker.getOutboxHealth(this.effectiveSettings);
+    this.queueSize = health.queueSize;
+    this.applyOutboxLimitStatus(health.limitStatus);
+  }
+
+  private applyOutboxLimitStatus(nextStatus: OutboxLimitStatus): void {
+    const previousState = this.outboxLimitStatus.thresholdState;
+    this.outboxLimitStatus = nextStatus;
+    if (previousState === nextStatus.thresholdState) {
       return;
     }
 
-    const droppedCount = this.pendingEvents.length - MAX_BUFFERED_EVENTS;
-    this.pendingEvents.splice(0, droppedCount);
-    this.observer.logWarn(`Buffered event queue limit reached; dropped ${droppedCount} oldest event(s)`);
-    this.publishStatus();
+    switch (nextStatus.thresholdState) {
+      case 'hard':
+        this.observer.logWarn('Outbox hard cap reached; capture will pause until backlog drains');
+        break;
+      case 'warning':
+        this.observer.logWarn('Outbox warning threshold reached');
+        break;
+      case 'soft':
+        this.observer.logInfo('Outbox soft threshold reached');
+        break;
+      case 'normal':
+      default:
+        this.observer.logInfo('Outbox backlog returned below soft threshold');
+        break;
+    }
+  }
+
+  private get effectiveSettings(): ExtensionEffectiveSettings {
+    return this.settingsMirror.getEffectiveSettings();
   }
 
   private setState(state: ConnectionState, detail: string): void {
@@ -374,23 +434,30 @@ export class KairosRuntime {
       displayState: this.getDisplayState(now),
       detail: this.stateDetail,
       todayTrackedMinutes: this.getTodayTrackedMinutes(now),
-      trackingEnabled: this.settings.trackingEnabled,
-      queueSize: this.pendingEvents.length,
+      trackingEnabled: this.effectiveSettings.trackingEnabled,
+      queueSize: this.queueSize,
       focused: this.focused,
-      trackOnlyWhenFocused: this.settings.trackOnlyWhenFocused,
-      bufferingEnabled: this.settings.bufferEventsWhenOffline,
-      heartbeatIntervalSeconds: this.settings.heartbeatIntervalSeconds,
-      filePathMode: this.settings.filePathMode,
+      trackOnlyWhenFocused: this.effectiveSettings.trackOnlyWhenFocused,
+      bufferingEnabled: this.effectiveSettings.bufferEventsWhenOffline,
+      heartbeatIntervalSeconds: this.effectiveSettings.heartbeatIntervalSeconds,
+      filePathMode: this.effectiveSettings.filePathMode,
       machineName: this.environment.machine.machineName,
+      editorVersion: this.environment.extension.editorVersion,
       extensionVersion: this.environment.extension.extensionVersion,
       lastHandshakeAt: this.lastHandshakeAt,
       lastSuccessfulSendAt: this.lastSuccessfulSendAt,
       lastEventAt: this.lastEventAt,
+      outboxSizeBytes: this.outboxLimitStatus.estimatedSizeBytes,
+      outboxThresholdState: this.outboxLimitStatus.thresholdState,
+      captureBlockedByHardCap: this.outboxLimitStatus.captureBlockedByHardCap,
+      outboxSoftThresholdBytes: this.outboxLimitStatus.thresholds.softThresholdBytes,
+      outboxWarningThresholdBytes: this.outboxLimitStatus.thresholds.warningThresholdBytes,
+      outboxHardCapBytes: this.outboxLimitStatus.thresholds.hardCapBytes,
     };
   }
 
   private getDisplayState(now: Date): StatusDisplayState {
-    if (!this.settings.trackingEnabled) {
+    if (!this.effectiveSettings.trackingEnabled) {
       return 'tracking-disabled';
     }
 
@@ -438,7 +505,7 @@ export class KairosRuntime {
   }
 
   private getIdleThresholdMs(): number {
-    return Math.max(1, this.settings.idleTimeoutMinutes) * 60 * 1000;
+    return Math.max(1, this.effectiveSettings.idleTimeoutMinutes) * 60 * 1000;
   }
 
   private recordTrackedActivity(eventType: ActivityEventType, at: Date): void {
@@ -480,6 +547,18 @@ function formatError(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function formatBytes(bytes: number): string {
+  const kibibyte = 1024;
+  const mebibyte = kibibyte * 1024;
+  if (bytes < kibibyte) {
+    return `${bytes} B`;
+  }
+  if (bytes < mebibyte) {
+    return `${(bytes / kibibyte).toFixed(1)} KiB`;
+  }
+  return `${(bytes / mebibyte).toFixed(1)} MiB`;
 }
 
 function addMinuteKeysBetween(target: Set<string>, start: Date, end: Date): void {
