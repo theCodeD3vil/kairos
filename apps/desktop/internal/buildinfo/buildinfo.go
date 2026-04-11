@@ -2,7 +2,7 @@ package buildinfo
 
 // These values are overridden at build/release time via -ldflags.
 var (
-	DesktopVersion   = "1.1.3-dev"
+	DesktopVersion   = "1.1.4-dev"
 	BuildChannel     = "dev"
 	GitCommit        = "unknown"
 	BuildDate        = "unknown"

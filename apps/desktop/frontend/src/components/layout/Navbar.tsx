@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NotificationsFilter, type FilterItem } from '@/components/ruixen/notifications-filter';
 import { SlidingCapsuleNav, type NavTab } from '@/components/satisui/sliding-capsule-nav';
+import { DevLiveRevisionBadge } from '@/components/system/DevLiveRevisionBadge';
 import { Button } from '@/components/ui/button';
 import kairosMark from '@/assets/kairos-mark.svg';
 import { LAST_PAGE_STORAGE_KEY } from '@/lib/settings/preferences';
@@ -127,7 +128,8 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-2">
+          {showTheme ? <DevLiveRevisionBadge /> : null}
           <div className="relative" ref={notificationsRef}>
             <Button
               variant="outline"

@@ -27,6 +27,7 @@ export type DesktopRefreshReason = 'poll' | 'event' | 'manual' | 'query';
 export type DesktopRefreshSignal = {
   reason: DesktopRefreshReason;
   revision: number;
+  kind?: string;
 };
 
 type DesktopDataContextValue = {
@@ -79,6 +80,7 @@ function mergeRefreshSignal(
   return {
     reason: mergeRefreshReason(current.reason, next.reason),
     revision: Math.max(current.revision, next.revision),
+    kind: mergeRefreshKind(current.kind, next.kind),
   };
 }
 
@@ -93,6 +95,66 @@ function extractEventRevision(args: unknown[]): number | null {
     }
   }
   return null;
+}
+
+function extractEventKind(args: unknown[]): string | undefined {
+  for (const arg of args) {
+    if (!arg || typeof arg !== 'object') {
+      continue;
+    }
+    const candidate = (arg as { kind?: unknown }).kind;
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim().toLowerCase();
+    }
+  }
+
+  for (const arg of args) {
+    if (typeof arg === 'string' && arg.trim()) {
+      return arg.trim().toLowerCase();
+    }
+  }
+
+  return undefined;
+}
+
+function mergeRefreshKind(current?: string, next?: string): string | undefined {
+  const currentKind = current?.trim().toLowerCase();
+  const nextKind = next?.trim().toLowerCase();
+  if (!currentKind || !nextKind) {
+    return undefined;
+  }
+  if (currentKind === nextKind) {
+    return currentKind;
+  }
+  // Different event kinds were coalesced; fall back to broad refresh.
+  return undefined;
+}
+
+function matchesEventKindToResourceKey(key: string, kind?: string): boolean {
+  const normalizedKind = kind?.trim().toLowerCase();
+  if (!normalizedKind) {
+    return true;
+  }
+
+  const isSettings = key === desktopResourceKeys.settings();
+  const isOverview = key.startsWith('overview:');
+  const isAnalytics = key.startsWith('analytics:');
+  const isSessions = key.startsWith('sessions:');
+  const isCalendar = key.startsWith('calendar:');
+
+  switch (normalizedKind) {
+    case 'extension-status':
+      return isSettings || isOverview;
+    case 'activity':
+    case 'sessions':
+      return isOverview || isAnalytics || isSessions || isCalendar;
+    case 'events':
+      return isSettings || isOverview || isAnalytics || isSessions || isCalendar;
+    case 'settings':
+      return true;
+    default:
+      return true;
+  }
 }
 
 export const desktopResourceKeys = {
@@ -190,7 +252,12 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
   const queuedRefreshSignalRef = useRef<DesktopRefreshSignal | null>(null);
 
   const refreshAll = async (signal: DesktopRefreshSignal) => {
-    const handlers = Array.from(refreshersRef.current.values()).flatMap((group) => Array.from(group));
+    const handlers = Array.from(refreshersRef.current.entries()).flatMap(([key, group]) => {
+      if (signal.reason === 'event' && !matchesEventKindToResourceKey(key, signal.kind)) {
+        return [];
+      }
+      return Array.from(group);
+    });
     if (handlers.length === 0) {
       return;
     }
@@ -202,7 +269,7 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
     );
   };
 
-  const queueRefresh = (reason: DesktopRefreshReason, revision?: number) => {
+  const queueRefresh = (reason: DesktopRefreshReason, revision?: number, kind?: string) => {
     const normalizedRevision = normalizeRevision(revision);
     if (normalizedRevision !== null) {
       latestEventRevisionRef.current = Math.max(latestEventRevisionRef.current, normalizedRevision);
@@ -210,6 +277,7 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
     const signal: DesktopRefreshSignal = {
       reason,
       revision: latestEventRevisionRef.current,
+      kind: reason === 'event' ? kind?.trim().toLowerCase() : undefined,
     };
 
     if (refreshInFlightRef.current) {
@@ -230,7 +298,7 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
       if (queuedRefreshSignalRef.current) {
         const queued = queuedRefreshSignalRef.current;
         queuedRefreshSignalRef.current = null;
-        queueRefresh(queued.reason, queued.revision);
+        queueRefresh(queued.reason, queued.revision, queued.kind);
       }
     });
   };
@@ -290,7 +358,11 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
     }
 
     const unsubscribe = EventsOn(dataChangedEventName, (...eventArgs: unknown[]) => {
-      queueRefresh('event', extractEventRevision(eventArgs) ?? undefined);
+      queueRefresh(
+        'event',
+        extractEventRevision(eventArgs) ?? undefined,
+        extractEventKind(eventArgs),
+      );
     });
 
     return () => {
