@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -27,6 +30,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: apps/desktop/go.mod
+          cache-dependency-path: apps/desktop/go.sum
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -102,6 +106,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: apps/desktop/go.mod
+          cache-dependency-path: apps/desktop/go.sum
 
       - name: Install Linux desktop build dependencies
         if: runner.os == 'Linux'

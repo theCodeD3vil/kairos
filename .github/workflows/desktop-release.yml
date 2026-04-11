@@ -11,6 +11,9 @@ on:
         required: true
         type: string
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
 
@@ -50,6 +53,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: apps/desktop/go.mod
+          cache-dependency-path: apps/desktop/go.sum
 
       - name: Install Linux desktop build dependencies
         if: runner.os == 'Linux'
