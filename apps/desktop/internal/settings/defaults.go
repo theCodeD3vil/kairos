@@ -74,7 +74,7 @@ func defaultEditableSettings() editableDefaults {
 		AppBehavior: contracts.AppBehaviorSettings{
 			LaunchOnStartup:      false,
 			StartMinimized:       false,
-			MinimizeToTray:       true,
+			MinimizeToTray:       runtime.GOOS != "linux",
 			OpenOnSystemLogin:    false,
 			RememberLastPage:     true,
 			RestoreLastDateRange: true,

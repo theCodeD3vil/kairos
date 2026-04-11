@@ -2,6 +2,7 @@ package settings
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
@@ -92,6 +93,14 @@ func validateAppBehavior(input contracts.AppBehaviorSettings) contracts.AppBehav
 	enabled := input.LaunchOnStartup || input.OpenOnSystemLogin
 	input.LaunchOnStartup = enabled
 	input.OpenOnSystemLogin = enabled
+
+	// Linux desktop environments can run without a reliable tray entry point.
+	// Keep startup behavior visible to avoid hidden-window lockouts.
+	if runtime.GOOS == "linux" {
+		input.StartMinimized = false
+		input.MinimizeToTray = false
+	}
+
 	return input
 }
 

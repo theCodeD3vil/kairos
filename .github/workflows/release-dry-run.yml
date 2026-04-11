@@ -20,7 +20,7 @@ jobs:
         include:
           - os: macos-latest
             platform: macos
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             platform: linux
           - os: windows-latest
             platform: windows

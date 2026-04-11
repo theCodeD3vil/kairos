@@ -20,19 +20,80 @@ import {
 } from '@/lib/backend/page-data';
 import { loadSettingsScreenData, probeVSCodeExtensionStatus } from '@/lib/backend/settings';
 
-export const DATA_REFRESH_INTERVAL_MS = 10_000;
-const EXTENSION_PROBE_INTERVAL_MS = 60_000;
+export const DATA_REFRESH_INTERVAL_MS = 60_000;
+const EXTENSION_PROBE_INTERVAL_MS = DATA_REFRESH_INTERVAL_MS;
 
 export type DesktopRefreshReason = 'poll' | 'event' | 'manual' | 'query';
+export type DesktopRefreshSignal = {
+  reason: DesktopRefreshReason;
+  revision: number;
+};
 
 type DesktopDataContextValue = {
   bootstrapped: boolean;
-  registerRefresher: (key: string, refresher: (reason: DesktopRefreshReason) => Promise<void> | void) => () => void;
+  registerRefresher: (key: string, refresher: (signal: DesktopRefreshSignal) => Promise<void> | void) => () => void;
 };
 
 const DesktopDataContext = createContext<DesktopDataContextValue | null>(null);
 const desktopDataCache = new Map<string, unknown>();
 const dataChangedEventName = 'kairos:data-changed';
+
+function mergeRefreshReason(
+  current: DesktopRefreshReason | null,
+  next: DesktopRefreshReason,
+): DesktopRefreshReason {
+  if (!current) {
+    return next;
+  }
+
+  const priority: Record<DesktopRefreshReason, number> = {
+    poll: 0,
+    event: 1,
+    query: 2,
+    manual: 3,
+  };
+  return priority[next] >= priority[current] ? next : current;
+}
+
+function normalizeRevision(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function mergeRefreshSignal(
+  current: DesktopRefreshSignal | null,
+  next: DesktopRefreshSignal,
+): DesktopRefreshSignal {
+  if (!current) {
+    return next;
+  }
+
+  return {
+    reason: mergeRefreshReason(current.reason, next.reason),
+    revision: Math.max(current.revision, next.revision),
+  };
+}
+
+function extractEventRevision(args: unknown[]): number | null {
+  for (const arg of args) {
+    if (!arg || typeof arg !== 'object') {
+      continue;
+    }
+    const revision = normalizeRevision((arg as { revision?: unknown }).revision);
+    if (revision !== null) {
+      return revision;
+    }
+  }
+  return null;
+}
 
 export const desktopResourceKeys = {
   analytics(filters: AnalyticsFilters) {
@@ -121,11 +182,14 @@ async function bootstrapDesktopCache(): Promise<void> {
 
 export function DesktopDataProvider({ children }: PropsWithChildren) {
   const [bootstrapped, setBootstrapped] = useState(false);
-  const refreshersRef = useRef(new Map<string, Set<(reason: DesktopRefreshReason) => Promise<void> | void>>());
+  const refreshersRef = useRef(new Map<string, Set<(signal: DesktopRefreshSignal) => Promise<void> | void>>());
   const lastExtensionProbeAtRef = useRef(0);
   const extensionProbeInFlightRef = useRef(false);
+  const latestEventRevisionRef = useRef(0);
+  const refreshInFlightRef = useRef(false);
+  const queuedRefreshSignalRef = useRef<DesktopRefreshSignal | null>(null);
 
-  const refreshAll = async (reason: DesktopRefreshReason) => {
+  const refreshAll = async (signal: DesktopRefreshSignal) => {
     const handlers = Array.from(refreshersRef.current.values()).flatMap((group) => Array.from(group));
     if (handlers.length === 0) {
       return;
@@ -133,9 +197,42 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
 
     await Promise.allSettled(
       handlers.map(async (handler) => {
-        await handler(reason);
+        await handler(signal);
       }),
     );
+  };
+
+  const queueRefresh = (reason: DesktopRefreshReason, revision?: number) => {
+    const normalizedRevision = normalizeRevision(revision);
+    if (normalizedRevision !== null) {
+      latestEventRevisionRef.current = Math.max(latestEventRevisionRef.current, normalizedRevision);
+    }
+    const signal: DesktopRefreshSignal = {
+      reason,
+      revision: latestEventRevisionRef.current,
+    };
+
+    if (refreshInFlightRef.current) {
+      queuedRefreshSignalRef.current = mergeRefreshSignal(queuedRefreshSignalRef.current, signal);
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    void (async () => {
+      let nextSignal: DesktopRefreshSignal | null = signal;
+      while (nextSignal) {
+        await refreshAll(nextSignal);
+        nextSignal = queuedRefreshSignalRef.current;
+        queuedRefreshSignalRef.current = null;
+      }
+    })().finally(() => {
+      refreshInFlightRef.current = false;
+      if (queuedRefreshSignalRef.current) {
+        const queued = queuedRefreshSignalRef.current;
+        queuedRefreshSignalRef.current = null;
+        queueRefresh(queued.reason, queued.revision);
+      }
+    });
   };
 
   useEffect(() => {
@@ -157,23 +254,31 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void (async () => {
-        const now = Date.now();
-        if (!extensionProbeInFlightRef.current && now-lastExtensionProbeAtRef.current >= EXTENSION_PROBE_INTERVAL_MS) {
-          extensionProbeInFlightRef.current = true;
-          try {
-            await probeVSCodeExtensionStatus();
-          } finally {
-            lastExtensionProbeAtRef.current = Date.now();
-            extensionProbeInFlightRef.current = false;
-          }
+    let active = true;
+    const runPollTick = async () => {
+      const now = Date.now();
+      if (!extensionProbeInFlightRef.current && now-lastExtensionProbeAtRef.current >= EXTENSION_PROBE_INTERVAL_MS) {
+        extensionProbeInFlightRef.current = true;
+        try {
+          await probeVSCodeExtensionStatus();
+        } finally {
+          lastExtensionProbeAtRef.current = Date.now();
+          extensionProbeInFlightRef.current = false;
         }
-        await refreshAll('poll');
-      })();
+      }
+      queueRefresh('poll');
+    };
+
+    void runPollTick();
+    const intervalId = window.setInterval(() => {
+      if (!active) {
+        return;
+      }
+      void runPollTick();
     }, DATA_REFRESH_INTERVAL_MS);
 
     return () => {
+      active = false;
       window.clearInterval(intervalId);
     };
   }, [bootstrapped]);
@@ -184,8 +289,8 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const unsubscribe = EventsOn(dataChangedEventName, () => {
-      void refreshAll('event');
+    const unsubscribe = EventsOn(dataChangedEventName, (...eventArgs: unknown[]) => {
+      queueRefresh('event', extractEventRevision(eventArgs) ?? undefined);
     });
 
     return () => {

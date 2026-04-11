@@ -33,6 +33,7 @@ const (
 type Service interface {
 	IngestEvents(ctx context.Context, request contracts.IngestEventsRequest) (contracts.IngestEventsResponse, error)
 	HandshakeExtension(ctx context.Context, request contracts.ExtensionHandshakeRequest) (contracts.ExtensionHandshakeResponse, error)
+	MarkExtensionDisconnected(ctx context.Context, editor string) error
 	GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error)
 	ListKnownMachines(ctx context.Context) ([]contracts.MachineInfo, error)
 	ListRecentEvents(ctx context.Context, limit int) ([]contracts.ActivityEvent, error)
@@ -318,6 +319,32 @@ func (s *ServiceImpl) emitDataChanged(kind string) {
 
 func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {
 	return s.store.GetExtensionStatus(ctx, "vscode")
+}
+
+func (s *ServiceImpl) MarkExtensionDisconnected(ctx context.Context, editor string) error {
+	if s.store == nil {
+		return nil
+	}
+
+	trimmedEditor := strings.TrimSpace(editor)
+	if trimmedEditor == "" {
+		trimmedEditor = "vscode"
+	}
+
+	current, err := s.store.GetExtensionStatus(ctx, trimmedEditor)
+	if err != nil {
+		return err
+	}
+	if !current.Installed || !current.Connected {
+		return nil
+	}
+
+	current.Connected = false
+	if err := s.store.UpsertExtensionStatus(ctx, current, s.now().UTC().Format(time.RFC3339)); err != nil {
+		return err
+	}
+	s.emitDataChanged("extension-status")
+	return nil
 }
 
 func (s *ServiceImpl) ListKnownMachines(ctx context.Context) ([]contracts.MachineInfo, error) {

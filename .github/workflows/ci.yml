@@ -82,7 +82,7 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - ubuntu-latest
+          - ubuntu-22.04
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout

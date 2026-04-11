@@ -3,6 +3,7 @@ package settings
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -29,6 +30,15 @@ func TestDefaultsLoadCorrectlyOnEmptyDB(t *testing.T) {
 	}
 	if data.DataStorage.LocalDataPath != store.Path() {
 		t.Fatalf("expected local data path %q, got %q", store.Path(), data.DataStorage.LocalDataPath)
+	}
+	if runtime.GOOS == "linux" {
+		if data.AppBehavior.MinimizeToTray {
+			t.Fatal("expected minimizeToTray disabled by default on linux")
+		}
+	} else {
+		if !data.AppBehavior.MinimizeToTray {
+			t.Fatal("expected minimizeToTray enabled by default on non-linux platforms")
+		}
 	}
 }
 
@@ -189,6 +199,73 @@ func TestUpdateExtensionSettingsAllowsLowHeartbeatIntervals(t *testing.T) {
 	}
 }
 
+func TestUpdateAppBehaviorSettingsSanitizesHiddenStartupOnLinux(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	updated, err := service.UpdateAppBehaviorSettings(context.Background(), contracts.AppBehaviorSettings{
+		LaunchOnStartup:      true,
+		OpenOnSystemLogin:    true,
+		StartMinimized:       true,
+		MinimizeToTray:       true,
+		RememberLastPage:     true,
+		RestoreLastDateRange: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateAppBehaviorSettings failed: %v", err)
+	}
+
+	if runtime.GOOS == "linux" {
+		if updated.StartMinimized {
+			t.Fatal("expected startMinimized false on linux")
+		}
+		if updated.MinimizeToTray {
+			t.Fatal("expected minimizeToTray false on linux")
+		}
+	} else {
+		if !updated.StartMinimized {
+			t.Fatal("expected startMinimized true on non-linux platforms")
+		}
+		if !updated.MinimizeToTray {
+			t.Fatal("expected minimizeToTray true on non-linux platforms")
+		}
+	}
+}
+
+func TestPersistedAppBehaviorHiddenFlagsSanitizedOnLinux(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.SetSettingsSection(
+		context.Background(),
+		SectionAppBehavior,
+		`{"launchOnStartup":false,"startMinimized":true,"minimizeToTray":true,"openOnSystemLogin":false,"rememberLastPage":true,"restoreLastDateRange":true}`,
+		"2026-04-10T09:45:00Z",
+	); err != nil {
+		t.Fatalf("seed app behavior section failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if runtime.GOOS == "linux" {
+		if data.AppBehavior.StartMinimized {
+			t.Fatal("expected persisted startMinimized sanitized to false on linux")
+		}
+		if data.AppBehavior.MinimizeToTray {
+			t.Fatal("expected persisted minimizeToTray sanitized to false on linux")
+		}
+		return
+	}
+
+	if !data.AppBehavior.StartMinimized {
+		t.Fatal("expected persisted startMinimized retained on non-linux")
+	}
+	if !data.AppBehavior.MinimizeToTray {
+		t.Fatal("expected persisted minimizeToTray retained on non-linux")
+	}
+}
+
 func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
 	service, _ := newTestSettingsService(t)
 
@@ -312,7 +389,7 @@ func TestGetSettingsDataLeavesPendingCountUnsetWithoutReportedBacklog(t *testing
 	}
 }
 
-func TestGetExtensionStatusMarksStaleConnectionOffline(t *testing.T) {
+func TestGetExtensionStatusPreservesPersistedConnectedState(t *testing.T) {
 	service, store := newTestSettingsService(t)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 8, 12, 10, 0, 0, time.UTC)
@@ -332,12 +409,12 @@ func TestGetExtensionStatusMarksStaleConnectionOffline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetExtensionStatus failed: %v", err)
 	}
-	if status.Connected {
-		t.Fatalf("expected stale extension status to be disconnected, got %+v", status)
+	if !status.Connected {
+		t.Fatalf("expected connected extension status to stay connected, got %+v", status)
 	}
 }
 
-func TestGetExtensionStatusKeepsFreshConnectionOnline(t *testing.T) {
+func TestGetExtensionStatusPreservesPersistedDisconnectedState(t *testing.T) {
 	service, store := newTestSettingsService(t)
 	service.now = func() time.Time {
 		return time.Date(2026, time.April, 8, 12, 0, 20, 0, time.UTC)
@@ -345,7 +422,7 @@ func TestGetExtensionStatusKeepsFreshConnectionOnline(t *testing.T) {
 
 	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
 		Installed:        true,
-		Connected:        true,
+		Connected:        false,
 		Editor:           "vscode",
 		ExtensionVersion: "1.2.3",
 		LastEventAt:      "2026-04-08T12:00:00Z",
@@ -357,8 +434,8 @@ func TestGetExtensionStatusKeepsFreshConnectionOnline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetExtensionStatus failed: %v", err)
 	}
-	if !status.Connected {
-		t.Fatalf("expected fresh extension status to stay connected, got %+v", status)
+	if status.Connected {
+		t.Fatalf("expected disconnected extension status to stay disconnected, got %+v", status)
 	}
 }
 

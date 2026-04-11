@@ -7,10 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
@@ -18,8 +16,10 @@ import (
 	stdruntime "runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/michaelnji/kairos/apps/desktop/internal/buildinfo"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
 	"github.com/michaelnji/kairos/apps/desktop/internal/ingestion"
@@ -33,7 +33,6 @@ import (
 )
 
 const dataChangedEventName = "kairos:data-changed"
-const extensionBridgeBaseURL = "http://127.0.0.1:42138"
 const launchAgentLabel = "com.kairos.desktop"
 const windowsStartupRegistryPath = `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 const windowsStartupRegistryValueName = "KairosDesktop"
@@ -53,6 +52,13 @@ type App struct {
 	viewService      views.Service
 	settingsService  desktopsettings.Service
 	updateService    *updates.Service
+	dataRevision     uint64
+}
+
+type dataChangedEventPayload struct {
+	Kind      string `json:"kind"`
+	Revision  uint64 `json:"revision"`
+	EmittedAt string `json:"emittedAt"`
 }
 
 type launchBehaviorOptions struct {
@@ -104,6 +110,9 @@ func NewApp() *App {
 	ingestionService := ingestion.NewService(sqliteStore, settingsService, sessionService, func(kind string) {
 		app.emitDataChanged(kind)
 	})
+	if err := ingestionService.MarkExtensionDisconnected(context.Background(), "vscode"); err != nil {
+		log.Printf("app: unable to reset extension connection status at startup: %v", err)
+	}
 	if isLocalServerDisabled() {
 		log.Printf("app: local extension server startup disabled by %s", disableLocalServerEnvVar)
 		clearDesktopBridgeDiscovery()
@@ -116,7 +125,8 @@ func NewApp() *App {
 		return app
 	}
 
-	localServer, err := startLocalServerWithFallback(ingestionService)
+	bridgeToken := uuid.NewString()
+	localServer, err := startLocalServerWithFallback(ingestionService, bridgeToken)
 	if err != nil {
 		// The desktop app should stay usable even if the local extension bridge port is occupied.
 		log.Printf("app: local extension server initialization failed (continuing without bridge): %v", err)
@@ -130,7 +140,7 @@ func NewApp() *App {
 		return app
 	}
 	localServer.Start()
-	if err := writeDesktopBridgeDiscovery(localServer.Address()); err != nil {
+	if err := writeDesktopBridgeDiscovery(localServer.Address(), bridgeToken); err != nil {
 		log.Printf("app: unable to write desktop bridge discovery file: %v", err)
 	}
 
@@ -145,8 +155,11 @@ func NewApp() *App {
 	return app
 }
 
-func startLocalServerWithFallback(ingestionService ingestion.Service) (*desktopserver.LocalServer, error) {
+func startLocalServerWithFallback(ingestionService ingestion.Service, bridgeToken string) (*desktopserver.LocalServer, error) {
 	config := desktopserver.DefaultConfig()
+	if strings.TrimSpace(bridgeToken) != "" {
+		config.BridgeToken = strings.TrimSpace(bridgeToken)
+	}
 	server, err := desktopserver.NewLocalServer(config, ingestionService)
 	if err == nil {
 		return server, nil
@@ -192,7 +205,7 @@ func isAddressInUse(err error) bool {
 	return strings.Contains(lower, "address already in use")
 }
 
-func writeDesktopBridgeDiscovery(address string) error {
+func writeDesktopBridgeDiscovery(address string, bridgeToken string) error {
 	host, portText, err := net.SplitHostPort(address)
 	if err != nil {
 		return fmt.Errorf("parse local server address %q: %w", address, err)
@@ -211,17 +224,19 @@ func writeDesktopBridgeDiscovery(address string) error {
 	}
 
 	payload := struct {
-		DesktopServerURL  string `json:"desktopServerUrl"`
-		DesktopServerHost string `json:"desktopServerHost"`
-		DesktopServerPort int    `json:"desktopServerPort"`
-		UpdatedAt         string `json:"updatedAt"`
-		Version           int    `json:"version"`
+		DesktopServerURL   string `json:"desktopServerUrl"`
+		DesktopServerHost  string `json:"desktopServerHost"`
+		DesktopServerPort  int    `json:"desktopServerPort"`
+		DesktopServerToken string `json:"desktopServerToken,omitempty"`
+		UpdatedAt          string `json:"updatedAt"`
+		Version            int    `json:"version"`
 	}{
-		DesktopServerURL:  fmt.Sprintf("http://%s:%d", host, port),
-		DesktopServerHost: host,
-		DesktopServerPort: port,
-		UpdatedAt:         time.Now().UTC().Format(time.RFC3339),
-		Version:           1,
+		DesktopServerURL:   fmt.Sprintf("http://%s:%d", host, port),
+		DesktopServerHost:  host,
+		DesktopServerPort:  port,
+		DesktopServerToken: strings.TrimSpace(bridgeToken),
+		UpdatedAt:          time.Now().UTC().Format(time.RFC3339),
+		Version:            1,
 	}
 
 	bytes, err := json.Marshal(payload)
@@ -586,25 +601,25 @@ func (a *App) GetVSCodeBridgeHealth() (bool, error) {
 	if a.initErr != nil {
 		return false, a.initErr
 	}
-	_, err := a.requestExtensionBridge(http.MethodGet, "/health")
+	status, err := a.settingsService.GetExtensionStatus(a.requestContext())
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return status.Connected, nil
 }
 
 func (a *App) RefreshVSCodeExtensionStatus() (contracts.ExtensionStatus, error) {
 	if a.initErr != nil {
 		return contracts.ExtensionStatus{}, a.initErr
 	}
-	return a.probeVSCodeExtension("GET", "/health")
+	return a.settingsService.GetExtensionStatus(a.requestContext())
 }
 
 func (a *App) ReconnectVSCodeExtension() (contracts.ExtensionStatus, error) {
 	if a.initErr != nil {
 		return contracts.ExtensionStatus{}, a.initErr
 	}
-	return a.probeVSCodeExtension("POST", "/reconnect")
+	return a.settingsService.GetExtensionStatus(a.requestContext())
 }
 
 func (a *App) GetSystemInfo() (contracts.SystemInfo, error) {
@@ -722,12 +737,21 @@ func (a *App) launchBehaviorOptions(ctx context.Context) launchBehaviorOptions {
 		return launchBehaviorOptions{}
 	}
 
-	return launchBehaviorOptions{
+	behavior := launchBehaviorOptions{
 		launchOnStartup:   data.AppBehavior.LaunchOnStartup,
 		openOnSystemLogin: data.AppBehavior.OpenOnSystemLogin,
 		startMinimized:    data.AppBehavior.StartMinimized,
 		minimizeToTray:    data.AppBehavior.MinimizeToTray,
 	}
+
+	// Linux desktop environments (especially Wayland sessions) can become
+	// inaccessible when startup is hidden to tray/minimized.
+	if stdruntime.GOOS == "linux" {
+		behavior.startMinimized = false
+		behavior.minimizeToTray = false
+	}
+
+	return behavior
 }
 
 func (a *App) applyCurrentStartupBehavior(ctx context.Context) error {
@@ -1013,137 +1037,13 @@ func (a *App) emitDataChanged(kind string) {
 		return
 	}
 
-	wailsruntime.EventsEmit(a.ctx, dataChangedEventName, kind)
-}
-
-type extensionBridgeStatusResponse struct {
-	ConnectionState       string `json:"connectionState"`
-	EditorVersion         string `json:"editorVersion"`
-	ExtensionVersion      string `json:"extensionVersion"`
-	LastHandshakeAt       string `json:"lastHandshakeAt"`
-	LastSuccessfulAt      string `json:"lastSuccessfulSendAt"`
-	LastSuccessfulSyncAt  string `json:"lastSuccessfulSyncAt"`
-	LastEventAt           string `json:"lastEventAt"`
-	PendingEventCount     *int   `json:"pendingEventCount,omitempty"`
-	OldestPendingEventAt  string `json:"oldestPendingEventAt,omitempty"`
-	QuarantinedEventCount *int   `json:"quarantinedEventCount,omitempty"`
-	OutboxSizeBytes       *int64 `json:"outboxSizeBytes,omitempty"`
-	DesktopInstanceSeen   string `json:"desktopInstanceSeen,omitempty"`
-}
-
-func (a *App) probeVSCodeExtension(method string, path string) (contracts.ExtensionStatus, error) {
-	current, err := a.settingsService.GetExtensionStatus(a.requestContext())
-	if err != nil {
-		return contracts.ExtensionStatus{}, err
+	revision := atomic.AddUint64(&a.dataRevision, 1)
+	payload := dataChangedEventPayload{
+		Kind:      kind,
+		Revision:  revision,
+		EmittedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	}
 
-	response, requestErr := a.requestExtensionBridge(method, path)
-	if requestErr != nil {
-		offline := current
-		offline.Connected = false
-		if offline.Editor == "" {
-			offline.Editor = "vscode"
-		}
-		_ = a.persistExtensionStatus(offline)
-		a.emitDataChanged("extension-status")
-		return offline, requestErr
-	}
-
-	next := contracts.ExtensionStatus{
-		Installed:             true,
-		Connected:             strings.EqualFold(response.ConnectionState, "connected"),
-		Editor:                "vscode",
-		EditorVersion:         coalesceString(response.EditorVersion, current.EditorVersion),
-		ExtensionVersion:      coalesceString(response.ExtensionVersion, current.ExtensionVersion),
-		LastHandshakeAt:       coalesceString(response.LastHandshakeAt, current.LastHandshakeAt),
-		LastEventAt:           coalesceString(response.LastEventAt, coalesceString(response.LastSuccessfulAt, current.LastEventAt)),
-		PendingEventCount:     coalesceIntPointer(response.PendingEventCount, current.PendingEventCount),
-		OldestPendingEventAt:  coalesceString(response.OldestPendingEventAt, current.OldestPendingEventAt),
-		QuarantinedEventCount: coalesceIntPointer(response.QuarantinedEventCount, current.QuarantinedEventCount),
-		OutboxSizeBytes:       coalesceInt64Pointer(response.OutboxSizeBytes, current.OutboxSizeBytes),
-		LastSuccessfulSyncAt:  coalesceString(response.LastSuccessfulSyncAt, current.LastSuccessfulSyncAt),
-		DesktopInstanceSeen:   coalesceString(response.DesktopInstanceSeen, current.DesktopInstanceSeen),
-	}
-
-	if err := a.persistExtensionStatus(next); err != nil {
-		return contracts.ExtensionStatus{}, err
-	}
-	a.emitDataChanged("extension-status")
-
-	return a.settingsService.GetExtensionStatus(a.requestContext())
-}
-
-func (a *App) requestExtensionBridge(method string, path string) (extensionBridgeStatusResponse, error) {
-	ctx, cancel := context.WithTimeout(a.requestContext(), 3*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, method, extensionBridgeBaseURL+path, nil)
-	if err != nil {
-		return extensionBridgeStatusResponse{}, fmt.Errorf("build extension probe request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return extensionBridgeStatusResponse{}, fmt.Errorf("contact extension bridge: %w", err)
-	}
-	defer response.Body.Close()
-
-	body, readErr := io.ReadAll(response.Body)
-	if readErr != nil {
-		return extensionBridgeStatusResponse{}, fmt.Errorf("read extension bridge response: %w", readErr)
-	}
-
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		message := strings.TrimSpace(string(body))
-		if message == "" {
-			message = response.Status
-		}
-		return extensionBridgeStatusResponse{}, fmt.Errorf("extension bridge returned %s: %s", response.Status, message)
-	}
-
-	var payload extensionBridgeStatusResponse
-	if err := json.Unmarshal(body, &payload); err != nil {
-		return extensionBridgeStatusResponse{}, fmt.Errorf("decode extension bridge response: %w", err)
-	}
-
-	return payload, nil
-}
-
-func (a *App) persistExtensionStatus(status contracts.ExtensionStatus) error {
-	if a.sqliteStore == nil {
-		return nil
-	}
-	return a.sqliteStore.UpsertExtensionStatus(a.requestContext(), status, time.Now().UTC().Format(time.RFC3339))
-}
-
-func coalesceString(primary string, fallback string) string {
-	if strings.TrimSpace(primary) != "" {
-		return primary
-	}
-	return fallback
-}
-
-func coalesceIntPointer(primary *int, fallback *int) *int {
-	if primary != nil {
-		value := *primary
-		return &value
-	}
-	if fallback == nil {
-		return nil
-	}
-	value := *fallback
-	return &value
-}
-
-func coalesceInt64Pointer(primary *int64, fallback *int64) *int64 {
-	if primary != nil {
-		value := *primary
-		return &value
-	}
-	if fallback == nil {
-		return nil
-	}
-	value := *fallback
-	return &value
+	// Keep "kind" as the first argument for backwards compatibility with older frontend listeners.
+	wailsruntime.EventsEmit(a.ctx, dataChangedEventName, kind, payload)
 }

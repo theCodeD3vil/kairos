@@ -570,6 +570,44 @@ func TestRequiredFieldLengthLimitIsRejected(t *testing.T) {
 	}
 }
 
+func TestMarkExtensionDisconnectedSetsConnectedFalse(t *testing.T) {
+	service := newTestService(t)
+
+	if _, err := service.HandshakeExtension(context.Background(), contracts.ExtensionHandshakeRequest{
+		Machine: validRequest().Machine,
+		Extension: contracts.ExtensionInfo{
+			Editor:           "vscode",
+			EditorVersion:    "1.99.0",
+			ExtensionVersion: "1.2.3",
+		},
+	}); err != nil {
+		t.Fatalf("handshake failed: %v", err)
+	}
+
+	if err := service.MarkExtensionDisconnected(context.Background(), "vscode"); err != nil {
+		t.Fatalf("mark extension disconnected failed: %v", err)
+	}
+
+	status, err := service.GetExtensionStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetExtensionStatus failed: %v", err)
+	}
+	if status.Connected {
+		t.Fatalf("expected extension to be disconnected, got %+v", status)
+	}
+	if !status.Installed {
+		t.Fatalf("expected extension to remain installed, got %+v", status)
+	}
+}
+
+func TestMarkExtensionDisconnectedNoopsWhenStatusMissing(t *testing.T) {
+	service := newTestService(t)
+
+	if err := service.MarkExtensionDisconnected(context.Background(), "vscode"); err != nil {
+		t.Fatalf("expected no error when status missing, got %v", err)
+	}
+}
+
 func newTestService(t *testing.T) *ServiceImpl {
 	service, _ := newTestServiceWithSettings(t)
 	return service

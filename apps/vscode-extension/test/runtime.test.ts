@@ -12,7 +12,7 @@ import type {
   ExtensionHandshakeResponse,
 } from '@kairos/shared/settings';
 
-import { INITIAL_RETRY_DELAY_MS } from '../src/runtime/constants';
+import { CONNECTION_PROBE_INTERVAL_MS, INITIAL_RETRY_DELAY_MS } from '../src/runtime/constants';
 import { getDefaultEffectiveSettings } from '../src/runtime/filters';
 import { KairosRuntime } from '../src/runtime/runtime';
 import type {
@@ -316,8 +316,26 @@ test('retry behavior reconnects and flushes buffered events', async () => {
   harness.scheduler.advanceBy(INITIAL_RETRY_DELAY_MS);
   await waitForConnectionState(harness, 'connected');
   await waitForBufferedCount(harness, 0);
-  assert.equal(harness.client.handshakeRequests.length, 2);
+  assert.ok(harness.client.handshakeRequests.length >= 2);
   assert.equal(harness.client.ingestRequests.length, 2);
+});
+
+test('connection probe detects idle disconnects and recovers via retry loop', async () => {
+  const harness = createHarness({
+    retryConnectionAutomatically: true,
+  });
+
+  await harness.runtime.start();
+  assert.equal(harness.runtime.getConnectionState(), 'connected');
+  assert.equal(harness.client.handshakeRequests.length, 1);
+
+  harness.client.failNextHandshake = true;
+  harness.scheduler.advanceBy(CONNECTION_PROBE_INTERVAL_MS);
+  await waitForConnectionState(harness, 'retrying');
+
+  harness.scheduler.advanceBy(INITIAL_RETRY_DELAY_MS);
+  await waitForConnectionState(harness, 'connected');
+  assert.ok(harness.client.handshakeRequests.length >= 3);
 });
 
 test('extension status updates reflect connection transitions', async () => {

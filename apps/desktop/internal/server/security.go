@@ -13,14 +13,16 @@ import (
 const jsonContentType = "application/json"
 const DefaultPort = 42137
 const (
-	localServerHostEnvVar = "KAIROS_LOCAL_SERVER_HOST"
-	localServerPortEnvVar = "KAIROS_LOCAL_SERVER_PORT"
+	localServerHostEnvVar  = "KAIROS_LOCAL_SERVER_HOST"
+	localServerPortEnvVar  = "KAIROS_LOCAL_SERVER_PORT"
+	localServerTokenEnvVar = "KAIROS_LOCAL_SERVER_TOKEN"
 )
 
 type Config struct {
 	Host                string
 	Port                int
 	MaxRequestBodyBytes int64
+	BridgeToken         string
 }
 
 func DefaultConfig() Config {
@@ -40,6 +42,7 @@ func DefaultConfig() Config {
 		Host:                host,
 		Port:                port,
 		MaxRequestBodyBytes: config.MaxRequestBodyBytes,
+		BridgeToken:         strings.TrimSpace(os.Getenv(localServerTokenEnvVar)),
 	}
 }
 

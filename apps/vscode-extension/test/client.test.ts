@@ -1,14 +1,116 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import { getDefaultEffectiveSettings } from '../src/runtime/filters';
-import { HTTPDesktopClient } from '../src/runtime/client';
+import { WebSocketDesktopClient } from '../src/runtime/client';
 
-test('desktop client discovers desktop base URL from shared discovery file', async () => {
+type Listener = () => void;
+type MessageListener = (event: { data: string }) => void;
+
+class FakeDesktopWebSocket {
+  readonly readyState = 1;
+  private readonly listeners = new Map<string, Set<Listener | MessageListener>>();
+
+  constructor(private readonly url: string) {
+    setImmediate(() => this.emit('open'));
+  }
+
+  send(data: string): void {
+    const envelope = JSON.parse(data) as { id: string; type: string; protocolVersion: number };
+    assert.equal(envelope.protocolVersion, 2);
+    if (envelope.type === 'handshake.request') {
+      this.emitMessage({
+        id: envelope.id,
+        type: 'handshake.response',
+        payload: {
+          desktopInstanceId: 'desktop-instance-1',
+          protocolVersion: 2,
+          capabilities: {
+            perEventIngestionResults: true,
+            settingsSnapshotMirror: true,
+          },
+          limits: {
+            maxBatchEvents: 500,
+            maxRequestBytes: 1 << 20,
+          },
+          settings: getDefaultEffectiveSettings(),
+          settingsVersion: 'settings-hash',
+          settingsUpdatedAt: new Date().toISOString(),
+          serverTimestamp: new Date().toISOString(),
+        },
+      });
+      return;
+    }
+
+    if (envelope.type === 'ingest.request') {
+      this.emitMessage({
+        id: envelope.id,
+        type: 'ingest.response',
+        payload: {
+          acceptedCount: 0,
+          rejectedCount: 0,
+          warnings: [],
+          results: [],
+          serverTimestamp: new Date().toISOString(),
+        },
+      });
+      return;
+    }
+
+    this.emitMessage({
+      id: envelope.id,
+      type: 'error',
+      error: {
+        code: 'invalid_request',
+        message: `unsupported request type ${envelope.type}`,
+      },
+    });
+  }
+
+  close(): void {
+    this.emit('close');
+  }
+
+  addEventListener(type: 'open' | 'close' | 'error' | 'message', listener: Listener | MessageListener): void {
+    const existing = this.listeners.get(type) ?? new Set();
+    existing.add(listener);
+    this.listeners.set(type, existing);
+  }
+
+  removeEventListener(type: 'open' | 'close' | 'error' | 'message', listener: Listener | MessageListener): void {
+    const existing = this.listeners.get(type);
+    if (!existing) {
+      return;
+    }
+    existing.delete(listener);
+  }
+
+  private emit(type: 'open' | 'close' | 'error'): void {
+    const listeners = this.listeners.get(type);
+    if (!listeners) {
+      return;
+    }
+    for (const listener of listeners) {
+      (listener as Listener)();
+    }
+  }
+
+  private emitMessage(payload: unknown): void {
+    const listeners = this.listeners.get('message');
+    if (!listeners) {
+      return;
+    }
+    const encoded = JSON.stringify(payload);
+    for (const listener of listeners) {
+      (listener as MessageListener)({ data: encoded });
+    }
+  }
+}
+
+test('desktop client discovers websocket endpoint from shared discovery file', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kairos-client-test-'));
   const discoveryPath = path.join(tempDir, 'desktop-bridge.json');
   const originalDiscoveryEnv = process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
@@ -16,21 +118,36 @@ test('desktop client discovers desktop base URL from shared discovery file', asy
   process.env.KAIROS_BRIDGE_DISCOVERY_FILE = discoveryPath;
   delete process.env.KAIROS_DESKTOP_URL;
 
-  const server = await createDesktopMockServer();
-  try {
-    const port = (server.address() as { port: number }).port;
-    fs.writeFileSync(
-      discoveryPath,
-      JSON.stringify({
-        desktopServerUrl: `http://127.0.0.1:${port}`,
-        desktopServerHost: '127.0.0.1',
-        desktopServerPort: port,
-        updatedAt: new Date().toISOString(),
-        version: 1,
-      }),
-    );
+  const discoveryPort = 43137;
+  const discoveryBaseURL = `http://127.0.0.1:${discoveryPort}`;
+  const discoveryToken = 'discovery-token-123';
+  const discoveryWSURL = `ws://127.0.0.1:${discoveryPort}/v1/extension/ws?token=${discoveryToken}`;
+  const attemptedURLs: string[] = [];
 
-    const client = new HTTPDesktopClient('http://127.0.0.1:1');
+  fs.writeFileSync(
+    discoveryPath,
+    JSON.stringify({
+      desktopServerUrl: discoveryBaseURL,
+      desktopServerHost: '127.0.0.1',
+      desktopServerPort: discoveryPort,
+      desktopServerToken: discoveryToken,
+      updatedAt: new Date().toISOString(),
+      version: 1,
+    }),
+  );
+
+  try {
+    const client = new WebSocketDesktopClient('http://127.0.0.1:1', {
+      webSocketFactory: (url) => {
+        attemptedURLs.push(url);
+        if (url === discoveryWSURL) {
+          return new FakeDesktopWebSocket(url);
+        }
+        throw new Error(`dial failed ${url}`);
+      },
+      requestTimeoutMs: 250,
+    });
+
     const handshake = await client.handshake({
       machine: {
         machineId: 'machine-1',
@@ -59,8 +176,8 @@ test('desktop client discovers desktop base URL from shared discovery file', asy
       events: [],
     });
     assert.equal(ingest.acceptedCount, 0);
+    assert.ok(attemptedURLs.includes(discoveryWSURL));
   } finally {
-    server.close();
     if (originalDiscoveryEnv) {
       process.env.KAIROS_BRIDGE_DISCOVERY_FILE = originalDiscoveryEnv;
     } else {
@@ -74,53 +191,3 @@ test('desktop client discovers desktop base URL from shared discovery file', asy
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
-
-async function createDesktopMockServer(): Promise<http.Server> {
-  const server = http.createServer((request, response) => {
-    if (request.url === '/v1/extension/handshake' && request.method === 'POST') {
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'application/json');
-      response.end(JSON.stringify({
-        desktopInstanceId: 'desktop-instance-1',
-        protocolVersion: 2,
-        capabilities: {
-          perEventIngestionResults: true,
-          settingsSnapshotMirror: true,
-        },
-        limits: {
-          maxBatchEvents: 500,
-          maxRequestBytes: 1048576,
-        },
-        settings: getDefaultEffectiveSettings(),
-        settingsVersion: 'settings-hash',
-        settingsUpdatedAt: new Date().toISOString(),
-        serverTimestamp: new Date().toISOString(),
-      }));
-      return;
-    }
-
-    if (request.url === '/v1/ingestion/events' && request.method === 'POST') {
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'application/json');
-      response.end(JSON.stringify({
-        acceptedCount: 0,
-        rejectedCount: 0,
-        warnings: [],
-        results: [],
-        serverTimestamp: new Date().toISOString(),
-      }));
-      return;
-    }
-
-    response.statusCode = 404;
-    response.setHeader('Content-Type', 'application/json');
-    response.end(JSON.stringify({ error: 'not found' }));
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
-
-  return server;
-}

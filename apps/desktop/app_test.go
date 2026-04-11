@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -194,4 +195,50 @@ func TestNewAppFallsBackWhenPreferredPortIsOccupied(t *testing.T) {
 	}
 
 	app.shutdown(context.Background())
+}
+
+func TestLaunchBehaviorOptionsIgnoreHiddenStartupFlagsOnLinux(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "kairos.sqlite3")
+	t.Setenv("KAIROS_DATABASE_PATH", dbPath)
+	t.Setenv("KAIROS_LOCAL_SERVER_PORT", "0")
+
+	store, err := storage.Open(context.Background(), dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite store: %v", err)
+	}
+	if err := store.SetSettingsSection(
+		context.Background(),
+		"appBehavior",
+		`{"launchOnStartup":false,"startMinimized":true,"minimizeToTray":true,"openOnSystemLogin":false,"rememberLastPage":true,"restoreLastDateRange":true}`,
+		"2026-04-10T09:30:00Z",
+	); err != nil {
+		t.Fatalf("seed app behavior settings: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close sqlite store: %v", err)
+	}
+
+	app := NewApp()
+	if app.initErr != nil {
+		t.Fatalf("app initialization failed: %v", app.initErr)
+	}
+	defer app.shutdown(context.Background())
+
+	behavior := app.launchBehaviorOptions(context.Background())
+	if runtime.GOOS == "linux" {
+		if behavior.startMinimized {
+			t.Fatal("expected startMinimized disabled on linux")
+		}
+		if behavior.minimizeToTray {
+			t.Fatal("expected minimizeToTray disabled on linux")
+		}
+		return
+	}
+
+	if !behavior.startMinimized {
+		t.Fatal("expected startMinimized retained on non-linux")
+	}
+	if !behavior.minimizeToTray {
+		t.Fatal("expected minimizeToTray retained on non-linux")
+	}
 }

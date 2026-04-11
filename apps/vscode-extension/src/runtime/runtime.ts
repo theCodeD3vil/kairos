@@ -2,6 +2,8 @@ import type { ActivityEventType } from '@kairos/shared/ingestion';
 import type { ExtensionEffectiveSettings, ExtensionHandshakeResponse } from '@kairos/shared/settings';
 
 import {
+  CONNECTION_PROBE_INTERVAL_MS,
+  DESKTOP_PROTOCOL_VERSION,
   INITIAL_RETRY_DELAY_MS,
   MAX_RETRY_DELAY_MS,
 } from './constants';
@@ -46,6 +48,7 @@ export class KairosRuntime {
   private flushing = false;
   private disposed = false;
   private heartbeatHandle?: RuntimeSchedulerHandle;
+  private connectionProbeHandle?: RuntimeSchedulerHandle;
   private retryHandle?: RuntimeSchedulerHandle;
   private dwellHandle?: RuntimeSchedulerHandle;
   private retryDelayMs = INITIAL_RETRY_DELAY_MS;
@@ -97,6 +100,7 @@ export class KairosRuntime {
       }
       await this.refreshOutboxHealth();
       this.publishStatus();
+      this.resetConnectionProbeSchedule();
 
       await this.connectAndSync();
     } catch (error) {
@@ -108,6 +112,7 @@ export class KairosRuntime {
   dispose(): void {
     this.disposed = true;
     this.heartbeatHandle?.cancel();
+    this.connectionProbeHandle?.cancel();
     this.retryHandle?.cancel();
     this.dwellHandle?.cancel();
     this.syncWorker.dispose();
@@ -185,15 +190,26 @@ export class KairosRuntime {
     await this.recordEvent('heartbeat', this.activeContext);
   }
 
-  private async connectAndSync(): Promise<void> {
+  private async connectAndSync(options?: {
+    silentWhenAlreadyConnected?: boolean;
+    failureReason?: string;
+  }): Promise<void> {
     if (this.disposed) {
       return;
     }
 
-    this.setState('connecting', 'Connecting');
+    const shouldSilentlySync = options?.silentWhenAlreadyConnected === true && this.state === 'connected';
+    if (!shouldSilentlySync) {
+      this.setState('connecting', 'Connecting');
+    }
 
     try {
       const response = await this.syncWorker.performHandshake();
+      if (response.protocolVersion !== DESKTOP_PROTOCOL_VERSION) {
+        throw new Error(
+          `desktop protocol mismatch: expected v${DESKTOP_PROTOCOL_VERSION}, received v${response.protocolVersion}`,
+        );
+      }
       await this.settingsMirror.applyHandshake(response);
 
       this.lastHandshakeResponse = response;
@@ -201,7 +217,12 @@ export class KairosRuntime {
       this.retryDelayMs = INITIAL_RETRY_DELAY_MS;
       this.retryHandle?.cancel();
       this.retryHandle = undefined;
-      this.setState('connected', 'Connected');
+      if (!shouldSilentlySync || this.state !== 'connected') {
+        this.setState('connected', 'Connected');
+      } else if (this.stateDetail !== 'Connected') {
+        this.stateDetail = 'Connected';
+        this.publishStatus();
+      }
       this.observer.logInfo('Kairos desktop settings synchronized');
       this.resetHeartbeatSchedule();
       await this.refreshOutboxHealth();
@@ -210,7 +231,7 @@ export class KairosRuntime {
       this.observer.logWarn(`Failed to synchronize with Kairos desktop: ${formatError(error)}`);
       this.resetHeartbeatSchedule();
       await this.refreshOutboxHealth();
-      this.handleConnectionFailure('handshake failed');
+      this.handleConnectionFailure(options?.failureReason ?? 'handshake failed');
       throw error;
     }
   }
@@ -346,6 +367,34 @@ export class KairosRuntime {
     this.heartbeatHandle = this.scheduler.setInterval(() => {
       void this.emitHeartbeat();
     }, this.effectiveSettings.heartbeatIntervalSeconds * 1000);
+  }
+
+  private resetConnectionProbeSchedule(): void {
+    this.connectionProbeHandle?.cancel();
+    this.connectionProbeHandle = undefined;
+
+    if (this.disposed) {
+      return;
+    }
+
+    this.connectionProbeHandle = this.scheduler.setInterval(() => {
+      void this.runConnectionProbe();
+    }, CONNECTION_PROBE_INTERVAL_MS);
+  }
+
+  private async runConnectionProbe(): Promise<void> {
+    if (this.disposed || this.state !== 'connected') {
+      return;
+    }
+
+    try {
+      await this.connectAndSync({
+        silentWhenAlreadyConnected: true,
+        failureReason: 'connection probe failed',
+      });
+    } catch {
+      // Connection failure handling happens inside connectAndSync.
+    }
   }
 
   private handleConnectionFailure(reason: string): void {

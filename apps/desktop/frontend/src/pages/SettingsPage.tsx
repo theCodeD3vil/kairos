@@ -91,6 +91,7 @@ export function SettingsPage() {
   const [heartbeatIntervalWarning, setHeartbeatIntervalWarning] = useState<string | null>(null);
   const persistCountRef = useRef(0);
   const changelogQueryHandledRef = useRef(false);
+  const isLinuxDesktop = currentMachine.os.trim().toLowerCase() === 'linux';
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -879,12 +880,16 @@ export function SettingsPage() {
               })}
             />
           </SettingsRow>
-          <SettingsRow label="Start minimized" helper="Starts the desktop window minimized instead of foregrounded.">
-            <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
-          </SettingsRow>
-          <SettingsRow label="Minimize to tray" helper="Keeps Kairos running in the background when the window is minimized, where supported.">
-            <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
-          </SettingsRow>
+          {!isLinuxDesktop ? (
+            <>
+              <SettingsRow label="Start minimized" helper="Starts the desktop window minimized instead of foregrounded.">
+                <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
+              </SettingsRow>
+              <SettingsRow label="Minimize to tray" helper="Keeps Kairos running in the background when the window is minimized, where supported.">
+                <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
+              </SettingsRow>
+            </>
+          ) : null}
           <SettingsRow label="Open on system login" helper="Requests OS login-item behavior so Kairos launches after sign-in, where supported.">
             <SettingsToggle
               checked={appBehavior.openOnSystemLogin}
