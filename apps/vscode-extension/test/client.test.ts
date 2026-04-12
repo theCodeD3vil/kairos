@@ -115,8 +115,10 @@ test('desktop client discovers websocket endpoint from shared discovery file', a
   const discoveryPath = path.join(tempDir, 'desktop-bridge.json');
   const originalDiscoveryEnv = process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
   const originalDesktopEnv = process.env.KAIROS_DESKTOP_URL;
+  const originalDesktopTokenEnv = process.env.KAIROS_DESKTOP_TOKEN;
   process.env.KAIROS_BRIDGE_DISCOVERY_FILE = discoveryPath;
   delete process.env.KAIROS_DESKTOP_URL;
+  delete process.env.KAIROS_DESKTOP_TOKEN;
 
   const discoveryPort = 43137;
   const discoveryBaseURL = `http://127.0.0.1:${discoveryPort}`;
@@ -187,6 +189,90 @@ test('desktop client discovers websocket endpoint from shared discovery file', a
       process.env.KAIROS_DESKTOP_URL = originalDesktopEnv;
     } else {
       delete process.env.KAIROS_DESKTOP_URL;
+    }
+    if (originalDesktopTokenEnv) {
+      process.env.KAIROS_DESKTOP_TOKEN = originalDesktopTokenEnv;
+    } else {
+      delete process.env.KAIROS_DESKTOP_TOKEN;
+    }
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('desktop client still attempts discovery token when env token for same URL is stale', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kairos-client-test-'));
+  const discoveryPath = path.join(tempDir, 'desktop-bridge.json');
+  const originalDiscoveryEnv = process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
+  const originalDesktopEnv = process.env.KAIROS_DESKTOP_URL;
+  const originalDesktopTokenEnv = process.env.KAIROS_DESKTOP_TOKEN;
+  process.env.KAIROS_BRIDGE_DISCOVERY_FILE = discoveryPath;
+
+  const discoveryPort = 43138;
+  const discoveryBaseURL = `http://127.0.0.1:${discoveryPort}`;
+  const staleEnvToken = 'stale-token-000';
+  const discoveryToken = 'discovery-token-456';
+  const staleWSURL = `ws://127.0.0.1:${discoveryPort}/v1/extension/ws?token=${staleEnvToken}`;
+  const discoveryWSURL = `ws://127.0.0.1:${discoveryPort}/v1/extension/ws?token=${discoveryToken}`;
+  const attemptedURLs: string[] = [];
+
+  process.env.KAIROS_DESKTOP_URL = discoveryBaseURL;
+  process.env.KAIROS_DESKTOP_TOKEN = staleEnvToken;
+
+  fs.writeFileSync(
+    discoveryPath,
+    JSON.stringify({
+      desktopServerUrl: discoveryBaseURL,
+      desktopServerHost: '127.0.0.1',
+      desktopServerPort: discoveryPort,
+      desktopServerToken: discoveryToken,
+      updatedAt: new Date().toISOString(),
+      version: 1,
+    }),
+  );
+
+  try {
+    const client = new WebSocketDesktopClient(undefined, {
+      webSocketFactory: (url) => {
+        attemptedURLs.push(url);
+        if (url === discoveryWSURL) {
+          return new FakeDesktopWebSocket(url);
+        }
+        throw new Error(`dial failed ${url}`);
+      },
+      requestTimeoutMs: 250,
+    });
+
+    const handshake = await client.handshake({
+      machine: {
+        machineId: 'machine-1',
+        machineName: 'test-machine',
+        osPlatform: 'linux',
+      },
+      extension: {
+        editor: 'vscode',
+        editorVersion: '1.100.0',
+        extensionVersion: '1.0.5',
+      },
+    });
+
+    assert.equal(handshake.settings.trackingEnabled, true);
+    assert.ok(attemptedURLs.includes(staleWSURL));
+    assert.ok(attemptedURLs.includes(discoveryWSURL));
+  } finally {
+    if (originalDiscoveryEnv) {
+      process.env.KAIROS_BRIDGE_DISCOVERY_FILE = originalDiscoveryEnv;
+    } else {
+      delete process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
+    }
+    if (originalDesktopEnv) {
+      process.env.KAIROS_DESKTOP_URL = originalDesktopEnv;
+    } else {
+      delete process.env.KAIROS_DESKTOP_URL;
+    }
+    if (originalDesktopTokenEnv) {
+      process.env.KAIROS_DESKTOP_TOKEN = originalDesktopTokenEnv;
+    } else {
+      delete process.env.KAIROS_DESKTOP_TOKEN;
     }
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

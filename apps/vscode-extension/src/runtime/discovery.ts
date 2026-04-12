@@ -50,10 +50,26 @@ function pushUniqueCandidate(candidates: DesktopEndpointCandidate[], candidate: 
   if (!candidate || !candidate.baseURL) {
     return;
   }
-  if (candidates.some((existing) => existing.baseURL === candidate.baseURL)) {
+
+  const normalized = normalizeCandidate(candidate);
+  if (!normalized.baseURL) {
     return;
   }
-  candidates.push(candidate);
+  if (candidates.some((existing) => sameCandidate(existing, normalized))) {
+    return;
+  }
+  candidates.push(normalized);
+}
+
+function normalizeCandidate(candidate: DesktopEndpointCandidate): DesktopEndpointCandidate {
+  return {
+    baseURL: candidate.baseURL.trim(),
+    token: candidate.token?.trim() || undefined,
+  };
+}
+
+function sameCandidate(a: DesktopEndpointCandidate, b: DesktopEndpointCandidate): boolean {
+  return a.baseURL === b.baseURL && (a.token ?? '') === (b.token ?? '');
 }
 
 export function buildDesktopEndpointCandidates(preferredBaseURL?: string): DesktopEndpointCandidate[] {
