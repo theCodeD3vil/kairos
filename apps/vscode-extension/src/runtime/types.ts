@@ -74,6 +74,12 @@ export type RuntimeStatusSnapshot = {
   displayState: StatusDisplayState;
   detail: string;
   todayTrackedMinutes: number;
+  currentSessionMinutes: number;
+  currentSessionActive: boolean;
+  currentSessionStartedAt?: string;
+  currentSessionLastActivityAt?: string;
+  activeFilePath?: string;
+  activeLanguage?: string;
   trackingEnabled: boolean;
   queueSize: number;
   focused: boolean;

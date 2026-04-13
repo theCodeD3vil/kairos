@@ -59,6 +59,7 @@ export class KairosRuntime {
   private stateDetail = 'Disconnected';
   private trackedMinuteKeys = new Set<string>();
   private trackedDateKey: string;
+  private currentSessionStartedAt?: Date;
   private lastTrackedActivityAt?: Date;
   private lastHandshakeAt?: string;
   private lastSuccessfulSendAt?: string;
@@ -502,12 +503,20 @@ export class KairosRuntime {
   private createStatusSnapshot(): RuntimeStatusSnapshot {
     const now = this.environment.now();
     this.ensureTrackedDay(now);
+    const sessionActive = this.isActiveNow(now);
+    const sessionMinutes = this.getCurrentSessionMinutes(now, sessionActive);
 
     return {
       connectionState: this.state,
       displayState: this.getDisplayState(now),
       detail: this.stateDetail,
       todayTrackedMinutes: this.getTodayTrackedMinutes(now),
+      currentSessionMinutes: sessionMinutes,
+      currentSessionActive: sessionActive,
+      currentSessionStartedAt: this.currentSessionStartedAt?.toISOString(),
+      currentSessionLastActivityAt: this.lastTrackedActivityAt?.toISOString(),
+      activeFilePath: this.activeContext?.filePath,
+      activeLanguage: this.activeContext?.language,
       trackingEnabled: this.effectiveSettings.trackingEnabled,
       queueSize: this.queueSize,
       focused: this.focused,
@@ -559,6 +568,21 @@ export class KairosRuntime {
     return effectiveMinutes.size;
   }
 
+  private getCurrentSessionMinutes(now: Date, activeNow = this.isActiveNow(now)): number {
+    if (!this.currentSessionStartedAt || !this.lastTrackedActivityAt) {
+      return 0;
+    }
+
+    const end = activeNow ? now : this.lastTrackedActivityAt;
+    if (end.getTime() < this.currentSessionStartedAt.getTime()) {
+      return 0;
+    }
+
+    const minuteKeys = new Set<string>();
+    addMinuteKeysBetween(minuteKeys, this.currentSessionStartedAt, end);
+    return minuteKeys.size;
+  }
+
   private isActiveNow(now: Date): boolean {
     if (!this.lastTrackedActivityAt) {
       return false;
@@ -591,11 +615,16 @@ export class KairosRuntime {
     if (this.lastTrackedActivityAt && toDateKey(this.lastTrackedActivityAt) === this.trackedDateKey) {
       const gapMs = at.getTime() - this.lastTrackedActivityAt.getTime();
       if (gapMs >= 0 && gapMs <= this.getIdleThresholdMs()) {
+        if (!this.currentSessionStartedAt) {
+          this.currentSessionStartedAt = this.lastTrackedActivityAt;
+        }
         addMinuteKeysBetween(this.trackedMinuteKeys, this.lastTrackedActivityAt, at);
       } else {
+        this.currentSessionStartedAt = at;
         this.trackedMinuteKeys.add(toMinuteKey(at));
       }
     } else {
+      this.currentSessionStartedAt = at;
       this.trackedMinuteKeys.add(toMinuteKey(at));
     }
 
@@ -610,6 +639,7 @@ export class KairosRuntime {
 
     this.trackedDateKey = dateKey;
     this.trackedMinuteKeys.clear();
+    this.currentSessionStartedAt = undefined;
     if (this.lastTrackedActivityAt && toDateKey(this.lastTrackedActivityAt) !== dateKey) {
       this.lastTrackedActivityAt = undefined;
     }

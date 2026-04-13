@@ -12,38 +12,40 @@ const statusbar_1 = require("../src/statusbar");
     strict_1.default.equal((0, statusbar_1.formatDuration)(272), '4h 32m');
 });
 (0, node_test_1.default)('buildStatusBarText selects concise state-aware labels', () => {
-    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'active', todayTrackedMinutes: 84 })), 'Kairos: 1h 24m today');
-    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'tracking-disabled' })), 'Kairos: Tracking off');
-    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'disconnected', connectionState: 'disconnected' })), 'Kairos: Disconnected');
-    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'buffering', connectionState: 'offline-buffering' })), 'Kairos: Buffering');
-    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'idle' })), 'Kairos: Idle');
+    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'active', todayTrackedMinutes: 84 })), '$(code) 1h 24m');
+    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'tracking-disabled' })), '$(code) 1h 24m');
+    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'disconnected', connectionState: 'disconnected' })), '$(code) 1h 24m');
+    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'buffering', connectionState: 'offline-buffering' })), '$(code) 1h 24m');
+    strict_1.default.equal((0, statusbar_1.buildStatusBarText)(createSnapshot({ displayState: 'idle' })), '$(code) 1h 24m');
 });
-(0, node_test_1.default)('buildStatusBarTooltip includes the main runtime detail fields', () => {
+(0, node_test_1.default)('buildStatusBarTooltip focuses on coding session details', () => {
     const tooltip = (0, statusbar_1.buildStatusBarTooltip)(createSnapshot({
-        displayState: 'buffering',
-        connectionState: 'offline-buffering',
-        queueSize: 7,
-        lastHandshakeAt: '2026-04-06T10:00:00Z',
-        lastSuccessfulSendAt: '2026-04-06T10:05:00Z',
-        lastEventAt: '2026-04-06T10:06:00Z',
+        displayState: 'active',
+        currentSessionMinutes: 42,
+        currentSessionActive: true,
+        currentSessionStartedAt: '2026-04-06T10:00:00Z',
+        currentSessionLastActivityAt: '2026-04-06T10:06:00Z',
+        activeFilePath: '/workspace/kairos/src/runtime/runtime.ts',
+        activeLanguage: 'typescript',
     }));
+    strict_1.default.match(tooltip, /\*\*Kairos Coding Session\*\*/);
     strict_1.default.match(tooltip, /Today: \*\*1h 24m\*\*/);
-    strict_1.default.match(tooltip, /State: \*\*Offline buffering\*\*/);
-    strict_1.default.match(tooltip, /Connection: \*\*Buffering offline\*\*/);
-    strict_1.default.match(tooltip, /Buffered events: \*\*7\*\*/);
-    strict_1.default.match(tooltip, /Outbox size:/);
-    strict_1.default.match(tooltip, /Outbox state:/);
-    strict_1.default.match(tooltip, /Last handshake:/);
-    strict_1.default.match(tooltip, /Last successful send:/);
-    strict_1.default.match(tooltip, /Last event:/);
+    strict_1.default.match(tooltip, /Current session: \*\*42m\*\*/);
+    strict_1.default.match(tooltip, /Session: \*\*Live\*\*/);
+    strict_1.default.match(tooltip, /Started:/);
+    strict_1.default.match(tooltip, /Last activity:/);
+    strict_1.default.match(tooltip, /File: \*\*\\\.\\\.\\\.\/runtime\/runtime\\.ts\*\*/);
+    strict_1.default.match(tooltip, /Language: \*\*typescript\*\*/);
 });
 (0, node_test_1.default)('buildStatusSummary and action list adapt to disconnected runtime state', () => {
     const snapshot = createSnapshot({
         displayState: 'disconnected',
         connectionState: 'disconnected',
-        queueSize: 3,
+        currentSessionMinutes: 23,
+        currentSessionActive: false,
+        activeLanguage: 'typescript',
     });
-    strict_1.default.equal((0, statusbar_1.buildStatusSummary)(snapshot), 'Today 1h 24m • Disconnected • Disconnected • 3 buffered');
+    strict_1.default.equal((0, statusbar_1.buildStatusSummary)(snapshot), 'Today 1h 24m • Session 23m • Paused • typescript');
     strict_1.default.equal((0, statusbar_1.getStatusBarActions)(snapshot)[0]?.action, 'reconnect-desktop');
 });
 (0, node_test_1.default)('connected runtime actions keep refresh and desktop open available', () => {
@@ -61,6 +63,12 @@ function createSnapshot(overrides) {
         displayState: 'active',
         detail: 'Connected',
         todayTrackedMinutes: 84,
+        currentSessionMinutes: 12,
+        currentSessionActive: false,
+        currentSessionStartedAt: undefined,
+        currentSessionLastActivityAt: undefined,
+        activeFilePath: undefined,
+        activeLanguage: undefined,
         trackingEnabled: true,
         queueSize: 0,
         focused: true,

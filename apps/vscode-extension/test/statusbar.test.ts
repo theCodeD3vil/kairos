@@ -17,44 +17,46 @@ test('formatDuration renders compact today labels', () => {
 });
 
 test('buildStatusBarText selects concise state-aware labels', () => {
-  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'active', todayTrackedMinutes: 84 })), 'Kairos: 1h 24m today');
-  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'tracking-disabled' })), 'Kairos: Tracking off');
-  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'disconnected', connectionState: 'disconnected' })), 'Kairos: Disconnected');
-  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'buffering', connectionState: 'offline-buffering' })), 'Kairos: Buffering');
-  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'idle' })), 'Kairos: Idle');
+  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'active', todayTrackedMinutes: 84 })), '$(code) 1h 24m');
+  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'tracking-disabled' })), '$(code) 1h 24m');
+  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'disconnected', connectionState: 'disconnected' })), '$(code) 1h 24m');
+  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'buffering', connectionState: 'offline-buffering' })), '$(code) 1h 24m');
+  assert.equal(buildStatusBarText(createSnapshot({ displayState: 'idle' })), '$(code) 1h 24m');
 });
 
-test('buildStatusBarTooltip includes the main runtime detail fields', () => {
+test('buildStatusBarTooltip focuses on coding session details', () => {
   const tooltip = buildStatusBarTooltip(
     createSnapshot({
-      displayState: 'buffering',
-      connectionState: 'offline-buffering',
-      queueSize: 7,
-      lastHandshakeAt: '2026-04-06T10:00:00Z',
-      lastSuccessfulSendAt: '2026-04-06T10:05:00Z',
-      lastEventAt: '2026-04-06T10:06:00Z',
+      displayState: 'active',
+      currentSessionMinutes: 42,
+      currentSessionActive: true,
+      currentSessionStartedAt: '2026-04-06T10:00:00Z',
+      currentSessionLastActivityAt: '2026-04-06T10:06:00Z',
+      activeFilePath: '/workspace/kairos/src/runtime/runtime.ts',
+      activeLanguage: 'typescript',
     }),
   );
 
+  assert.match(tooltip, /\*\*Kairos Coding Session\*\*/);
   assert.match(tooltip, /Today: \*\*1h 24m\*\*/);
-  assert.match(tooltip, /State: \*\*Offline buffering\*\*/);
-  assert.match(tooltip, /Connection: \*\*Buffering offline\*\*/);
-  assert.match(tooltip, /Buffered events: \*\*7\*\*/);
-  assert.match(tooltip, /Outbox size:/);
-  assert.match(tooltip, /Outbox state:/);
-  assert.match(tooltip, /Last handshake:/);
-  assert.match(tooltip, /Last successful send:/);
-  assert.match(tooltip, /Last event:/);
+  assert.match(tooltip, /Current session: \*\*42m\*\*/);
+  assert.match(tooltip, /Session: \*\*Live\*\*/);
+  assert.match(tooltip, /Started:/);
+  assert.match(tooltip, /Last activity:/);
+  assert.match(tooltip, /File: \*\*\\\.\\\.\\\.\/runtime\/runtime\\.ts\*\*/);
+  assert.match(tooltip, /Language: \*\*typescript\*\*/);
 });
 
 test('buildStatusSummary and action list adapt to disconnected runtime state', () => {
   const snapshot = createSnapshot({
     displayState: 'disconnected',
     connectionState: 'disconnected',
-    queueSize: 3,
+    currentSessionMinutes: 23,
+    currentSessionActive: false,
+    activeLanguage: 'typescript',
   });
 
-  assert.equal(buildStatusSummary(snapshot), 'Today 1h 24m • Disconnected • Disconnected • 3 buffered');
+  assert.equal(buildStatusSummary(snapshot), 'Today 1h 24m • Session 23m • Paused • typescript');
   assert.equal(getStatusBarActions(snapshot)[0]?.action, 'reconnect-desktop');
 });
 
@@ -74,6 +76,12 @@ function createSnapshot(overrides: Partial<RuntimeStatusSnapshot>): RuntimeStatu
     displayState: 'active',
     detail: 'Connected',
     todayTrackedMinutes: 84,
+    currentSessionMinutes: 12,
+    currentSessionActive: false,
+    currentSessionStartedAt: undefined,
+    currentSessionLastActivityAt: undefined,
+    activeFilePath: undefined,
+    activeLanguage: undefined,
     trackingEnabled: true,
     queueSize: 0,
     focused: true,

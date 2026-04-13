@@ -9,65 +9,41 @@ export type StatusBarActionItem = {
 };
 
 export function buildStatusBarText(snapshot: RuntimeStatusSnapshot): string {
-  switch (snapshot.displayState) {
-    case 'active':
-      return `Kairos: ${formatDuration(snapshot.todayTrackedMinutes)} today`;
-    case 'tracking-disabled':
-      return 'Kairos: Tracking off';
-    case 'buffering':
-      return 'Kairos: Buffering';
-    case 'connecting':
-      return 'Kairos: Connecting';
-    case 'retrying':
-      return 'Kairos: Reconnecting';
-    case 'disconnected':
-      return 'Kairos: Disconnected';
-    case 'idle':
-    default:
-      return 'Kairos: Idle';
-  }
+  return `$(code) ${formatDuration(snapshot.todayTrackedMinutes)}`;
 }
 
 export function buildStatusBarTooltip(snapshot: RuntimeStatusSnapshot): string {
   const lines = [
-    '$(pulse) **Kairos**',
+    '$(code) **Kairos Coding Session**',
     '',
-    `- Today: **${formatDuration(snapshot.todayTrackedMinutes)}**`,
-    `- State: **${describeDisplayState(snapshot)}**`,
-    `- Connection: **${describeConnectionState(snapshot)}**`,
-    `- Tracking: **${snapshot.trackingEnabled ? 'Enabled' : 'Disabled'}**`,
+    `- $(clock) Today: **${formatDuration(snapshot.todayTrackedMinutes)}**`,
+    `- $(pulse) Current session: **${formatDuration(snapshot.currentSessionMinutes)}**`,
+    `- $(circle-large-filled) Session: **${describeSessionState(snapshot)}**`,
   ];
 
-  if (snapshot.queueSize > 0 || snapshot.displayState === 'buffering') {
-    lines.push(`- Buffered events: **${snapshot.queueSize}**`);
-  }
-  lines.push(`- Outbox size: **${formatBytes(snapshot.outboxSizeBytes)}**`);
-  lines.push(`- Outbox state: **${describeOutboxThresholdState(snapshot.outboxThresholdState)}**`);
-  if (snapshot.captureBlockedByHardCap) {
-    lines.push('- Capture blocked: **Outbox hard cap reached**');
+  if (snapshot.currentSessionStartedAt) {
+    lines.push(`- $(play) Started: **${formatTimestamp(snapshot.currentSessionStartedAt)}**`);
   }
 
-  lines.push(`- Machine: **${escapeMarkdown(snapshot.machineName)}**`);
-
-  if (snapshot.extensionVersion) {
-    lines.push(`- Extension version: **${escapeMarkdown(snapshot.extensionVersion)}**`);
+  if (snapshot.currentSessionLastActivityAt) {
+    lines.push(`- $(history) Last activity: **${formatTimestamp(snapshot.currentSessionLastActivityAt)}**`);
   }
 
-  if (snapshot.lastHandshakeAt) {
-    lines.push(`- Last handshake: **${formatTimestamp(snapshot.lastHandshakeAt)}**`);
+  if (snapshot.activeFilePath) {
+    lines.push(`- $(file-code) File: **${escapeMarkdown(toDisplayFilePath(snapshot.activeFilePath))}**`);
   }
 
-  if (snapshot.lastSuccessfulSendAt) {
-    lines.push(`- Last successful send: **${formatTimestamp(snapshot.lastSuccessfulSendAt)}**`);
+  if (snapshot.activeLanguage) {
+    lines.push(`- $(symbol-key) Language: **${escapeMarkdown(snapshot.activeLanguage)}**`);
   }
 
-  if (snapshot.lastEventAt) {
-    lines.push(`- Last event: **${formatTimestamp(snapshot.lastEventAt)}**`);
+  if (snapshot.trackOnlyWhenFocused && !snapshot.focused) {
+    lines.push('- $(eye-closed) Focus tracking is enabled and VS Code is unfocused');
   }
 
-  lines.push(`- File path mode: **${snapshot.filePathMode}**`);
-  lines.push(`- Heartbeat interval: **${snapshot.heartbeatIntervalSeconds}s**`);
-  lines.push(`- Focus-only tracking: **${snapshot.trackOnlyWhenFocused ? 'On' : 'Off'}**`);
+  if (!snapshot.trackingEnabled) {
+    lines.push('- $(circle-slash) Tracking is disabled in desktop settings');
+  }
 
   return lines.join('\n');
 }
@@ -75,12 +51,12 @@ export function buildStatusBarTooltip(snapshot: RuntimeStatusSnapshot): string {
 export function buildStatusSummary(snapshot: RuntimeStatusSnapshot): string {
   const parts = [
     `Today ${formatDuration(snapshot.todayTrackedMinutes)}`,
-    describeDisplayState(snapshot),
-    describeConnectionState(snapshot),
+    `Session ${formatDuration(snapshot.currentSessionMinutes)}`,
+    describeSessionState(snapshot),
   ];
 
-  if (snapshot.queueSize > 0) {
-    parts.push(`${snapshot.queueSize} buffered`);
+  if (snapshot.activeLanguage) {
+    parts.push(snapshot.activeLanguage);
   }
 
   return parts.join(' • ');
@@ -132,40 +108,20 @@ export function formatDuration(minutes: number): string {
   return `${hours}h ${String(remainingMinutes).padStart(2, '0')}m`;
 }
 
-function describeDisplayState(snapshot: RuntimeStatusSnapshot): string {
-  switch (snapshot.displayState) {
-    case 'active':
-      return 'Active';
-    case 'tracking-disabled':
-      return 'Tracking disabled';
-    case 'buffering':
-      return 'Offline buffering';
-    case 'connecting':
-      return 'Connecting';
-    case 'retrying':
-      return 'Retrying';
-    case 'disconnected':
-      return 'Disconnected';
-    case 'idle':
-    default:
-      return snapshot.trackOnlyWhenFocused && !snapshot.focused ? 'Idle (window unfocused)' : 'Idle';
+function describeSessionState(snapshot: RuntimeStatusSnapshot): string {
+  if (!snapshot.trackingEnabled) {
+    return 'Tracking off';
   }
-}
 
-function describeConnectionState(snapshot: RuntimeStatusSnapshot): string {
-  switch (snapshot.connectionState) {
-    case 'connected':
-      return 'Connected';
-    case 'connecting':
-      return 'Connecting';
-    case 'retrying':
-      return 'Retrying';
-    case 'offline-buffering':
-      return snapshot.bufferingEnabled ? 'Buffering offline' : 'Unavailable';
-    case 'disconnected':
-    default:
-      return 'Disconnected';
+  if (snapshot.currentSessionActive) {
+    return 'Live';
   }
+
+  if (snapshot.currentSessionMinutes > 0) {
+    return 'Paused';
+  }
+
+  return 'Waiting for activity';
 }
 
 function formatTimestamp(value: string): string {
@@ -177,30 +133,14 @@ function formatTimestamp(value: string): string {
   return escapeMarkdown(parsed.toLocaleString());
 }
 
-function describeOutboxThresholdState(state: RuntimeStatusSnapshot['outboxThresholdState']): string {
-  switch (state) {
-    case 'hard':
-      return 'Hard cap';
-    case 'warning':
-      return 'Warning threshold';
-    case 'soft':
-      return 'Soft threshold';
-    case 'normal':
-    default:
-      return 'Normal';
+function toDisplayFilePath(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/');
+  const segments = normalized.split('/').filter(Boolean);
+  if (segments.length <= 2) {
+    return normalized;
   }
-}
 
-function formatBytes(bytes: number): string {
-  const kibibyte = 1024;
-  const mebibyte = kibibyte * 1024;
-  if (bytes < kibibyte) {
-    return `${bytes} B`;
-  }
-  if (bytes < mebibyte) {
-    return `${(bytes / kibibyte).toFixed(1)} KiB`;
-  }
-  return `${(bytes / mebibyte).toFixed(1)} MiB`;
+  return `.../${segments.slice(-2).join('/')}`;
 }
 
 function escapeMarkdown(value: string): string {
