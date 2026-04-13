@@ -25,6 +25,8 @@ class KairosRuntime {
     retryHandle;
     dwellHandle;
     retryDelayMs = constants_1.INITIAL_RETRY_DELAY_MS;
+    consecutiveProbeFailures = 0;
+    consecutiveTransientReplayFailures = 0;
     stateDetail = 'Disconnected';
     trackedMinuteKeys = new Set();
     trackedDateKey;
@@ -161,6 +163,8 @@ class KairosRuntime {
             await this.settingsMirror.applyHandshake(response);
             this.lastHandshakeResponse = response;
             this.lastHandshakeAt = response.serverTimestamp;
+            this.consecutiveProbeFailures = 0;
+            this.consecutiveTransientReplayFailures = 0;
             this.retryDelayMs = constants_1.INITIAL_RETRY_DELAY_MS;
             this.retryHandle?.cancel();
             this.retryHandle = undefined;
@@ -180,7 +184,9 @@ class KairosRuntime {
             this.observer.logWarn(`Failed to synchronize with Kairos desktop: ${formatError(error)}`);
             this.resetHeartbeatSchedule();
             await this.refreshOutboxHealth();
-            this.handleConnectionFailure(options?.failureReason ?? 'handshake failed');
+            if (!options?.suppressFailureTransition) {
+                this.handleConnectionFailure(options?.failureReason ?? 'handshake failed');
+            }
             throw error;
         }
     }
@@ -267,12 +273,21 @@ class KairosRuntime {
             await this.refreshOutboxHealth();
             if (outcome.kind === 'error') {
                 this.observer.logWarn(`Failed to replay outbox batch: ${outcome.message}`);
+                if (this.effectiveSettings.retryConnectionAutomatically
+                    && isLikelyTransientReplayFailure(outcome.message)) {
+                    this.consecutiveTransientReplayFailures += 1;
+                    if (this.consecutiveTransientReplayFailures < constants_1.DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD) {
+                        return;
+                    }
+                    this.consecutiveTransientReplayFailures = 0;
+                }
                 this.handleConnectionFailure('event delivery failed');
                 return;
             }
             if (outcome.deliveredAt) {
                 this.lastSuccessfulSendAt = outcome.deliveredAt;
             }
+            this.consecutiveTransientReplayFailures = 0;
             this.setState('connected', 'Connected');
             this.publishStatus();
         }
@@ -308,10 +323,15 @@ class KairosRuntime {
             await this.connectAndSync({
                 silentWhenAlreadyConnected: true,
                 failureReason: 'connection probe failed',
+                suppressFailureTransition: true,
             });
         }
         catch {
-            // Connection failure handling happens inside connectAndSync.
+            this.consecutiveProbeFailures += 1;
+            if (this.consecutiveProbeFailures >= constants_1.CONNECTION_PROBE_FAILURE_THRESHOLD) {
+                this.consecutiveProbeFailures = 0;
+                this.handleConnectionFailure('connection probe failed');
+            }
         }
     }
     handleConnectionFailure(reason) {
@@ -500,6 +520,14 @@ function formatBytes(bytes) {
         return `${(bytes / kibibyte).toFixed(1)} KiB`;
     }
     return `${(bytes / mebibyte).toFixed(1)} MiB`;
+}
+function isLikelyTransientReplayFailure(message) {
+    const normalized = message.toLowerCase();
+    return normalized.includes('timed out')
+        || normalized.includes('closed')
+        || normalized.includes('connect failed')
+        || normalized.includes('response type mismatch')
+        || normalized.includes('malformed');
 }
 function addMinuteKeysBetween(target, start, end) {
     const startMs = floorToMinute(start).getTime();

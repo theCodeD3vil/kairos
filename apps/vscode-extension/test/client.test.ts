@@ -9,18 +9,29 @@ import { WebSocketDesktopClient } from '../src/runtime/client';
 
 type Listener = () => void;
 type MessageListener = (event: { data: string }) => void;
+type FakeDesktopWebSocketOptions = {
+  dropResponses?: boolean;
+};
 
 class FakeDesktopWebSocket {
   readonly readyState = 1;
+  closeCallCount = 0;
   private readonly listeners = new Map<string, Set<Listener | MessageListener>>();
 
-  constructor(private readonly url: string) {
+  constructor(
+    private readonly url: string,
+    private readonly options?: FakeDesktopWebSocketOptions,
+  ) {
     setImmediate(() => this.emit('open'));
   }
 
   send(data: string): void {
     const envelope = JSON.parse(data) as { id: string; type: string; protocolVersion: number };
     assert.equal(envelope.protocolVersion, 2);
+    if (this.options?.dropResponses) {
+      return;
+    }
+
     if (envelope.type === 'handshake.request') {
       this.emitMessage({
         id: envelope.id,
@@ -71,6 +82,7 @@ class FakeDesktopWebSocket {
   }
 
   close(): void {
+    this.closeCallCount += 1;
     this.emit('close');
   }
 
@@ -190,4 +202,52 @@ test('desktop client discovers websocket endpoint from shared discovery file', a
     }
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+});
+
+test('desktop client resets stale socket after timeout and reconnects cleanly', async () => {
+  const createdSockets: FakeDesktopWebSocket[] = [];
+  const client = new WebSocketDesktopClient('http://127.0.0.1:42137', {
+    requestTimeoutMs: 20,
+    webSocketFactory: (url) => {
+      const socket = new FakeDesktopWebSocket(url, {
+        dropResponses: createdSockets.length === 0,
+      });
+      createdSockets.push(socket);
+      return socket;
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      client.handshake({
+        machine: {
+          machineId: 'machine-1',
+          machineName: 'test-machine',
+          osPlatform: 'linux',
+        },
+        extension: {
+          editor: 'vscode',
+          editorVersion: '1.100.0',
+          extensionVersion: '1.0.5',
+        },
+      }),
+    /desktop websocket request timed out \(handshake.request\)/,
+  );
+
+  assert.equal(createdSockets[0]?.closeCallCount, 1);
+
+  const handshake = await client.handshake({
+    machine: {
+      machineId: 'machine-1',
+      machineName: 'test-machine',
+      osPlatform: 'linux',
+    },
+    extension: {
+      editor: 'vscode',
+      editorVersion: '1.100.0',
+      extensionVersion: '1.0.5',
+    },
+  });
+  assert.equal(handshake.protocolVersion, 2);
+  assert.equal(createdSockets.length, 2);
 });

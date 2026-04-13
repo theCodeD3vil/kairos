@@ -2,8 +2,10 @@ import type { ActivityEventType } from '@kairos/shared/ingestion';
 import type { ExtensionEffectiveSettings, ExtensionHandshakeResponse } from '@kairos/shared/settings';
 
 import {
+  CONNECTION_PROBE_FAILURE_THRESHOLD,
   CONNECTION_PROBE_INTERVAL_MS,
   DESKTOP_PROTOCOL_VERSION,
+  DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD,
   INITIAL_RETRY_DELAY_MS,
   MAX_RETRY_DELAY_MS,
 } from './constants';
@@ -52,6 +54,8 @@ export class KairosRuntime {
   private retryHandle?: RuntimeSchedulerHandle;
   private dwellHandle?: RuntimeSchedulerHandle;
   private retryDelayMs = INITIAL_RETRY_DELAY_MS;
+  private consecutiveProbeFailures = 0;
+  private consecutiveTransientReplayFailures = 0;
   private stateDetail = 'Disconnected';
   private trackedMinuteKeys = new Set<string>();
   private trackedDateKey: string;
@@ -193,6 +197,7 @@ export class KairosRuntime {
   private async connectAndSync(options?: {
     silentWhenAlreadyConnected?: boolean;
     failureReason?: string;
+    suppressFailureTransition?: boolean;
   }): Promise<void> {
     if (this.disposed) {
       return;
@@ -214,6 +219,8 @@ export class KairosRuntime {
 
       this.lastHandshakeResponse = response;
       this.lastHandshakeAt = response.serverTimestamp;
+      this.consecutiveProbeFailures = 0;
+      this.consecutiveTransientReplayFailures = 0;
       this.retryDelayMs = INITIAL_RETRY_DELAY_MS;
       this.retryHandle?.cancel();
       this.retryHandle = undefined;
@@ -231,7 +238,9 @@ export class KairosRuntime {
       this.observer.logWarn(`Failed to synchronize with Kairos desktop: ${formatError(error)}`);
       this.resetHeartbeatSchedule();
       await this.refreshOutboxHealth();
-      this.handleConnectionFailure(options?.failureReason ?? 'handshake failed');
+      if (!options?.suppressFailureTransition) {
+        this.handleConnectionFailure(options?.failureReason ?? 'handshake failed');
+      }
       throw error;
     }
   }
@@ -341,6 +350,16 @@ export class KairosRuntime {
 
       if (outcome.kind === 'error') {
         this.observer.logWarn(`Failed to replay outbox batch: ${outcome.message}`);
+        if (
+          this.effectiveSettings.retryConnectionAutomatically
+          && isLikelyTransientReplayFailure(outcome.message)
+        ) {
+          this.consecutiveTransientReplayFailures += 1;
+          if (this.consecutiveTransientReplayFailures < DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD) {
+            return;
+          }
+          this.consecutiveTransientReplayFailures = 0;
+        }
         this.handleConnectionFailure('event delivery failed');
         return;
       }
@@ -348,6 +367,7 @@ export class KairosRuntime {
       if (outcome.deliveredAt) {
         this.lastSuccessfulSendAt = outcome.deliveredAt;
       }
+      this.consecutiveTransientReplayFailures = 0;
 
       this.setState('connected', 'Connected');
       this.publishStatus();
@@ -391,9 +411,14 @@ export class KairosRuntime {
       await this.connectAndSync({
         silentWhenAlreadyConnected: true,
         failureReason: 'connection probe failed',
+        suppressFailureTransition: true,
       });
     } catch {
-      // Connection failure handling happens inside connectAndSync.
+      this.consecutiveProbeFailures += 1;
+      if (this.consecutiveProbeFailures >= CONNECTION_PROBE_FAILURE_THRESHOLD) {
+        this.consecutiveProbeFailures = 0;
+        this.handleConnectionFailure('connection probe failed');
+      }
     }
   }
 
@@ -608,6 +633,15 @@ function formatBytes(bytes: number): string {
     return `${(bytes / kibibyte).toFixed(1)} KiB`;
   }
   return `${(bytes / mebibyte).toFixed(1)} MiB`;
+}
+
+function isLikelyTransientReplayFailure(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return normalized.includes('timed out')
+    || normalized.includes('closed')
+    || normalized.includes('connect failed')
+    || normalized.includes('response type mismatch')
+    || normalized.includes('malformed');
 }
 
 function addMinuteKeysBetween(target: Set<string>, start: Date, end: Date): void {

@@ -12,7 +12,12 @@ import type {
   ExtensionHandshakeResponse,
 } from '@kairos/shared/settings';
 
-import { CONNECTION_PROBE_INTERVAL_MS, INITIAL_RETRY_DELAY_MS } from '../src/runtime/constants';
+import {
+  CONNECTION_PROBE_FAILURE_THRESHOLD,
+  CONNECTION_PROBE_INTERVAL_MS,
+  DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD,
+  INITIAL_RETRY_DELAY_MS,
+} from '../src/runtime/constants';
 import { getDefaultEffectiveSettings } from '../src/runtime/filters';
 import { KairosRuntime } from '../src/runtime/runtime';
 import type {
@@ -320,6 +325,30 @@ test('retry behavior reconnects and flushes buffered events', async () => {
   assert.equal(harness.client.ingestRequests.length, 2);
 });
 
+test('single transient replay failure does not immediately drop connected state', async () => {
+  const harness = createHarness({
+    bufferEventsWhenOffline: true,
+    retryConnectionAutomatically: true,
+  });
+  harness.client.failNextIngest = true;
+  harness.client.nextIngestErrorMessage = 'desktop websocket request timed out (ingest.request)';
+
+  await harness.runtime.start();
+  await qualifyActiveFile(harness);
+  await harness.runtime.recordEdit(baseContext);
+
+  assert.equal(harness.runtime.getConnectionState(), 'connected');
+  assert.ok(harness.runtime.getBufferedEventCount() >= 1);
+
+  for (let attempt = 1; attempt < DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD; attempt += 1) {
+    harness.client.failNextIngest = true;
+    harness.client.nextIngestErrorMessage = 'desktop websocket request timed out (ingest.request)';
+    await harness.runtime.recordEdit(baseContext);
+  }
+
+  assert.equal(harness.runtime.getConnectionState(), 'offline-buffering');
+});
+
 test('connection probe detects idle disconnects and recovers via retry loop', async () => {
   const harness = createHarness({
     retryConnectionAutomatically: true,
@@ -331,7 +360,15 @@ test('connection probe detects idle disconnects and recovers via retry loop', as
 
   harness.client.failNextHandshake = true;
   harness.scheduler.advanceBy(CONNECTION_PROBE_INTERVAL_MS);
-  await waitForConnectionState(harness, 'retrying');
+  await waitForConnectionState(harness, 'connected');
+
+  for (let attempt = 0; attempt < CONNECTION_PROBE_FAILURE_THRESHOLD + 1; attempt += 1) {
+    harness.client.failNextHandshake = true;
+    harness.scheduler.advanceBy(CONNECTION_PROBE_INTERVAL_MS);
+    await flushMicrotasks();
+  }
+  assert.ok(harness.client.handshakeRequests.length >= 2);
+  assert.ok(['connected', 'retrying'].includes(harness.runtime.getConnectionState()));
 
   harness.scheduler.advanceBy(INITIAL_RETRY_DELAY_MS);
   await waitForConnectionState(harness, 'connected');
@@ -645,6 +682,7 @@ class FakeDesktopClient implements DesktopClient {
   failNextHandshake = false;
   failNextIngest = false;
   nextHandshakeSettings?: ExtensionEffectiveSettings;
+  nextIngestErrorMessage?: string;
 
   constructor(public settings: ExtensionEffectiveSettings) {}
 
@@ -686,7 +724,9 @@ class FakeDesktopClient implements DesktopClient {
 
     if (this.failNextIngest) {
       this.failNextIngest = false;
-      throw new Error('desktop unavailable');
+      const message = this.nextIngestErrorMessage ?? 'desktop unavailable';
+      this.nextIngestErrorMessage = undefined;
+      throw new Error(message);
     }
 
     return {

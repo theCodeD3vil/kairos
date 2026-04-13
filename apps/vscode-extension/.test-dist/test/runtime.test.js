@@ -240,6 +240,25 @@ const scmInputContext = {
     strict_1.default.ok(harness.client.handshakeRequests.length >= 2);
     strict_1.default.equal(harness.client.ingestRequests.length, 2);
 });
+(0, node_test_1.default)('single transient replay failure does not immediately drop connected state', async () => {
+    const harness = createHarness({
+        bufferEventsWhenOffline: true,
+        retryConnectionAutomatically: true,
+    });
+    harness.client.failNextIngest = true;
+    harness.client.nextIngestErrorMessage = 'desktop websocket request timed out (ingest.request)';
+    await harness.runtime.start();
+    await qualifyActiveFile(harness);
+    await harness.runtime.recordEdit(baseContext);
+    strict_1.default.equal(harness.runtime.getConnectionState(), 'connected');
+    strict_1.default.ok(harness.runtime.getBufferedEventCount() >= 1);
+    for (let attempt = 1; attempt < constants_1.DELIVERY_REPLAY_TRANSIENT_FAILURE_THRESHOLD; attempt += 1) {
+        harness.client.failNextIngest = true;
+        harness.client.nextIngestErrorMessage = 'desktop websocket request timed out (ingest.request)';
+        await harness.runtime.recordEdit(baseContext);
+    }
+    strict_1.default.equal(harness.runtime.getConnectionState(), 'offline-buffering');
+});
 (0, node_test_1.default)('connection probe detects idle disconnects and recovers via retry loop', async () => {
     const harness = createHarness({
         retryConnectionAutomatically: true,
@@ -249,7 +268,14 @@ const scmInputContext = {
     strict_1.default.equal(harness.client.handshakeRequests.length, 1);
     harness.client.failNextHandshake = true;
     harness.scheduler.advanceBy(constants_1.CONNECTION_PROBE_INTERVAL_MS);
-    await waitForConnectionState(harness, 'retrying');
+    await waitForConnectionState(harness, 'connected');
+    for (let attempt = 0; attempt < constants_1.CONNECTION_PROBE_FAILURE_THRESHOLD + 1; attempt += 1) {
+        harness.client.failNextHandshake = true;
+        harness.scheduler.advanceBy(constants_1.CONNECTION_PROBE_INTERVAL_MS);
+        await flushMicrotasks();
+    }
+    strict_1.default.ok(harness.client.handshakeRequests.length >= 2);
+    strict_1.default.ok(['connected', 'retrying'].includes(harness.runtime.getConnectionState()));
     harness.scheduler.advanceBy(constants_1.INITIAL_RETRY_DELAY_MS);
     await waitForConnectionState(harness, 'connected');
     strict_1.default.ok(harness.client.handshakeRequests.length >= 3);
@@ -529,6 +555,7 @@ class FakeDesktopClient {
     failNextHandshake = false;
     failNextIngest = false;
     nextHandshakeSettings;
+    nextIngestErrorMessage;
     constructor(settings) {
         this.settings = settings;
     }
@@ -566,7 +593,9 @@ class FakeDesktopClient {
         });
         if (this.failNextIngest) {
             this.failNextIngest = false;
-            throw new Error('desktop unavailable');
+            const message = this.nextIngestErrorMessage ?? 'desktop unavailable';
+            this.nextIngestErrorMessage = undefined;
+            throw new Error(message);
         }
         return {
             acceptedCount: request.events.length,

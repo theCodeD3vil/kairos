@@ -12,15 +12,21 @@ const filters_1 = require("../src/runtime/filters");
 const client_1 = require("../src/runtime/client");
 class FakeDesktopWebSocket {
     url;
+    options;
     readyState = 1;
+    closeCallCount = 0;
     listeners = new Map();
-    constructor(url) {
+    constructor(url, options) {
         this.url = url;
+        this.options = options;
         setImmediate(() => this.emit('open'));
     }
     send(data) {
         const envelope = JSON.parse(data);
         strict_1.default.equal(envelope.protocolVersion, 2);
+        if (this.options?.dropResponses) {
+            return;
+        }
         if (envelope.type === 'handshake.request') {
             this.emitMessage({
                 id: envelope.id,
@@ -68,6 +74,7 @@ class FakeDesktopWebSocket {
         });
     }
     close() {
+        this.closeCallCount += 1;
         this.emit('close');
     }
     addEventListener(type, listener) {
@@ -177,5 +184,45 @@ class FakeDesktopWebSocket {
         }
         node_fs_1.default.rmSync(tempDir, { recursive: true, force: true });
     }
+});
+(0, node_test_1.default)('desktop client resets stale socket after timeout and reconnects cleanly', async () => {
+    const createdSockets = [];
+    const client = new client_1.WebSocketDesktopClient('http://127.0.0.1:42137', {
+        requestTimeoutMs: 20,
+        webSocketFactory: (url) => {
+            const socket = new FakeDesktopWebSocket(url, {
+                dropResponses: createdSockets.length === 0,
+            });
+            createdSockets.push(socket);
+            return socket;
+        },
+    });
+    await strict_1.default.rejects(() => client.handshake({
+        machine: {
+            machineId: 'machine-1',
+            machineName: 'test-machine',
+            osPlatform: 'linux',
+        },
+        extension: {
+            editor: 'vscode',
+            editorVersion: '1.100.0',
+            extensionVersion: '1.0.5',
+        },
+    }), /desktop websocket request timed out \(handshake.request\)/);
+    strict_1.default.equal(createdSockets[0]?.closeCallCount, 1);
+    const handshake = await client.handshake({
+        machine: {
+            machineId: 'machine-1',
+            machineName: 'test-machine',
+            osPlatform: 'linux',
+        },
+        extension: {
+            editor: 'vscode',
+            editorVersion: '1.100.0',
+            extensionVersion: '1.0.5',
+        },
+    });
+    strict_1.default.equal(handshake.protocolVersion, 2);
+    strict_1.default.equal(createdSockets.length, 2);
 });
 //# sourceMappingURL=client.test.js.map

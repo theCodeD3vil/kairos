@@ -130,8 +130,7 @@ export class WebSocketDesktopClient implements DesktopClient {
 
     return new Promise<TResponse>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.pending.delete(requestID);
-        reject(new Error(`desktop websocket request timed out (${requestType})`));
+        this.resetConnection(new Error(`desktop websocket request timed out (${requestType})`), true);
       }, this.requestTimeoutMs);
 
       this.pending.set(requestID, {
