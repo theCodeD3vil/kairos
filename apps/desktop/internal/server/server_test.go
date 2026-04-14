@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -346,6 +347,66 @@ func TestWebSocketEndpointRejectsMissingTokenWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestWebSocketEndpointAcceptsTokenFromSubprotocolWhenConfigured(t *testing.T) {
+	service := &stubIngestionService{
+		handshakeResponse: contracts.ExtensionHandshakeResponse{
+			DesktopInstanceID: "desktop-instance-1",
+			ProtocolVersion:   wsProtocolVersion,
+		},
+	}
+	config := DefaultConfig()
+	config.BridgeToken = "token-123"
+
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen on loopback for websocket test: %v", err)
+	}
+	httpServer := &http.Server{
+		Handler: NewHandler(service, config),
+	}
+	go func() {
+		_ = httpServer.Serve(listener)
+	}()
+	defer func() {
+		_ = httpServer.Shutdown(context.Background())
+	}()
+
+	dialer := websocket.Dialer{
+		Subprotocols: websocketAuthSubprotocols(config.BridgeToken),
+	}
+	wsURL := "ws://" + listener.Addr().String() + extensionWebSocketPath
+	conn, _, err := dialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial websocket with token subprotocol: %v", err)
+	}
+	defer conn.Close()
+
+	handshakePayload := contracts.ExtensionHandshakeRequest{
+		Machine: contracts.MachineInfo{
+			MachineID:   "machine-1",
+			MachineName: "Kairos",
+			OSPlatform:  "darwin",
+		},
+		Extension: contracts.ExtensionInfo{Editor: "vscode"},
+	}
+	if err := conn.WriteJSON(wsRequestEnvelope{
+		ID:              "h-1",
+		ProtocolVersion: wsProtocolVersion,
+		Type:            wsRequestTypeHandshake,
+		Payload:         mustMarshalRawJSON(t, handshakePayload),
+	}); err != nil {
+		t.Fatalf("write handshake request: %v", err)
+	}
+
+	var response wsResponseEnvelope
+	if err := conn.ReadJSON(&response); err != nil {
+		t.Fatalf("read handshake response: %v", err)
+	}
+	if response.Type != wsResponseTypeHandshake {
+		t.Fatalf("expected handshake response type, got %+v", response)
+	}
+}
+
 func TestWebSocketEndpointRejectsUnsupportedProtocolVersion(t *testing.T) {
 	service := &stubIngestionService{}
 
@@ -399,6 +460,21 @@ func TestWebSocketEndpointRejectsUnsupportedProtocolVersion(t *testing.T) {
 	}
 }
 
+func TestIsAllowedWebSocketOrigin(t *testing.T) {
+	if !isAllowedWebSocketOrigin("") {
+		t.Fatal("expected empty origin to be allowed for extension host")
+	}
+	if !isAllowedWebSocketOrigin("https://localhost:3000") {
+		t.Fatal("expected loopback origin to be allowed")
+	}
+	if !isAllowedWebSocketOrigin("http://127.0.0.1:5173") {
+		t.Fatal("expected loopback ip origin to be allowed")
+	}
+	if isAllowedWebSocketOrigin("https://example.com") {
+		t.Fatal("expected non-loopback origin to be rejected")
+	}
+}
+
 func mustMarshalRawJSON(t *testing.T, value any) json.RawMessage {
 	t.Helper()
 
@@ -407,6 +483,14 @@ func mustMarshalRawJSON(t *testing.T, value any) json.RawMessage {
 		t.Fatalf("marshal payload: %v", err)
 	}
 	return payload
+}
+
+func websocketAuthSubprotocols(token string) []string {
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(token))
+	return []string{
+		wsTransportSubprotocol,
+		wsBridgeTokenPrefix + encoded,
+	}
 }
 
 type stubIngestionService struct {

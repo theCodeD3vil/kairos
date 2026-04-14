@@ -3,7 +3,9 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -84,6 +86,39 @@ func TestMigrationsDoNotFailOnRerun(t *testing.T) {
 		t.Fatalf("count migrations: %v", err)
 	} else if count != 6 {
 		t.Fatalf("expected 6 migration records after rerun, got %d", count)
+	}
+}
+
+func TestOpenSecuresDatabaseFilesystemPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits are platform specific on windows")
+	}
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "secure.sqlite3")
+
+	store, err := Open(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("open secure sqlite store: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = store.Close()
+	})
+
+	info, err := os.Stat(dbPath)
+	if err != nil {
+		t.Fatalf("stat sqlite file: %v", err)
+	}
+	if perms := info.Mode().Perm(); perms != 0o600 {
+		t.Fatalf("expected sqlite file permissions 0600, got %o", perms)
+	}
+
+	dirInfo, err := os.Stat(filepath.Dir(dbPath))
+	if err != nil {
+		t.Fatalf("stat sqlite directory: %v", err)
+	}
+	if perms := dirInfo.Mode().Perm(); perms != 0o700 {
+		t.Fatalf("expected sqlite directory permissions 0700, got %o", perms)
 	}
 }
 

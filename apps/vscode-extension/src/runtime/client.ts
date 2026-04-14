@@ -17,6 +17,8 @@ const WS_RESPONSE_TYPE_HANDSHAKE = 'handshake.response';
 const WS_RESPONSE_TYPE_INGEST = 'ingest.response';
 const WS_RESPONSE_TYPE_ERROR = 'error';
 const WS_ENDPOINT_PATH = '/v1/extension/ws';
+const WS_SUBPROTOCOL = 'kairos.v2';
+const WS_AUTH_SUBPROTOCOL_PREFIX = 'kairos.auth.';
 const WEBSOCKET_STATE_CONNECTING = 0;
 const WEBSOCKET_STATE_OPEN = 1;
 
@@ -74,14 +76,14 @@ type ConnectionListeners = {
 };
 
 type ClientOptions = {
-  webSocketFactory?: (url: string) => DesktopWebSocketLike;
+  webSocketFactory?: (url: string, protocols: string[]) => DesktopWebSocketLike;
   requestTimeoutMs?: number;
   idFactory?: () => string;
 };
 
 export class WebSocketDesktopClient implements DesktopClient {
   private readonly requestTimeoutMs: number;
-  private readonly webSocketFactory: (url: string) => DesktopWebSocketLike;
+  private readonly webSocketFactory: (url: string, protocols: string[]) => DesktopWebSocketLike;
   private readonly idFactory: () => string;
   private activeEndpoint?: string;
   private activeSocket?: DesktopWebSocketLike;
@@ -167,35 +169,39 @@ export class WebSocketDesktopClient implements DesktopClient {
   private async openConnection(): Promise<DesktopWebSocketLike> {
     let lastError: Error | undefined;
 
-    for (const endpoint of this.resolveCandidates()) {
+    for (const candidate of this.resolveCandidates()) {
       try {
-        const socket = await this.connectCandidate(endpoint);
-        this.bindSocket(socket, endpoint);
+        const socket = await this.connectCandidate(candidate);
+        this.bindSocket(socket, candidate.endpoint);
         return socket;
       } catch (error) {
-        lastError = normalizeError(error, `desktop websocket unavailable at ${endpoint}`);
+        lastError = new Error('desktop websocket unavailable');
       }
     }
 
     throw lastError ?? new Error('desktop websocket unavailable');
   }
 
-  private resolveCandidates(): string[] {
+  private resolveCandidates(): Array<{ endpoint: string; token?: string }> {
     const candidates = buildDesktopEndpointCandidates(this.preferredBaseURL)
-      .map((candidate) => toWebSocketEndpoint(candidate.baseURL, candidate.token))
-      .filter((value) => value !== '');
-    return dedupe(candidates);
+      .map((candidate) => ({
+        endpoint: toWebSocketEndpoint(candidate.baseURL),
+        token: candidate.token,
+      }))
+      .filter((candidate) => candidate.endpoint !== '');
+    return dedupeCandidates(candidates);
   }
 
-  private connectCandidate(endpoint: string): Promise<DesktopWebSocketLike> {
+  private connectCandidate(candidate: { endpoint: string; token?: string }): Promise<DesktopWebSocketLike> {
     return new Promise((resolve, reject) => {
-      const socket = this.webSocketFactory(endpoint);
+      const protocols = buildWebSocketProtocols(candidate.token);
+      const socket = this.webSocketFactory(candidate.endpoint, protocols);
       let settled = false;
 
       const timeout = setTimeout(() => {
         cleanup();
         safeCloseSocket(socket);
-        reject(new Error(`desktop websocket connect timed out (${endpoint})`));
+        reject(new Error('desktop websocket connect timed out'));
       }, this.requestTimeoutMs);
 
       const onOpen = () => {
@@ -213,7 +219,7 @@ export class WebSocketDesktopClient implements DesktopClient {
         }
         settled = true;
         cleanup();
-        reject(new Error(`desktop websocket connect failed (${endpoint})`));
+        reject(new Error('desktop websocket connect failed'));
       };
 
       const onClose = () => {
@@ -222,7 +228,7 @@ export class WebSocketDesktopClient implements DesktopClient {
         }
         settled = true;
         cleanup();
-        reject(new Error(`desktop websocket closed during connect (${endpoint})`));
+        reject(new Error('desktop websocket closed during connect'));
       };
 
       const cleanup = () => {
@@ -339,23 +345,23 @@ export class WebSocketDesktopClient implements DesktopClient {
   }
 }
 
-function dedupe(values: string[]): string[] {
-  const unique = new Set<string>();
+function dedupeCandidates(values: Array<{ endpoint: string; token?: string }>): Array<{ endpoint: string; token?: string }> {
+  const unique = new Map<string, { endpoint: string; token?: string }>();
   for (const value of values) {
-    unique.add(value);
+    const key = `${value.endpoint}::${value.token ?? ''}`;
+    if (!unique.has(key)) {
+      unique.set(key, value);
+    }
   }
-  return Array.from(unique);
+  return Array.from(unique.values());
 }
 
-function toWebSocketEndpoint(baseURL: string, token?: string): string {
+function toWebSocketEndpoint(baseURL: string): string {
   try {
     const parsed = new URL(baseURL);
     parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
     parsed.pathname = WS_ENDPOINT_PATH;
     parsed.search = '';
-    if (token) {
-      parsed.searchParams.set('token', token);
-    }
     parsed.hash = '';
     return parsed.toString();
   } catch {
@@ -363,12 +369,20 @@ function toWebSocketEndpoint(baseURL: string, token?: string): string {
   }
 }
 
-function createDefaultWebSocketFactory(): (url: string) => DesktopWebSocketLike {
-  const ctor = (globalThis as { WebSocket?: new (url: string) => DesktopWebSocketLike }).WebSocket;
+function buildWebSocketProtocols(token?: string): string[] {
+  if (!token) {
+    return [WS_SUBPROTOCOL];
+  }
+  const encodedToken = Buffer.from(token, 'utf8').toString('base64url');
+  return [WS_SUBPROTOCOL, `${WS_AUTH_SUBPROTOCOL_PREFIX}${encodedToken}`];
+}
+
+function createDefaultWebSocketFactory(): (url: string, protocols: string[]) => DesktopWebSocketLike {
+  const ctor = (globalThis as { WebSocket?: new (url: string, protocols?: string | string[]) => DesktopWebSocketLike }).WebSocket;
   if (!ctor) {
     throw new Error('WebSocket is unavailable in this runtime');
   }
-  return (url: string) => new ctor(url);
+  return (url: string, protocols: string[]) => new ctor(url, protocols);
 }
 
 function safeCloseSocket(socket: DesktopWebSocketLike): void {
@@ -377,13 +391,6 @@ function safeCloseSocket(socket: DesktopWebSocketLike): void {
   } catch {
     // Ignore close failures.
   }
-}
-
-function normalizeError(error: unknown, fallback: string): Error {
-  if (error instanceof Error) {
-    return error;
-  }
-  return new Error(fallback);
 }
 
 function formatError(error: unknown): string {

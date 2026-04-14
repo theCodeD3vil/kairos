@@ -10,6 +10,7 @@ const RECOVERY_ERROR_CODE = 'startup_recovery';
 const AMBIGUOUS_FAILURE_CODE = 'send_ambiguous_failure';
 const TEMPORARY_REJECT_CODE = 'desktop_rejected_temporary';
 const LOCAL_PAYLOAD_PARSE_ERROR_CODE = 'payload_parse_error';
+const INVALID_RESULTS_ERROR_CODE = 'desktop_response_invalid_results';
 const LAST_SUCCESSFUL_SYNC_STATE_KEY = 'last_successful_sync_at';
 class OutboxSyncWorker {
     client;
@@ -115,9 +116,10 @@ class OutboxSyncWorker {
         }
         const limits = resolveReplayLimits(handshake);
         let deliveredAt;
+        let forceSingleEventReplay = false;
         for (;;) {
             const extensionInfo = await this.buildExtensionInfo();
-            const pendingRows = await this.storage.fetchPendingBatch(limits.maxBatchEvents);
+            const pendingRows = await this.storage.fetchPendingBatch(forceSingleEventReplay ? 1 : limits.maxBatchEvents);
             if (pendingRows.length === 0) {
                 return {
                     kind: 'ok',
@@ -158,15 +160,40 @@ class OutboxSyncWorker {
             }
             const classified = classifyResponseResults(response, sendingIDs);
             if (!classified) {
+                const invalidResponseMessage = 'desktop response missing or invalid per-event results';
+                if (parsed.rows.length > 1) {
+                    await this.storage.revertSendingToPending({
+                        eventIds: sendingIDs,
+                        errorCode: AMBIGUOUS_FAILURE_CODE,
+                        errorMessage: invalidResponseMessage,
+                    });
+                    forceSingleEventReplay = true;
+                    this.observer.logWarn('Desktop replay response invalid; retrying in single-event isolation mode');
+                    continue;
+                }
+                const candidate = parsed.rows[0];
+                if (candidate && candidate.attemptCount + 1 >= constants_1.INVALID_RESULTS_ROW_QUARANTINE_ATTEMPT_THRESHOLD) {
+                    await this.storage.moveToQuarantine([
+                        {
+                            eventId: candidate.eventId,
+                            rejectionCode: INVALID_RESULTS_ERROR_CODE,
+                            rejectionMessage: invalidResponseMessage,
+                            quarantinedAt: this.environment.now().toISOString(),
+                        },
+                    ]);
+                    this.observer.logWarn(`Quarantined outbox row ${candidate.eventId} after repeated invalid desktop replay responses`);
+                    forceSingleEventReplay = false;
+                    continue;
+                }
                 await this.storage.revertSendingToPending({
                     eventIds: sendingIDs,
                     errorCode: AMBIGUOUS_FAILURE_CODE,
-                    errorMessage: 'desktop response missing or invalid per-event results',
+                    errorMessage: invalidResponseMessage,
                 });
                 return {
                     kind: 'error',
                     queueSize: await this.getQueueSize(),
-                    message: 'desktop response missing or invalid per-event results',
+                    message: invalidResponseMessage,
                 };
             }
             if (classified.ackEventIDs.length > 0) {
@@ -195,6 +222,7 @@ class OutboxSyncWorker {
             }
             deliveredAt = response.serverTimestamp;
             await this.persistLastSuccessfulSyncAt(response.serverTimestamp);
+            forceSingleEventReplay = false;
             const madeProgress = classified.ackEventIDs.length > 0 || classified.permanentRejects.length > 0;
             if (!madeProgress) {
                 return {

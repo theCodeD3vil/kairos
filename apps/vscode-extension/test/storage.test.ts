@@ -95,6 +95,25 @@ test('initializes outbox schema and migration state', async () => {
   }
 });
 
+test('outbox database hardens filesystem permissions', async () => {
+  if (process.platform === 'win32') {
+    return;
+  }
+
+  const harness = await createHarness();
+  const store = await openOutboxStorage({ databasePath: harness.dbPath });
+
+  try {
+    const fileMode = fs.statSync(harness.dbPath).mode & 0o777;
+    assert.equal(fileMode, 0o600);
+    const dirMode = fs.statSync(path.dirname(harness.dbPath)).mode & 0o777;
+    assert.equal(dirMode, 0o700);
+  } finally {
+    await store.close();
+    harness.cleanup();
+  }
+});
+
 test('re-open is idempotent and newer schema version is rejected', async () => {
   const harness = await createHarness();
   const first = await openOutboxStorage({ databasePath: harness.dbPath });

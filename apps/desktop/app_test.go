@@ -193,6 +193,22 @@ func TestNewAppFallsBackWhenPreferredPortIsOccupied(t *testing.T) {
 	if discovery.DesktopServerPort != activePort {
 		t.Fatalf("expected discovery port %d to match active server port %d", discovery.DesktopServerPort, activePort)
 	}
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(discoveryPath)
+		if err != nil {
+			t.Fatalf("stat discovery file: %v", err)
+		}
+		if perms := info.Mode().Perm(); perms != 0o600 {
+			t.Fatalf("expected discovery file permissions 0600, got %o", perms)
+		}
+		dirInfo, err := os.Stat(filepath.Dir(discoveryPath))
+		if err != nil {
+			t.Fatalf("stat discovery directory: %v", err)
+		}
+		if perms := dirInfo.Mode().Perm(); perms != 0o700 {
+			t.Fatalf("expected discovery directory permissions 0700, got %o", perms)
+		}
+	}
 
 	app.shutdown(context.Background())
 }

@@ -75,6 +75,23 @@ const SQL_WASM_PATH = require.resolve('sql.js/dist/sql-wasm.wasm');
         harness.cleanup();
     }
 });
+(0, node_test_1.default)('outbox database hardens filesystem permissions', async () => {
+    if (process.platform === 'win32') {
+        return;
+    }
+    const harness = await createHarness();
+    const store = await (0, storage_1.openOutboxStorage)({ databasePath: harness.dbPath });
+    try {
+        const fileMode = node_fs_1.default.statSync(harness.dbPath).mode & 0o777;
+        strict_1.default.equal(fileMode, 0o600);
+        const dirMode = node_fs_1.default.statSync(node_path_1.default.dirname(harness.dbPath)).mode & 0o777;
+        strict_1.default.equal(dirMode, 0o700);
+    }
+    finally {
+        await store.close();
+        harness.cleanup();
+    }
+});
 (0, node_test_1.default)('re-open is idempotent and newer schema version is rejected', async () => {
     const harness = await createHarness();
     const first = await (0, storage_1.openOutboxStorage)({ databasePath: harness.dbPath });

@@ -3,12 +3,15 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -85,6 +88,8 @@ const (
 	wsErrorCodeUnauthorized   = "unauthorized"
 	wsErrorCodeProtocol       = "unsupported_protocol_version"
 	wsErrorCodeHandshake      = "handshake_required"
+	wsTransportSubprotocol    = "kairos.v2"
+	wsBridgeTokenPrefix       = "kairos.auth."
 	wsDisconnectTimeout       = 2 * time.Second
 )
 
@@ -171,8 +176,8 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 			return
 		}
 		if config.BridgeToken != "" {
-			token := strings.TrimSpace(r.URL.Query().Get("token"))
-			if token != config.BridgeToken {
+			token, err := resolveBridgeToken(r)
+			if err != nil || subtle.ConstantTimeCompare([]byte(token), []byte(config.BridgeToken)) != 1 {
 				writeJSON(w, http.StatusUnauthorized, errorResponse{Error: wsErrorCodeUnauthorized})
 				return
 			}
@@ -181,8 +186,9 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin: func(_ *http.Request) bool {
-				return true
+			Subprotocols:    []string{wsTransportSubprotocol},
+			CheckOrigin: func(request *http.Request) bool {
+				return isAllowedWebSocketOrigin(request.Header.Get("Origin"))
 			},
 		}
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -353,6 +359,45 @@ func runWebSocketKeepAlive(conn *websocket.Conn, done <-chan struct{}) {
 			}
 		}
 	}
+}
+
+func resolveBridgeToken(r *http.Request) (string, error) {
+	for _, protocol := range websocket.Subprotocols(r) {
+		trimmed := strings.TrimSpace(protocol)
+		if !strings.HasPrefix(trimmed, wsBridgeTokenPrefix) {
+			continue
+		}
+
+		encoded := strings.TrimPrefix(trimmed, wsBridgeTokenPrefix)
+		if strings.TrimSpace(encoded) == "" {
+			break
+		}
+
+		decoded, err := base64.RawURLEncoding.DecodeString(encoded)
+		if err != nil {
+			return "", fmt.Errorf("invalid bridge token encoding")
+		}
+		return string(decoded), nil
+	}
+
+	return "", fmt.Errorf("missing bridge token")
+}
+
+func isAllowedWebSocketOrigin(origin string) bool {
+	trimmed := strings.TrimSpace(origin)
+	if trimmed == "" {
+		return true
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return false
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+
+	return isLoopbackHost(parsed.Hostname())
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

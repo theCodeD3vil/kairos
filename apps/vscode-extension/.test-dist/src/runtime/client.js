@@ -14,6 +14,8 @@ const WS_RESPONSE_TYPE_HANDSHAKE = 'handshake.response';
 const WS_RESPONSE_TYPE_INGEST = 'ingest.response';
 const WS_RESPONSE_TYPE_ERROR = 'error';
 const WS_ENDPOINT_PATH = '/v1/extension/ws';
+const WS_SUBPROTOCOL = 'kairos.v2';
+const WS_AUTH_SUBPROTOCOL_PREFIX = 'kairos.auth.';
 const WEBSOCKET_STATE_CONNECTING = 0;
 const WEBSOCKET_STATE_OPEN = 1;
 class WebSocketDesktopClient {
@@ -80,32 +82,36 @@ class WebSocketDesktopClient {
     }
     async openConnection() {
         let lastError;
-        for (const endpoint of this.resolveCandidates()) {
+        for (const candidate of this.resolveCandidates()) {
             try {
-                const socket = await this.connectCandidate(endpoint);
-                this.bindSocket(socket, endpoint);
+                const socket = await this.connectCandidate(candidate);
+                this.bindSocket(socket, candidate.endpoint);
                 return socket;
             }
             catch (error) {
-                lastError = normalizeError(error, `desktop websocket unavailable at ${endpoint}`);
+                lastError = new Error('desktop websocket unavailable');
             }
         }
         throw lastError ?? new Error('desktop websocket unavailable');
     }
     resolveCandidates() {
         const candidates = (0, discovery_1.buildDesktopEndpointCandidates)(this.preferredBaseURL)
-            .map((candidate) => toWebSocketEndpoint(candidate.baseURL, candidate.token))
-            .filter((value) => value !== '');
-        return dedupe(candidates);
+            .map((candidate) => ({
+            endpoint: toWebSocketEndpoint(candidate.baseURL),
+            token: candidate.token,
+        }))
+            .filter((candidate) => candidate.endpoint !== '');
+        return dedupeCandidates(candidates);
     }
-    connectCandidate(endpoint) {
+    connectCandidate(candidate) {
         return new Promise((resolve, reject) => {
-            const socket = this.webSocketFactory(endpoint);
+            const protocols = buildWebSocketProtocols(candidate.token);
+            const socket = this.webSocketFactory(candidate.endpoint, protocols);
             let settled = false;
             const timeout = setTimeout(() => {
                 cleanup();
                 safeCloseSocket(socket);
-                reject(new Error(`desktop websocket connect timed out (${endpoint})`));
+                reject(new Error('desktop websocket connect timed out'));
             }, this.requestTimeoutMs);
             const onOpen = () => {
                 if (settled) {
@@ -121,7 +127,7 @@ class WebSocketDesktopClient {
                 }
                 settled = true;
                 cleanup();
-                reject(new Error(`desktop websocket connect failed (${endpoint})`));
+                reject(new Error('desktop websocket connect failed'));
             };
             const onClose = () => {
                 if (settled) {
@@ -129,7 +135,7 @@ class WebSocketDesktopClient {
                 }
                 settled = true;
                 cleanup();
-                reject(new Error(`desktop websocket closed during connect (${endpoint})`));
+                reject(new Error('desktop websocket closed during connect'));
             };
             const cleanup = () => {
                 clearTimeout(timeout);
@@ -231,22 +237,22 @@ class WebSocketDesktopClient {
     }
 }
 exports.WebSocketDesktopClient = WebSocketDesktopClient;
-function dedupe(values) {
-    const unique = new Set();
+function dedupeCandidates(values) {
+    const unique = new Map();
     for (const value of values) {
-        unique.add(value);
+        const key = `${value.endpoint}::${value.token ?? ''}`;
+        if (!unique.has(key)) {
+            unique.set(key, value);
+        }
     }
-    return Array.from(unique);
+    return Array.from(unique.values());
 }
-function toWebSocketEndpoint(baseURL, token) {
+function toWebSocketEndpoint(baseURL) {
     try {
         const parsed = new URL(baseURL);
         parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
         parsed.pathname = WS_ENDPOINT_PATH;
         parsed.search = '';
-        if (token) {
-            parsed.searchParams.set('token', token);
-        }
         parsed.hash = '';
         return parsed.toString();
     }
@@ -254,12 +260,19 @@ function toWebSocketEndpoint(baseURL, token) {
         return '';
     }
 }
+function buildWebSocketProtocols(token) {
+    if (!token) {
+        return [WS_SUBPROTOCOL];
+    }
+    const encodedToken = node_buffer_1.Buffer.from(token, 'utf8').toString('base64url');
+    return [WS_SUBPROTOCOL, `${WS_AUTH_SUBPROTOCOL_PREFIX}${encodedToken}`];
+}
 function createDefaultWebSocketFactory() {
     const ctor = globalThis.WebSocket;
     if (!ctor) {
         throw new Error('WebSocket is unavailable in this runtime');
     }
-    return (url) => new ctor(url);
+    return (url, protocols) => new ctor(url, protocols);
 }
 function safeCloseSocket(socket) {
     try {
@@ -268,12 +281,6 @@ function safeCloseSocket(socket) {
     catch {
         // Ignore close failures.
     }
-}
-function normalizeError(error, fallback) {
-    if (error instanceof Error) {
-        return error;
-    }
-    return new Error(fallback);
 }
 function formatError(error) {
     if (error instanceof Error && error.message) {

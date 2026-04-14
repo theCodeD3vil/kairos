@@ -132,6 +132,43 @@ const extension = {
         await harness.close();
     }
 });
+(0, node_test_1.default)('invalid replay results trigger single-event isolation and quarantine repeatedly failing rows', async () => {
+    const harness = await createHarness();
+    try {
+        await seedEvent(harness.storage, createEvent('evt-1'));
+        await seedEvent(harness.storage, createEvent('evt-2'));
+        harness.client.nextIngestResponse = ({ events }) => ({
+            acceptedCount: events.length,
+            rejectedCount: 0,
+            results: events.slice(0, Math.max(0, events.length - 1)).map((event) => ({
+                eventId: event.id,
+                status: 'accepted',
+                code: 'persisted',
+            })),
+            serverTimestamp: '2026-04-09T12:00:00Z',
+        });
+        for (let attempt = 0; attempt < constants_1.INVALID_RESULTS_ROW_QUARANTINE_ATTEMPT_THRESHOLD; attempt += 1) {
+            await harness.storage.markSending({
+                eventIds: ['evt-1'],
+                attemptedAt: '2026-04-09T12:00:00Z',
+                batchId: `preflight-${attempt}`,
+            });
+            await harness.storage.revertSendingToPending({
+                eventIds: ['evt-1'],
+                errorCode: 'preflight',
+                errorMessage: 'preflight',
+            });
+        }
+        const outcome = await harness.worker.replayPendingEvents(harness.client.handshakeResponse);
+        strict_1.default.equal(outcome.kind, 'error');
+        const stats = await harness.storage.getStats();
+        strict_1.default.equal(stats.quarantineCount, 1);
+        strict_1.default.equal(stats.pendingCount, 1);
+    }
+    finally {
+        await harness.close();
+    }
+});
 (0, node_test_1.default)('startup recovery reverts stale sending rows to pending', async () => {
     const harness = await createHarness();
     try {

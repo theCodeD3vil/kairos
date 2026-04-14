@@ -21,11 +21,14 @@ function tryReadDiscoveredDesktopCandidate() {
     try {
         const decoded = JSON.parse(node_fs_1.default.readFileSync(discoveryFile, 'utf8'));
         const token = decoded.desktopServerToken?.trim() || undefined;
-        if (decoded.desktopServerUrl?.startsWith('http://127.0.0.1:')) {
-            return { baseURL: decoded.desktopServerUrl, token };
+        const loopbackURL = parseLoopbackURL(decoded.desktopServerUrl);
+        if (loopbackURL) {
+            return { baseURL: loopbackURL, token };
         }
-        if (decoded.desktopServerHost && Number.isFinite(decoded.desktopServerPort)) {
-            return { baseURL: `http://${decoded.desktopServerHost}:${decoded.desktopServerPort}`, token };
+        const host = decoded.desktopServerHost?.trim();
+        const port = decoded.desktopServerPort;
+        if (host && typeof port === 'number' && Number.isInteger(port) && isValidPort(port) && isLoopbackHost(host)) {
+            return { baseURL: `http://${formatHostForURL(host)}:${port}`, token };
         }
         return undefined;
     }
@@ -58,5 +61,37 @@ function buildDesktopEndpointCandidates(preferredBaseURL) {
 }
 function buildDesktopBaseURLCandidates(preferredBaseURL) {
     return buildDesktopEndpointCandidates(preferredBaseURL).map((candidate) => candidate.baseURL);
+}
+function parseLoopbackURL(raw) {
+    if (!raw) {
+        return undefined;
+    }
+    try {
+        const parsed = new URL(raw);
+        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !isLoopbackHost(parsed.hostname)) {
+            return undefined;
+        }
+        return parsed.origin;
+    }
+    catch {
+        return undefined;
+    }
+}
+function isValidPort(port) {
+    return port > 0 && port <= 65535;
+}
+function isLoopbackHost(host) {
+    const trimmed = host.trim().toLowerCase();
+    const normalized = trimmed.startsWith('[') && trimmed.endsWith(']')
+        ? trimmed.slice(1, -1)
+        : trimmed;
+    return normalized === 'localhost' || normalized === '::1' || normalized.startsWith('127.');
+}
+function formatHostForURL(host) {
+    const trimmed = host.trim();
+    if (trimmed.includes(':') && !trimmed.startsWith('[')) {
+        return `[${trimmed}]`;
+    }
+    return trimmed;
 }
 //# sourceMappingURL=discovery.js.map

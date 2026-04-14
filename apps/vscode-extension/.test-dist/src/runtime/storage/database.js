@@ -20,7 +20,9 @@ class OutboxDatabase {
     static async open(options) {
         const SQL = await loadSqlStatic();
         const dbPath = node_path_1.default.resolve(options.databasePath);
-        await promises_1.default.mkdir(node_path_1.default.dirname(dbPath), { recursive: true });
+        const parentDir = node_path_1.default.dirname(dbPath);
+        await promises_1.default.mkdir(parentDir, { recursive: true, mode: 0o700 });
+        await promises_1.default.chmod(parentDir, 0o700);
         let dbBytes;
         try {
             const raw = await promises_1.default.readFile(dbPath);
@@ -34,6 +36,7 @@ class OutboxDatabase {
         const db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
         const outboxDB = new OutboxDatabase(dbPath, db);
         await outboxDB.runMigrations();
+        await outboxDB.hardenPermissions();
         return outboxDB;
     }
     query(sql, params = []) {
@@ -76,11 +79,16 @@ class OutboxDatabase {
     async persist() {
         const bytes = this.db.export();
         const tempPath = `${this.dbPath}.tmp`;
-        await promises_1.default.writeFile(tempPath, Buffer.from(bytes));
+        await promises_1.default.writeFile(tempPath, Buffer.from(bytes), { mode: 0o600 });
+        await promises_1.default.chmod(tempPath, 0o600);
         await promises_1.default.rename(tempPath, this.dbPath);
+        await this.hardenPermissions();
     }
     async close() {
         this.db.close();
+    }
+    async hardenPermissions() {
+        await promises_1.default.chmod(this.dbPath, 0o600);
     }
     async migrationStatus() {
         const rows = this.query(`SELECT version FROM ${MIGRATIONS_TABLE} ORDER BY version ASC`);

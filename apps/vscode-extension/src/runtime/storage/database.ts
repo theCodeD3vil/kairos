@@ -26,7 +26,9 @@ export class OutboxDatabase {
   static async open(options: OpenOutboxStorageOptions): Promise<OutboxDatabase> {
     const SQL = await loadSqlStatic();
     const dbPath = path.resolve(options.databasePath);
-    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+    const parentDir = path.dirname(dbPath);
+    await fs.mkdir(parentDir, { recursive: true, mode: 0o700 });
+    await fs.chmod(parentDir, 0o700);
 
     let dbBytes: Uint8Array | undefined;
     try {
@@ -41,6 +43,7 @@ export class OutboxDatabase {
     const db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
     const outboxDB = new OutboxDatabase(dbPath, db);
     await outboxDB.runMigrations();
+    await outboxDB.hardenPermissions();
     return outboxDB;
   }
 
@@ -85,12 +88,18 @@ export class OutboxDatabase {
   async persist(): Promise<void> {
     const bytes = this.db.export();
     const tempPath = `${this.dbPath}.tmp`;
-    await fs.writeFile(tempPath, Buffer.from(bytes));
+    await fs.writeFile(tempPath, Buffer.from(bytes), { mode: 0o600 });
+    await fs.chmod(tempPath, 0o600);
     await fs.rename(tempPath, this.dbPath);
+    await this.hardenPermissions();
   }
 
   async close(): Promise<void> {
     this.db.close();
+  }
+
+  private async hardenPermissions(): Promise<void> {
+    await fs.chmod(this.dbPath, 0o600);
   }
 
   async migrationStatus(): Promise<StorageMigrationStatus> {

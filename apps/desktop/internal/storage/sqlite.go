@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -42,8 +43,13 @@ func DefaultDatabasePath() (string, error) {
 }
 
 func Open(ctx context.Context, dbPath string) (*Store, error) {
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
-		return nil, fmt.Errorf("create db directory: %w", err)
+	if shouldManageFilesystemPermissions(dbPath) {
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
+			return nil, fmt.Errorf("create db directory: %w", err)
+		}
+		if err := os.Chmod(filepath.Dir(dbPath), 0o700); err != nil {
+			return nil, fmt.Errorf("secure db directory permissions: %w", err)
+		}
 	}
 
 	db, err := sql.Open("sqlite", dbPath)
@@ -86,6 +92,10 @@ func Open(ctx context.Context, dbPath string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := store.tightenSQLiteFilePermissions(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	log.Printf("storage: sqlite ready")
 
@@ -98,6 +108,42 @@ func (s *Store) Close() error {
 	}
 
 	return s.db.Close()
+}
+
+func shouldManageFilesystemPermissions(dbPath string) bool {
+	trimmed := strings.TrimSpace(dbPath)
+	if trimmed == "" || trimmed == ":memory:" {
+		return false
+	}
+	return !strings.HasPrefix(trimmed, "file:")
+}
+
+func (s *Store) tightenSQLiteFilePermissions() error {
+	if s == nil || !shouldManageFilesystemPermissions(s.path) {
+		return nil
+	}
+
+	if err := chmodIfPresent(s.path, 0o600); err != nil {
+		return fmt.Errorf("secure sqlite file permissions: %w", err)
+	}
+	if err := chmodIfPresent(s.path+"-wal", 0o600); err != nil {
+		return fmt.Errorf("secure sqlite wal file permissions: %w", err)
+	}
+	if err := chmodIfPresent(s.path+"-shm", 0o600); err != nil {
+		return fmt.Errorf("secure sqlite shm file permissions: %w", err)
+	}
+	return nil
+}
+
+func chmodIfPresent(path string, mode os.FileMode) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return os.Chmod(path, mode)
 }
 
 func (s *Store) Path() string {

@@ -7,7 +7,10 @@ import test from 'node:test';
 import type { ActivityEvent, IngestEventsRequest, IngestEventsResponse, MachineInfo } from '@kairos/shared/ingestion';
 import type { ExtensionEffectiveSettings, ExtensionHandshakeRequest, ExtensionHandshakeResponse } from '@kairos/shared/settings';
 
-import { ACKED_COMPACTION_DELAY_MS } from '../src/runtime/constants';
+import {
+  ACKED_COMPACTION_DELAY_MS,
+  INVALID_RESULTS_ROW_QUARANTINE_ATTEMPT_THRESHOLD,
+} from '../src/runtime/constants';
 import { getDefaultEffectiveSettings } from '../src/runtime/filters';
 import { OutboxSyncWorker } from '../src/runtime/sync-worker';
 import { openOutboxStorage, OUTBOX_DATABASE_FILE_NAME, type OutboxStorageHandle } from '../src/runtime/storage';
@@ -136,6 +139,45 @@ test('ambiguous replay failures revert sending rows back to pending', async () =
     assert.equal(pending[0].eventId, 'evt-1');
     assert.equal(pending[0].deliveryState, 'pending');
     assert.equal(pending[0].lastErrorCode, 'send_ambiguous_failure');
+  } finally {
+    await harness.close();
+  }
+});
+
+test('invalid replay results trigger single-event isolation and quarantine repeatedly failing rows', async () => {
+  const harness = await createHarness();
+  try {
+    await seedEvent(harness.storage, createEvent('evt-1'));
+    await seedEvent(harness.storage, createEvent('evt-2'));
+    harness.client.nextIngestResponse = ({ events }: IngestEventsRequest): IngestEventsResponse => ({
+      acceptedCount: events.length,
+      rejectedCount: 0,
+      results: events.slice(0, Math.max(0, events.length - 1)).map((event: IngestEventsRequest['events'][number]) => ({
+        eventId: event.id,
+        status: 'accepted' as const,
+        code: 'persisted',
+      })),
+      serverTimestamp: '2026-04-09T12:00:00Z',
+    });
+
+    for (let attempt = 0; attempt < INVALID_RESULTS_ROW_QUARANTINE_ATTEMPT_THRESHOLD; attempt += 1) {
+      await harness.storage.markSending({
+        eventIds: ['evt-1'],
+        attemptedAt: '2026-04-09T12:00:00Z',
+        batchId: `preflight-${attempt}`,
+      });
+      await harness.storage.revertSendingToPending({
+        eventIds: ['evt-1'],
+        errorCode: 'preflight',
+        errorMessage: 'preflight',
+      });
+    }
+
+    const outcome = await harness.worker.replayPendingEvents(harness.client.handshakeResponse);
+    assert.equal(outcome.kind, 'error');
+    const stats = await harness.storage.getStats();
+    assert.equal(stats.quarantineCount, 1);
+    assert.equal(stats.pendingCount, 1);
   } finally {
     await harness.close();
   }

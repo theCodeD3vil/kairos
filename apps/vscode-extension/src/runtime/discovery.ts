@@ -34,11 +34,14 @@ function tryReadDiscoveredDesktopCandidate(): DesktopEndpointCandidate | undefin
   try {
     const decoded = JSON.parse(fs.readFileSync(discoveryFile, 'utf8')) as BridgeDiscoveryRecord;
     const token = decoded.desktopServerToken?.trim() || undefined;
-    if (decoded.desktopServerUrl?.startsWith('http://127.0.0.1:')) {
-      return { baseURL: decoded.desktopServerUrl, token };
+    const loopbackURL = parseLoopbackURL(decoded.desktopServerUrl);
+    if (loopbackURL) {
+      return { baseURL: loopbackURL, token };
     }
-    if (decoded.desktopServerHost && Number.isFinite(decoded.desktopServerPort)) {
-      return { baseURL: `http://${decoded.desktopServerHost}:${decoded.desktopServerPort}`, token };
+    const host = decoded.desktopServerHost?.trim();
+    const port = decoded.desktopServerPort;
+    if (host && typeof port === 'number' && Number.isInteger(port) && isValidPort(port) && isLoopbackHost(host)) {
+      return { baseURL: `http://${formatHostForURL(host)}:${port}`, token };
     }
     return undefined;
   } catch {
@@ -76,4 +79,40 @@ export function buildDesktopEndpointCandidates(preferredBaseURL?: string): Deskt
 
 export function buildDesktopBaseURLCandidates(preferredBaseURL?: string): string[] {
   return buildDesktopEndpointCandidates(preferredBaseURL).map((candidate) => candidate.baseURL);
+}
+
+function parseLoopbackURL(raw: string | undefined): string | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !isLoopbackHost(parsed.hostname)) {
+      return undefined;
+    }
+    return parsed.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function isValidPort(port: number): boolean {
+  return port > 0 && port <= 65535;
+}
+
+function isLoopbackHost(host: string): boolean {
+  const trimmed = host.trim().toLowerCase();
+  const normalized = trimmed.startsWith('[') && trimmed.endsWith(']')
+    ? trimmed.slice(1, -1)
+    : trimmed;
+  return normalized === 'localhost' || normalized === '::1' || normalized.startsWith('127.');
+}
+
+function formatHostForURL(host: string): string {
+  const trimmed = host.trim();
+  if (trimmed.includes(':') && !trimmed.startsWith('[')) {
+    return `[${trimmed}]`;
+  }
+  return trimmed;
 }

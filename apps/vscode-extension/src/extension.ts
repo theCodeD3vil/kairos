@@ -162,7 +162,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     observer.logWarn('Open Kairos Desktop is not available on this machine');
     await vscode.window.showInformationMessage(
-      'Kairos Desktop could not be opened automatically. Start the desktop app manually, then use “Refresh Kairos Settings”.',
+      'Kairos Desktop could not be opened automatically. Start the desktop app manually, then use Refresh Kairos Settings.',
     );
   });
 

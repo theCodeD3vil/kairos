@@ -219,7 +219,7 @@ func writeDesktopBridgeDiscovery(address string, bridgeToken string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := createPrivateDirectory(filepath.Dir(path)); err != nil {
 		return fmt.Errorf("create discovery directory: %w", err)
 	}
 
@@ -243,7 +243,7 @@ func writeDesktopBridgeDiscovery(address string, bridgeToken string) error {
 	if err != nil {
 		return fmt.Errorf("marshal discovery payload: %w", err)
 	}
-	if err := os.WriteFile(path, append(bytes, '\n'), 0o644); err != nil {
+	if err := writePrivateFile(path, append(bytes, '\n')); err != nil {
 		return fmt.Errorf("write discovery file: %w", err)
 	}
 	return nil
@@ -257,6 +257,35 @@ func clearDesktopBridgeDiscovery() {
 	if removeErr := os.Remove(path); removeErr != nil && !os.IsNotExist(removeErr) {
 		log.Printf("app: unable to remove desktop bridge discovery file: %v", removeErr)
 	}
+}
+
+func createPrivateDirectory(path string) error {
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		return err
+	}
+	if err := os.Chmod(path, 0o700); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writePrivateFile(path string, content []byte) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err := file.Chmod(0o600); err != nil {
+		return err
+	}
+	if _, err := file.Write(content); err != nil {
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func desktopBridgeDiscoveryPath() (string, error) {

@@ -12,12 +12,14 @@ const filters_1 = require("../src/runtime/filters");
 const client_1 = require("../src/runtime/client");
 class FakeDesktopWebSocket {
     url;
+    protocols;
     options;
     readyState = 1;
     closeCallCount = 0;
     listeners = new Map();
-    constructor(url, options) {
+    constructor(url, protocols = [], options) {
         this.url = url;
+        this.protocols = protocols;
         this.options = options;
         setImmediate(() => this.emit('open'));
     }
@@ -119,8 +121,10 @@ class FakeDesktopWebSocket {
     const discoveryPort = 43137;
     const discoveryBaseURL = `http://127.0.0.1:${discoveryPort}`;
     const discoveryToken = 'discovery-token-123';
-    const discoveryWSURL = `ws://127.0.0.1:${discoveryPort}/v1/extension/ws?token=${discoveryToken}`;
+    const discoveryWSURL = `ws://127.0.0.1:${discoveryPort}/v1/extension/ws`;
+    const expectedAuthProtocol = `kairos.auth.${Buffer.from(discoveryToken, 'utf8').toString('base64url')}`;
     const attemptedURLs = [];
+    const attemptedProtocols = [];
     node_fs_1.default.writeFileSync(discoveryPath, JSON.stringify({
         desktopServerUrl: discoveryBaseURL,
         desktopServerHost: '127.0.0.1',
@@ -131,10 +135,11 @@ class FakeDesktopWebSocket {
     }));
     try {
         const client = new client_1.WebSocketDesktopClient('http://127.0.0.1:1', {
-            webSocketFactory: (url) => {
+            webSocketFactory: (url, protocols) => {
                 attemptedURLs.push(url);
+                attemptedProtocols.push(protocols);
                 if (url === discoveryWSURL) {
-                    return new FakeDesktopWebSocket(url);
+                    return new FakeDesktopWebSocket(url, protocols);
                 }
                 throw new Error(`dial failed ${url}`);
             },
@@ -168,6 +173,62 @@ class FakeDesktopWebSocket {
         });
         strict_1.default.equal(ingest.acceptedCount, 0);
         strict_1.default.ok(attemptedURLs.includes(discoveryWSURL));
+        strict_1.default.ok(attemptedProtocols.some((protocols) => protocols.includes('kairos.v2')));
+        strict_1.default.ok(attemptedProtocols.some((protocols) => protocols.includes(expectedAuthProtocol)));
+    }
+    finally {
+        if (originalDiscoveryEnv) {
+            process.env.KAIROS_BRIDGE_DISCOVERY_FILE = originalDiscoveryEnv;
+        }
+        else {
+            delete process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
+        }
+        if (originalDesktopEnv) {
+            process.env.KAIROS_DESKTOP_URL = originalDesktopEnv;
+        }
+        else {
+            delete process.env.KAIROS_DESKTOP_URL;
+        }
+        node_fs_1.default.rmSync(tempDir, { recursive: true, force: true });
+    }
+});
+(0, node_test_1.default)('desktop client ignores non-loopback discovery hosts', async () => {
+    const tempDir = node_fs_1.default.mkdtempSync(node_path_1.default.join(node_os_1.default.tmpdir(), 'kairos-client-test-'));
+    const discoveryPath = node_path_1.default.join(tempDir, 'desktop-bridge.json');
+    const originalDiscoveryEnv = process.env.KAIROS_BRIDGE_DISCOVERY_FILE;
+    const originalDesktopEnv = process.env.KAIROS_DESKTOP_URL;
+    process.env.KAIROS_BRIDGE_DISCOVERY_FILE = discoveryPath;
+    delete process.env.KAIROS_DESKTOP_URL;
+    const attemptedURLs = [];
+    node_fs_1.default.writeFileSync(discoveryPath, JSON.stringify({
+        desktopServerUrl: 'http://192.168.1.10:43137',
+        desktopServerHost: '192.168.1.10',
+        desktopServerPort: 43137,
+        desktopServerToken: 'token',
+        updatedAt: new Date().toISOString(),
+        version: 1,
+    }));
+    try {
+        const client = new client_1.WebSocketDesktopClient(undefined, {
+            webSocketFactory: (url) => {
+                attemptedURLs.push(url);
+                throw new Error(`dial failed ${url}`);
+            },
+            requestTimeoutMs: 30,
+        });
+        await strict_1.default.rejects(() => client.handshake({
+            machine: {
+                machineId: 'machine-1',
+                machineName: 'test-machine',
+                osPlatform: 'linux',
+            },
+            extension: {
+                editor: 'vscode',
+                editorVersion: '1.100.0',
+                extensionVersion: '1.0.5',
+            },
+        }), /desktop websocket unavailable/);
+        strict_1.default.equal(attemptedURLs.some((url) => url.includes('192.168.1.10')), false);
     }
     finally {
         if (originalDiscoveryEnv) {
@@ -189,8 +250,8 @@ class FakeDesktopWebSocket {
     const createdSockets = [];
     const client = new client_1.WebSocketDesktopClient('http://127.0.0.1:42137', {
         requestTimeoutMs: 20,
-        webSocketFactory: (url) => {
-            const socket = new FakeDesktopWebSocket(url, {
+        webSocketFactory: (url, protocols) => {
+            const socket = new FakeDesktopWebSocket(url, protocols, {
                 dropResponses: createdSockets.length === 0,
             });
             createdSockets.push(socket);
