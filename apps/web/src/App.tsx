@@ -43,8 +43,8 @@ const featureCards = [
     icon: ShieldCheck,
   },
   {
-    title: 'Local-First Privacy',
-    detail: 'Your activity data stays on your machine with configurable file-path privacy and exclusion controls.',
+    title: 'Hardened Local Bridge',
+    detail: 'Desktop-extension bridge traffic stays loopback-only, uses authenticated websocket protocols, and keeps local data files owner-private.',
     icon: Settings,
   },
 ] as const;
@@ -107,12 +107,12 @@ const docsPages: Record<DocsSlug, { title: string; sections: { title: string; co
         ),
       },
       {
-        title: 'Connection States',
+        title: 'Status Experience',
         content: (
           <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-[var(--ink-secondary)]">
-            <li><strong>Connected:</strong> extension can send events to desktop.</li>
-            <li><strong>Offline or retrying:</strong> extension stores events locally in its durable outbox.</li>
-            <li><strong>Reconnected:</strong> extension replays backlog and clears acknowledged events.</li>
+            <li>Status bar shows coding time only, with an icon.</li>
+            <li>Hover shows current session details like today tracked time, active session duration, and last activity.</li>
+            <li>Sync and replay continue in the background without buffering or connection labels in the status bar.</li>
           </ul>
         ),
       },
@@ -238,9 +238,9 @@ const docsPages: Record<DocsSlug, { title: string; sections: { title: string; co
         title: 'What You See In VS Code',
         content: (
           <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-[var(--ink-secondary)]">
-            <li>Status bar and tooltip indicate connection and replay state.</li>
-            <li>During outages, status indicates buffering or retrying instead of failing silently.</li>
-            <li>After reconnect, backlog drains and status returns to connected.</li>
+            <li>Status bar is focused and stable: coding time only with an icon.</li>
+            <li>Hover details focus on the current coding session, not transport state.</li>
+            <li>Outbox replay and quarantine handling run automatically in the background after reconnect.</li>
           </ul>
         ),
       },
@@ -292,11 +292,11 @@ const docsPages: Record<DocsSlug, { title: string; sections: { title: string; co
           <>
             <ol className="mt-3 list-decimal space-y-2 pl-6 text-sm leading-7 text-[var(--ink-secondary)]">
               <li>Keep desktop open for a minute and continue editing.</li>
-              <li>Check extension status tooltip for retrying or backlog indicators.</li>
+              <li>Open the Kairos output channel in VS Code to inspect replay warnings.</li>
               <li>Reload VS Code window to restart extension runtime cleanly.</li>
             </ol>
             <p className="mt-4 text-sm leading-7 text-[var(--ink-secondary)]">
-              Captured events are buffered locally and replayed when desktop is reachable.
+              Captured events are buffered locally and replayed when desktop is reachable, with repeated malformed replay rows isolated and quarantined.
             </p>
           </>
         ),
@@ -567,7 +567,7 @@ export default function App() {
               <article className="border-l-2 border-primary/45 pl-5">
                 <h3 className="text-xl font-semibold">Desktop App</h3>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-secondary)]">
-                  Desktop runs a loopback-only local server, stores canonical long-term data in SQLite, and is the authority for effective settings.
+                  Desktop runs a loopback-only local server with authenticated websocket protocols, stores canonical long-term data in SQLite, and is the authority for effective settings.
                 </p>
               </article>
               <article className="border-l-2 border-primary/45 pl-5">
@@ -661,9 +661,9 @@ export default function App() {
                   </p>
                 </div>
                 <div className="border-l-2 border-primary/45 pl-5">
-                  <h3 className="text-lg font-semibold">Clear Connection States</h3>
+                  <h3 className="text-lg font-semibold">Focused Status Bar</h3>
                   <p className="mt-2 text-sm leading-7 text-[var(--ink-secondary)]">
-                    Status bar and tooltip show connected, buffering, retrying, and backlog states so you always know what Kairos is doing.
+                    VS Code status bar shows coding time only. Hover details show current session context without buffering or connection state labels.
                   </p>
                 </div>
               </article>
