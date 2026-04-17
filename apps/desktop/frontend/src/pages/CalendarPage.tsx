@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarMonthGrid } from '@/components/calendar/CalendarMonthGrid';
 import { DaySummary } from '@/components/calendar/DaySummary';
@@ -10,8 +10,10 @@ import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
+import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import { readCalendarMonthPreference, saveCalendarMonthPreference } from '@/lib/settings/preferences';
 
 function addMonths(base: Date, delta: number) {
   const next = new Date(base);
@@ -37,8 +39,15 @@ function findInitialSelection(monthDays: CalendarDay[], fallbackDate: string) {
 }
 
 export function CalendarPage() {
+  const monthTouchedRef = useRef(false);
   const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
+    cacheKey: desktopResourceKeys.settings(),
+    emptyValue: emptySettingsScreenData(),
+    errorMessage: 'Unable to load desktop settings.',
+    load: (options) => loadSettingsScreenData(options),
+  });
   const {
     data: monthView,
     isInitialLoading: isMonthLoading,
@@ -68,15 +77,46 @@ export function CalendarPage() {
   const selectedIsInMonth = monthData.some((day) => day.date === selectedDate);
 
   useEffect(() => {
+    if (!hasResolvedSettings || monthTouchedRef.current) {
+      return;
+    }
+
+    if (settingsData.viewModel.appBehavior.reopenLastViewedContext) {
+      const savedMonth = readCalendarMonthPreference();
+      if (savedMonth) {
+        monthTouchedRef.current = true;
+        setMonthRef(savedMonth);
+        return;
+      }
+    }
+
+    monthTouchedRef.current = true;
+  }, [hasResolvedSettings, settingsData.viewModel.appBehavior.reopenLastViewedContext]);
+
+  useEffect(() => {
+    if (!monthTouchedRef.current) {
+      return;
+    }
+    saveCalendarMonthPreference(monthRef);
+  }, [monthRef]);
+
+  useEffect(() => {
     if (!selectedIsInMonth && monthData.length > 0) {
       const nextSelection = findInitialSelection(monthData, monthData[0].date);
       setSelectedDate(nextSelection);
     }
   }, [selectedIsInMonth, monthData]);
 
-  const handlePrevMonth = () => setMonthRef((prev) => addMonths(prev, -1));
-  const handleNextMonth = () => setMonthRef((prev) => addMonths(prev, 1));
+  const handlePrevMonth = () => {
+    monthTouchedRef.current = true;
+    setMonthRef((prev) => addMonths(prev, -1));
+  };
+  const handleNextMonth = () => {
+    monthTouchedRef.current = true;
+    setMonthRef((prev) => addMonths(prev, 1));
+  };
   const handleToday = () => {
+    monthTouchedRef.current = true;
     const current = new Date();
     const today = startOfMonth(current);
     setMonthRef(today);

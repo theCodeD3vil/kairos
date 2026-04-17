@@ -34,22 +34,22 @@ function toneClasses(state: SyncIndicatorState) {
   switch (state) {
     case 'success':
       return {
-        container: 'border-emerald-500/25 bg-emerald-500/12 text-emerald-950',
+        container: 'border-emerald-600/25 bg-emerald-500/14 text-emerald-900 dark:border-emerald-400/45 dark:bg-emerald-400/16 dark:text-emerald-100',
         dot: 'bg-emerald-400',
       };
     case 'warning':
       return {
-        container: 'border-amber-500/30 bg-amber-500/15 text-amber-950',
+        container: 'border-amber-600/30 bg-amber-500/16 text-amber-900 dark:border-amber-400/50 dark:bg-amber-400/18 dark:text-amber-100',
         dot: 'bg-amber-400',
       };
     case 'error':
       return {
-        container: 'border-rose-500/30 bg-rose-500/15 text-rose-950',
+        container: 'border-rose-600/30 bg-rose-500/16 text-rose-900 dark:border-rose-400/50 dark:bg-rose-400/18 dark:text-rose-100',
         dot: 'bg-rose-400',
       };
     default:
       return {
-        container: 'border-sky-500/25 bg-sky-500/14 text-sky-950',
+        container: 'border-sky-600/25 bg-sky-500/14 text-sky-900 dark:border-sky-400/45 dark:bg-sky-400/16 dark:text-sky-100',
         dot: 'bg-sky-400',
       };
   }

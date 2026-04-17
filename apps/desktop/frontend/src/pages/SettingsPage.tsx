@@ -20,7 +20,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ClearLocalData, ExportLocalDataToDisk } from '../../wailsjs/go/main/App';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  ClearLocalData,
+  ExportLocalDataToDisk,
+  RebuildAllSessions,
+  RebuildSessionsForDate,
+  RebuildSessionsForRange,
+} from '../../wailsjs/go/main/App';
 import { ExclusionEditor } from '@/components/settings/ExclusionEditor';
 import { ChangelogViewer } from '@/components/ui/changelog-viewer';
 import {
@@ -51,13 +64,32 @@ import {
   refreshVSCodeExtensionStatus,
   settingsSections,
 } from '@/lib/backend/settings';
+import {
+  isSensitiveFilePresetEnabled,
+  sensitiveFilePresets,
+  withSensitiveFilePreset,
+} from '@/lib/exclusion-presets';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import {
+  canConfigureStartupWindowBehavior,
+  withLaunchOnStartup,
+  withOpenOnSystemLogin,
+} from '@/pages/settings-behavior';
 
 const MIN_IDLE_TIMEOUT_MINUTES = 5;
 const MIN_SESSION_MERGE_THRESHOLD_MINUTES = 0;
 const MIN_HEARTBEAT_INTERVAL_SECONDS = 1;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 500;
 const OBFUSCATED_STORAGE_PATH_LABEL = '••••••••••';
+
+type RebuildScope = 'all' | 'date' | 'range';
+
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export function SettingsPage() {
   const { error, success } = useToast();
@@ -89,9 +121,16 @@ export function SettingsPage() {
   const [sessionMergeWarning, setSessionMergeWarning] = useState<string | null>(null);
   const [heartbeatIntervalDraft, setHeartbeatIntervalDraft] = useState(initialData.viewModel.vscodeExtension.heartbeatIntervalSeconds);
   const [heartbeatIntervalWarning, setHeartbeatIntervalWarning] = useState<string | null>(null);
+  const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false);
+  const [rebuildScope, setRebuildScope] = useState<RebuildScope>('all');
+  const [rebuildDate, setRebuildDate] = useState(() => toDateInputValue(new Date()));
+  const [rebuildStartDate, setRebuildStartDate] = useState(() => toDateInputValue(new Date()));
+  const [rebuildEndDate, setRebuildEndDate] = useState(() => toDateInputValue(new Date()));
+  const [rebuildValidationError, setRebuildValidationError] = useState<string | null>(null);
+  const [rebuildInProgress, setRebuildInProgress] = useState(false);
   const persistCountRef = useRef(0);
   const changelogQueryHandledRef = useRef(false);
-  const isLinuxDesktop = currentMachine.os.trim().toLowerCase() === 'linux';
+  const canConfigureStartupWindowBehaviorControls = canConfigureStartupWindowBehavior(currentMachine.os);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -400,6 +439,60 @@ export function SettingsPage() {
 
   const canOpenRepository = about.repositoryLabel.startsWith('http');
   const canOpenReleaseNotes = about.releaseNotesLabel.startsWith('http');
+  const canRunRebuild = rebuildScope === 'all'
+    || (rebuildScope === 'date' && rebuildDate.trim() !== '')
+    || (
+      rebuildScope === 'range'
+      && rebuildStartDate.trim() !== ''
+      && rebuildEndDate.trim() !== ''
+      && rebuildStartDate <= rebuildEndDate
+    );
+
+  const runSessionRebuild = useCallback(() => {
+    if (rebuildScope === 'date' && rebuildDate.trim() === '') {
+      setRebuildValidationError('Select a date to rebuild.');
+      return;
+    }
+
+    if (rebuildScope === 'range') {
+      if (rebuildStartDate.trim() === '' || rebuildEndDate.trim() === '') {
+        setRebuildValidationError('Select both start and end dates.');
+        return;
+      }
+      if (rebuildStartDate > rebuildEndDate) {
+        setRebuildValidationError('Start date must be on or before end date.');
+        return;
+      }
+    }
+
+    setRebuildValidationError(null);
+    setRebuildInProgress(true);
+
+    void (async () => {
+      try {
+        const result = rebuildScope === 'all'
+          ? await RebuildAllSessions()
+          : rebuildScope === 'date'
+            ? await RebuildSessionsForDate(rebuildDate)
+            : await RebuildSessionsForRange(rebuildStartDate, rebuildEndDate);
+        const rebuiltRangeLabel = result.startDate === result.endDate
+          ? result.startDate
+          : `${result.startDate} → ${result.endDate}`;
+        success(
+          'Session Rebuild Complete',
+          `${result.createdSessionCount} sessions generated from ${result.processedEventCount} events for ${rebuiltRangeLabel}.`,
+        );
+        setRebuildDialogOpen(false);
+      } catch (cause) {
+        error(
+          'Session Rebuild Failed',
+          cause instanceof Error ? cause.message : 'Unable to rebuild sessions.',
+        );
+      } finally {
+        setRebuildInProgress(false);
+      }
+    })();
+  }, [error, rebuildDate, rebuildEndDate, rebuildScope, rebuildStartDate, success]);
 
   const tabs = [
     {
@@ -421,7 +514,6 @@ export function SettingsPage() {
                 { label: '1D', value: 'today' },
                 { label: '7D', value: 'week' },
                 { label: '1M', value: 'month' },
-                { label: 'custom', value: 'custom' },
               ]}
             />
           </SettingsRow>
@@ -651,6 +743,22 @@ export function SettingsPage() {
             iconInput={(item) => `example${item.startsWith('.') ? item : `.${item}`}`}
             onChange={(items) => updateExclusionsState({ ...exclusions, fileExtensions: items })}
           />
+          <SettingsRow
+            label="Sensitive file presets"
+            helper="Disabled by default. Enable to exclude common secret-bearing files from tracking."
+            stacked
+          >
+            <div className="flex flex-wrap gap-2">
+              {sensitiveFilePresets.map((preset) => (
+                <SettingsToggle
+                  key={preset.id}
+                  checked={isSensitiveFilePresetEnabled(exclusions, preset)}
+                  label={preset.label}
+                  onChange={(next) => updateExclusionsState(withSensitiveFilePreset(exclusions, preset, next))}
+                />
+              ))}
+            </div>
+          </SettingsRow>
           <ExclusionEditor
             label="Excluded machines"
             items={exclusions.machineNames}
@@ -873,31 +981,37 @@ export function SettingsPage() {
           <SettingsRow label="Launch on startup" helper="Opens Kairos automatically when your OS starts your user session, where supported.">
             <SettingsToggle
               checked={appBehavior.launchOnStartup}
-              onChange={(next) => updateAppBehaviorState({
-                ...appBehavior,
-                launchOnStartup: next,
-                openOnSystemLogin: next,
-              })}
+              onChange={(next) => updateAppBehaviorState(withLaunchOnStartup(appBehavior, next))}
             />
           </SettingsRow>
-          {!isLinuxDesktop ? (
-            <>
-              <SettingsRow label="Start minimized" helper="Starts the desktop window minimized instead of foregrounded.">
-                <SettingsToggle checked={appBehavior.startMinimized} onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })} />
-              </SettingsRow>
-              <SettingsRow label="Minimize to tray" helper="Keeps Kairos running in the background when the window is minimized, where supported.">
-                <SettingsToggle checked={appBehavior.minimizeToTray} onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })} />
-              </SettingsRow>
-            </>
-          ) : null}
+          <SettingsRow
+            label="Start minimized"
+            helper={canConfigureStartupWindowBehaviorControls
+              ? 'Starts the desktop window minimized instead of foregrounded.'
+              : 'Unavailable on Linux desktop builds.'}
+          >
+            <SettingsToggle
+              checked={appBehavior.startMinimized}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, startMinimized: next })}
+              disabled={!canConfigureStartupWindowBehaviorControls}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Minimize to tray"
+            helper={canConfigureStartupWindowBehaviorControls
+              ? 'Keeps Kairos running in the background when the window is minimized, where supported.'
+              : 'Unavailable on Linux desktop builds.'}
+          >
+            <SettingsToggle
+              checked={appBehavior.minimizeToTray}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, minimizeToTray: next })}
+              disabled={!canConfigureStartupWindowBehaviorControls}
+            />
+          </SettingsRow>
           <SettingsRow label="Open on system login" helper="Requests OS login-item behavior so Kairos launches after sign-in, where supported.">
             <SettingsToggle
               checked={appBehavior.openOnSystemLogin}
-              onChange={(next) => updateAppBehaviorState({
-                ...appBehavior,
-                launchOnStartup: next,
-                openOnSystemLogin: next,
-              })}
+              onChange={(next) => updateAppBehaviorState(withOpenOnSystemLogin(appBehavior, next))}
             />
           </SettingsRow>
           <SettingsRow label="Autostart registration" helper="Detected from your OS startup integration.">
@@ -914,8 +1028,7 @@ export function SettingsPage() {
           <SettingsRow label="Reopen last viewed calendar month or analytics filters" helper="Restore your last calendar month and analytics filter state.">
             <SettingsToggle
               checked={appBehavior.reopenLastViewedContext}
-              onChange={() => {}}
-              disabled
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, reopenLastViewedContext: next })}
             />
           </SettingsRow>
         </SettingsSection>
@@ -1013,9 +1126,137 @@ export function SettingsPage() {
             <SettingsActionRow
               label="Processing"
               actions={
-                <Button variant="secondary" size="sm" className="rounded-full!" disabled>
-                  Rebuild Analytics Cache
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full!"
+                    onClick={() => {
+                      setRebuildValidationError(null);
+                      setRebuildDialogOpen(true);
+                    }}
+                  >
+                    Rebuild Sessions
+                  </Button>
+                  <Dialog
+                    open={rebuildDialogOpen}
+                    onOpenChange={(nextOpen) => {
+                      if (rebuildInProgress) {
+                        return;
+                      }
+                      setRebuildDialogOpen(nextOpen);
+                      if (!nextOpen) {
+                        setRebuildValidationError(null);
+                      }
+                    }}
+                  >
+                    <DialogContent className="max-w-xl rounded-[20px] border-[var(--surface-subtle)] bg-[var(--surface)] p-4">
+                      <DialogHeader className="pr-8">
+                        <DialogTitle className="text-xl text-[var(--ink-strong)]">Rebuild Sessions</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <SettingsRow
+                          label="Scope"
+                          helper="Choose whether to rebuild all sessions, one date, or a date range."
+                          stacked
+                        >
+                          <SettingsSelect
+                            value={rebuildScope}
+                            onChange={(event) => {
+                              setRebuildScope(event.target.value as RebuildScope);
+                              setRebuildValidationError(null);
+                            }}
+                            disabled={rebuildInProgress}
+                            options={[
+                              { label: 'All data', value: 'all' },
+                              { label: 'Single date', value: 'date' },
+                              { label: 'Date range', value: 'range' },
+                            ]}
+                          />
+                        </SettingsRow>
+                        {rebuildScope === 'date' ? (
+                          <SettingsRow
+                            label="Date"
+                            helper="Rebuild sessions for one day (YYYY-MM-DD)."
+                            stacked
+                          >
+                            <SettingsInput
+                              type="date"
+                              value={rebuildDate}
+                              onChange={(event) => {
+                                setRebuildDate(event.target.value);
+                                setRebuildValidationError(null);
+                              }}
+                              disabled={rebuildInProgress}
+                            />
+                          </SettingsRow>
+                        ) : null}
+                        {rebuildScope === 'range' ? (
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <SettingsRow
+                              label="Start date"
+                              helper="Inclusive start date."
+                              stacked
+                            >
+                              <SettingsInput
+                                type="date"
+                                value={rebuildStartDate}
+                                onChange={(event) => {
+                                  setRebuildStartDate(event.target.value);
+                                  setRebuildValidationError(null);
+                                }}
+                                disabled={rebuildInProgress}
+                              />
+                            </SettingsRow>
+                            <SettingsRow
+                              label="End date"
+                              helper="Inclusive end date."
+                              stacked
+                            >
+                              <SettingsInput
+                                type="date"
+                                value={rebuildEndDate}
+                                onChange={(event) => {
+                                  setRebuildEndDate(event.target.value);
+                                  setRebuildValidationError(null);
+                                }}
+                                disabled={rebuildInProgress}
+                              />
+                            </SettingsRow>
+                          </div>
+                        ) : null}
+                        {rebuildValidationError ? (
+                          <p className="text-xs text-[var(--ink-warning)]">{rebuildValidationError}</p>
+                        ) : null}
+                      </div>
+                      <DialogFooter className="mt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                          onClick={() => {
+                            setRebuildDialogOpen(false);
+                            setRebuildValidationError(null);
+                          }}
+                          disabled={rebuildInProgress}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-full!"
+                          onClick={runSessionRebuild}
+                          disabled={rebuildInProgress || !canRunRebuild}
+                        >
+                          {rebuildInProgress ? 'Rebuilding…' : 'Run Rebuild'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </>
               }
             />
           </SettingsSection>

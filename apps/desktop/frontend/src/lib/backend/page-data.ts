@@ -45,7 +45,17 @@ const LEGACY_WORKSPACE_SENTINEL = 'untitled-workspace';
 const NO_WORKSPACE_DISPLAY_LABEL = 'No workspace';
 
 function normalizeLanguageLabel(language: string): string {
-  return language === 'TypeScriptReact' ? 'React' : language;
+  const trimmed = language.trim();
+  if (!trimmed) {
+    return language;
+  }
+
+  const compact = trimmed.toLowerCase().replace(/[\s_-]+/g, '');
+  if (compact === 'typescriptreact') {
+    return 'React';
+  }
+
+  return trimmed;
 }
 
 function normalizeProjectDisplayLabel(value: string): string {
@@ -80,8 +90,21 @@ export type SessionsScreenData = {
     language: string;
     durationMinutes: number;
     startAt: string;
+    rangeStartAt: string;
+    rangeEndAt: string;
     machineName: string;
     osLabel: string;
+    sessionCount: number;
+    machineCount: number;
+    subSessions: Array<{
+      id: string;
+      language: string;
+      durationMinutes: number;
+      startAt: string;
+      endAt: string;
+      machineName: string;
+      osLabel: string;
+    }>;
   }>;
 };
 
@@ -90,6 +113,7 @@ type SessionRecordInternal = SessionRecord & {
   dateKey: string;
   endTime: string;
   dayLabel: string;
+  osLabel: string;
 };
 
 type DateWindow = {
@@ -532,6 +556,7 @@ function mapSessionRecord(
     project: mapProjectLabel(session.projectName),
     language: normalizeLanguageLabel(session.language),
     machine: machineName,
+    osLabel: formatOsLabel(machine ?? { osPlatform: 'linux' }),
     machineId: session.machineId,
     start: session.startTime,
     durationMinutes: session.durationMinutes,
@@ -584,11 +609,11 @@ function computeWeeklyTotals(daily: DailyStat[], weekStartsOn: DisplayPreference
   }
 
   return [...totals.entries()]
+    .sort(([leftWeekStart], [rightWeekStart]) => leftWeekStart.localeCompare(rightWeekStart))
     .map(([weekStart, minutes]) => ({
       label: formatDate(weekStart),
       minutes,
-    }))
-    .sort((left, right) => left.label.localeCompare(right.label));
+    }));
 }
 
 function computeBreakdown(
@@ -677,6 +702,160 @@ function computeDelta(current: number, previous: number) {
     return current === 0 ? 0 : 100;
   }
   return Math.round((((current - previous) / previous) * 100) * 10) / 10;
+}
+
+type SessionGroupAccumulator = {
+  dateKey: string;
+  project: string;
+  durationMinutes: number;
+  latestStartTime: string;
+  earliestStartTime: string;
+  latestEndTime: string;
+  latestMachineName: string;
+  latestOsLabel: string;
+  sessionCount: number;
+  languages: Set<string>;
+  machineIds: Set<string>;
+  osLabels: Set<string>;
+  subSessions: Array<{
+    id: string;
+    language: string;
+    durationMinutes: number;
+    start: string;
+    end: string;
+    machine: string;
+    osLabel: string;
+  }>;
+};
+
+type GroupedSessionRecord = {
+  id: string;
+  project: string;
+  language: string;
+  machine: string;
+  osLabel: string;
+  start: string;
+  groupStart: string;
+  groupEnd: string;
+  dayLabel: string;
+  durationMinutes: number;
+  sessionCount: number;
+  machineCount: number;
+  subSessions: Array<{
+    id: string;
+    language: string;
+    durationMinutes: number;
+    start: string;
+    end: string;
+    machine: string;
+    osLabel: string;
+  }>;
+};
+
+function summarizeLanguages(languages: Set<string>) {
+  const values = [...languages].filter(Boolean);
+  if (values.length === 0) {
+    return 'Unknown';
+  }
+  if (values.length === 1) {
+    return values[0];
+  }
+  return `Mixed (${values.length})`;
+}
+
+function groupSessionRecordsByProjectAndDay(records: SessionRecordInternal[]): GroupedSessionRecord[] {
+  const grouped = new Map<string, SessionGroupAccumulator>();
+
+  for (const record of records) {
+    const dateKey = record.dateKey || record.start.slice(0, 10);
+    const project = record.project;
+    const language = record.language;
+    const groupKey = `${dateKey}\u0000${project}`;
+    const existing = grouped.get(groupKey);
+
+    if (!existing) {
+      grouped.set(groupKey, {
+        dateKey,
+        project,
+        durationMinutes: record.durationMinutes,
+        latestStartTime: record.start,
+        earliestStartTime: record.start,
+        latestEndTime: record.endTime,
+        latestMachineName: record.machine,
+        latestOsLabel: record.osLabel,
+        sessionCount: 1,
+        languages: new Set([language]),
+        machineIds: new Set([record.machineId]),
+        osLabels: new Set([record.osLabel]),
+        subSessions: [{
+          id: record.id,
+          language: record.language,
+          durationMinutes: record.durationMinutes,
+          start: record.start,
+          end: record.endTime,
+          machine: record.machine,
+          osLabel: record.osLabel,
+        }],
+      });
+      continue;
+    }
+
+    existing.durationMinutes += record.durationMinutes;
+    existing.sessionCount += 1;
+    existing.languages.add(language);
+    existing.machineIds.add(record.machineId);
+    existing.osLabels.add(record.osLabel);
+    existing.subSessions.push({
+      id: record.id,
+      language: record.language,
+      durationMinutes: record.durationMinutes,
+      start: record.start,
+      end: record.endTime,
+      machine: record.machine,
+      osLabel: record.osLabel,
+    });
+
+    if (record.start > existing.latestStartTime) {
+      existing.latestStartTime = record.start;
+      existing.latestMachineName = record.machine;
+      existing.latestOsLabel = record.osLabel;
+    }
+    if (record.start < existing.earliestStartTime) {
+      existing.earliestStartTime = record.start;
+    }
+    if (record.endTime > existing.latestEndTime) {
+      existing.latestEndTime = record.endTime;
+    }
+  }
+
+  return [...grouped.values()]
+    .sort((left, right) => {
+      if (left.latestEndTime !== right.latestEndTime) {
+        return right.latestEndTime.localeCompare(left.latestEndTime);
+      }
+      if (left.latestStartTime !== right.latestStartTime) {
+        return right.latestStartTime.localeCompare(left.latestStartTime);
+      }
+      return left.project.localeCompare(right.project);
+    })
+    .map((group) => {
+      const machineCount = group.machineIds.size;
+      return {
+        id: `${group.dateKey}:${group.project}`,
+        project: group.project,
+        language: summarizeLanguages(group.languages),
+        machine: machineCount > 1 ? `${machineCount} machines` : group.latestMachineName,
+        osLabel: group.osLabels.size > 1 ? 'Mixed OS' : group.latestOsLabel,
+        start: group.latestStartTime,
+        groupStart: group.earliestStartTime,
+        groupEnd: group.latestEndTime,
+        dayLabel: formatDate(group.dateKey),
+        durationMinutes: group.durationMinutes,
+        sessionCount: group.sessionCount,
+        machineCount,
+        subSessions: [...group.subSessions].sort((left, right) => right.start.localeCompare(left.start)),
+      };
+    });
 }
 
 function buildEmptyMachineInfo(): MachineInfo {
@@ -843,9 +1022,7 @@ async function fetchAnalyticsSnapshot(
   const previousProjects = computeBreakdown(filteredPreviousRecords, 'project', preferences.hour12);
   const previousLanguages = computeBreakdown(filteredPreviousRecords, 'language', preferences.hour12);
   const hourBuckets = computeHourBuckets(filteredCurrentRecords);
-  const recentSessions = [...filteredCurrentRecords]
-    .sort((left, right) => right.start.localeCompare(left.start))
-    .slice(0, 8);
+  const recentSessions = groupSessionRecordsByProjectAndDay(filteredCurrentRecords).slice(0, 8);
 
   const longestDay = daily.reduce<DailyStat | null>((accumulator, day) => {
     if (!accumulator || day.minutes > accumulator.minutes) {
@@ -890,15 +1067,7 @@ async function fetchAnalyticsSnapshot(
       topLanguage: breakdownLanguages[0]?.name ?? null,
     },
     sessions: {
-      recent: recentSessions.map((session) => ({
-        id: session.id,
-        project: session.project,
-        language: session.language,
-        machine: session.machine,
-        start: session.start,
-        durationMinutes: session.durationMinutes,
-        dayLabel: session.dayLabel,
-      })),
+      recent: recentSessions,
       longestSession,
       averageSessionMinutes,
       totalSessions: filteredCurrentRecords.length,
@@ -1029,12 +1198,24 @@ export async function loadOverviewSnapshot(
       machineDistribution,
       recentSessions: analytics.sessions.recent.map((session) => ({
         project: session.project,
+        language: session.language,
         durationMinutes: session.durationMinutes,
         startAt: formatDateTime(session.start, preferences.hour12),
+        rangeStartAt: formatDateTime(session.groupStart, preferences.hour12),
+        rangeEndAt: formatDateTime(session.groupEnd, preferences.hour12),
         machineName: session.machine,
-        osLabel: formatOsLabel(
-          machines.find((machine) => machine.machineName === session.machine) ?? { osPlatform: 'linux' },
-        ),
+        osLabel: session.osLabel,
+        sessionCount: session.sessionCount,
+        machineCount: session.machineCount,
+        subSessions: session.subSessions.map((subSession) => ({
+          id: subSession.id,
+          language: subSession.language,
+          durationMinutes: subSession.durationMinutes,
+          startAt: formatDateTime(subSession.start, preferences.hour12),
+          endAt: formatDateTime(subSession.end, preferences.hour12),
+          machineName: subSession.machine,
+          osLabel: subSession.osLabel,
+        })),
       })),
       activeHoursSummary: overview.activeHoursSummary,
       syncHealth: buildSyncHealth(
@@ -1078,27 +1259,55 @@ export async function loadSessionsScreenData(
       preferences.obfuscateProjectNames,
       settings.privacy.sensitiveProjectNames ?? [],
     );
-    const sessions = data.sessions.map((session) => {
-      const machine = machinesById.get(session.machineId);
-      const machineName = resolveDisplayMachineName(session.machineName ?? machine?.machineName, session.machineId, preferences);
-      return {
-        id: session.id,
-        project: mapProjectLabel(session.projectName),
-        language: normalizeLanguageLabel(session.language),
-        durationMinutes: session.durationMinutes,
-        startAt: formatDateTime(session.startTime, preferences.hour12),
-        machineName,
-        osLabel: formatOsLabel(machine ?? { osPlatform: 'linux' }),
-      };
-    });
+    const sessionRecords = data.sessions.map((session) =>
+      mapSessionRecord(session, machinesById, preferences, mapProjectLabel),
+    );
+    const sessions = groupSessionRecordsByProjectAndDay(sessionRecords).map((session) => ({
+      id: session.id,
+      project: session.project,
+      language: session.language,
+      durationMinutes: session.durationMinutes,
+      startAt: formatDateTime(session.start, preferences.hour12),
+      rangeStartAt: formatDateTime(session.groupStart, preferences.hour12),
+      rangeEndAt: formatDateTime(session.groupEnd, preferences.hour12),
+      machineName: session.machine,
+      osLabel: session.osLabel,
+      sessionCount: session.sessionCount,
+      machineCount: session.machineCount,
+      subSessions: session.subSessions.map((subSession) => ({
+        id: subSession.id,
+        language: subSession.language,
+        durationMinutes: subSession.durationMinutes,
+        startAt: formatDateTime(subSession.start, preferences.hour12),
+        endAt: formatDateTime(subSession.end, preferences.hour12),
+        machineName: subSession.machine,
+        osLabel: subSession.osLabel,
+      })),
+    }));
+    const latestSession = [...data.sessions].sort((left, right) => {
+      if (left.endTime !== right.endTime) {
+        return right.endTime.localeCompare(left.endTime);
+      }
+      if (left.startTime !== right.startTime) {
+        return right.startTime.localeCompare(left.startTime);
+      }
+      return right.id.localeCompare(left.id);
+    })[0];
+    const latestSessionMachine = latestSession
+      ? resolveDisplayMachineName(
+        latestSession.machineName ?? machinesById.get(latestSession.machineId)?.machineName,
+        latestSession.machineId,
+        preferences,
+      )
+      : currentMachine.machineName;
 
     return {
       range,
       totalSessions: data.totalSessions,
       averageSessionMinutes: data.averageSessionMinutes,
       longestSessionMinutes: data.longestSessionMinutes,
-      lastActiveAt: formatDateTime(data.sessions[0]?.endTime ?? data.sessions[0]?.startTime, preferences.hour12),
-      lastActiveMachine: sessions[0]?.machineName ?? currentMachine.machineName,
+      lastActiveAt: formatDateTime(latestSession?.endTime ?? latestSession?.startTime, preferences.hour12),
+      lastActiveMachine: latestSessionMachine,
       currentMachine,
       knownMachines,
       sessions,

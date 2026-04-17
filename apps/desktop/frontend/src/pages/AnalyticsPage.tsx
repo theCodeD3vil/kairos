@@ -12,16 +12,23 @@ import {
 import { AnalyticsComparison } from '@/components/analytics/AnalyticsComparison';
 import { AnalyticsSessionsTable } from '@/components/analytics/AnalyticsSessions';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
+import { SessionDetailsDialog, type SessionDetailRecord } from '@/components/sessions/SessionDetailsDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
-import type { AnalyticsFilters as Filters } from '@/data/mockAnalytics';
+import type { AnalyticsFilters as Filters, RecentSessionRow } from '@/data/mockAnalytics';
 import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { normalizeOverviewRange } from '@/components/overview/types';
-import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
+import {
+  getRangeStorageKey,
+  readAnalyticsContextPreference,
+  readRangePreference,
+  saveAnalyticsContextPreference,
+  saveRangePreference,
+} from '@/lib/settings/preferences';
 import { formatDurationMinutes } from '@/lib/time-format';
 
 const analyticsDefaultFilters: Filters = {
@@ -35,6 +42,8 @@ const analyticsDefaultFilters: Filters = {
 export function AnalyticsPage() {
   const rangeTouchedRef = useRef(false);
   const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
+  const [isSessionDetailsOpen, setIsSessionDetailsOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionDetailRecord | null>(null);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
     cacheKey: desktopResourceKeys.settings(),
     emptyValue: emptySettingsScreenData(),
@@ -58,25 +67,21 @@ export function AnalyticsPage() {
     }
 
     const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
+    const restoreContext = settingsData.viewModel.appBehavior.reopenLastViewedContext;
     const saved = restoreLast ? readRangePreference(getRangeStorageKey('analytics')) : null;
-    if (saved) {
-      setFilters((current) => ({
-        ...current,
-        range: saved.range,
-        customRange: saved.customRange,
-      }));
-      rangeTouchedRef.current = true;
-      return;
-    }
-
+    const savedContext = restoreContext ? readAnalyticsContextPreference() : null;
     setFilters((current) => ({
       ...current,
-      range: normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange),
-      customRange: null,
+      range: saved?.range ?? normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange),
+      customRange: saved?.customRange ?? null,
+      project: savedContext?.project ?? current.project,
+      language: savedContext?.language ?? current.language,
+      machine: savedContext?.machine ?? current.machine,
     }));
     rangeTouchedRef.current = true;
   }, [
     hasResolvedSettings,
+    settingsData.viewModel.appBehavior.reopenLastViewedContext,
     settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
     settingsData.viewModel.general.defaultDateRange,
   ]);
@@ -88,12 +93,60 @@ export function AnalyticsPage() {
     saveRangePreference(getRangeStorageKey('analytics'), filters.range, filters.customRange ?? null);
   }, [filters.customRange, filters.range]);
 
+  useEffect(() => {
+    if (!rangeTouchedRef.current) {
+      return;
+    }
+    saveAnalyticsContextPreference({
+      project: filters.project,
+      language: filters.language,
+      machine: filters.machine,
+    });
+  }, [filters.language, filters.machine, filters.project]);
+
   const handleFiltersChange = (next: Filters) => {
     rangeTouchedRef.current = true;
     setFilters(next);
   };
 
   const empty = snapshot.summary.totalMinutes === 0;
+
+  const formatDetailDateTime = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const openSessionDetails = (session: RecentSessionRow) => {
+    setSelectedSession({
+      id: session.id,
+      project: session.project,
+      language: session.language,
+      durationMinutes: session.durationMinutes,
+      startAt: formatDetailDateTime(session.start),
+      machineName: session.machine,
+      osLabel: session.osLabel,
+      sessionCount: session.sessionCount,
+      machineCount: session.machineCount,
+      subSessions: session.subSessions.map((subSession) => ({
+        id: subSession.id,
+        language: subSession.language,
+        durationMinutes: subSession.durationMinutes,
+        startAt: formatDetailDateTime(subSession.start),
+        endAt: formatDetailDateTime(subSession.end),
+        machineName: subSession.machine,
+        osLabel: subSession.osLabel,
+      })),
+    });
+    setIsSessionDetailsOpen(true);
+  };
 
   return (
     <div className="space-y-3">
@@ -126,6 +179,7 @@ export function AnalyticsPage() {
           projectOptions={snapshot.filters.projects}
           languageOptions={snapshot.filters.languages}
           machineOptions={SHOW_MULTI_MACHINE_UI ? snapshot.filters.machines : []}
+          fallbackRange={normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange)}
         />
       </section>
 
@@ -276,7 +330,7 @@ export function AnalyticsPage() {
           <AnalyticsKpiCard label="Average session" value={formatMinutes(snapshot.sessions.averageSessionMinutes)} />
           <AnalyticsKpiCard label="Longest session" value={formatMinutes(snapshot.sessions.longestSession)} />
         </div>
-        <AnalyticsSessionsTable sessions={snapshot.sessions.recent} />
+        <AnalyticsSessionsTable sessions={snapshot.sessions.recent} onRowSelect={openSessionDetails} />
       </section>
 
       {SHOW_MULTI_MACHINE_UI ? (
@@ -322,6 +376,12 @@ export function AnalyticsPage() {
           </section>
         </>
       ) : null}
+
+      <SessionDetailsDialog
+        open={isSessionDetailsOpen}
+        onOpenChange={setIsSessionDetailsOpen}
+        session={selectedSession}
+      />
     </div>
   );
 }

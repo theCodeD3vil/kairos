@@ -16,6 +16,7 @@ import { emptyOverviewSnapshot, loadOverviewSnapshot } from '@/lib/backend/page-
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
+import { resolveRangeAfterCustomRangeChange } from '@/lib/overview-range';
 import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 
 export function OverviewPage() {
@@ -104,7 +105,11 @@ export function OverviewPage() {
             onCustomRangeChange={(nextRange) => {
               rangeTouchedRef.current = true;
               setCustomRange(nextRange);
-              if (nextRange) handleRangeChange('custom');
+              setRange((current) => resolveRangeAfterCustomRangeChange(
+                current,
+                nextRange,
+                normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange),
+              ));
             }}
           />
         </div>

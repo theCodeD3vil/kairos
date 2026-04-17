@@ -826,12 +826,13 @@ func ensureMacLaunchAgent(enabled bool) error {
 	if err != nil {
 		return fmt.Errorf("resolve executable path: %w", err)
 	}
+	programArguments := macLaunchProgramArguments(executablePath)
 
 	if err := os.MkdirAll(filepath.Dir(agentPath), 0o755); err != nil {
 		return fmt.Errorf("create launch agents directory: %w", err)
 	}
 
-	plist, err := renderLaunchAgentPlist(executablePath)
+	plist, err := renderLaunchAgentPlist(programArguments)
 	if err != nil {
 		return err
 	}
@@ -989,30 +990,72 @@ func fileExists(path string) (bool, error) {
 }
 
 func launchAgentPlistPath() (string, error) {
-	currentUser, err := user.Current()
+	homeDir, err := resolveCurrentUserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("resolve current user: %w", err)
-	}
-	if strings.TrimSpace(currentUser.HomeDir) == "" {
-		return "", fmt.Errorf("current user home directory is unavailable")
+		return "", err
 	}
 
-	return filepath.Join(currentUser.HomeDir, "Library", "LaunchAgents", launchAgentLabel+".plist"), nil
+	return filepath.Join(homeDir, "Library", "LaunchAgents", launchAgentLabel+".plist"), nil
 }
 
 func linuxAutostartDesktopFilePath() (string, error) {
+	homeDir, err := resolveCurrentUserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(homeDir, ".config", "autostart", launchAgentLabel+".desktop"), nil
+}
+
+func resolveCurrentUserHomeDir() (string, error) {
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		trimmed := strings.TrimSpace(homeDir)
+		if trimmed != "" {
+			return trimmed, nil
+		}
+	}
+
 	currentUser, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("resolve current user: %w", err)
+		return "", fmt.Errorf("resolve current user home directory: %w", err)
 	}
-	if strings.TrimSpace(currentUser.HomeDir) == "" {
+	trimmed := strings.TrimSpace(currentUser.HomeDir)
+	if trimmed == "" {
 		return "", fmt.Errorf("current user home directory is unavailable")
 	}
 
-	return filepath.Join(currentUser.HomeDir, ".config", "autostart", launchAgentLabel+".desktop"), nil
+	return trimmed, nil
 }
 
-func renderLaunchAgentPlist(executablePath string) ([]byte, error) {
+func macLaunchProgramArguments(executablePath string) []string {
+	if appBundlePath, ok := macAppBundlePathFromExecutable(executablePath); ok {
+		return []string{"/usr/bin/open", appBundlePath}
+	}
+
+	return []string{executablePath}
+}
+
+func macAppBundlePathFromExecutable(executablePath string) (string, bool) {
+	cleanPath := filepath.Clean(executablePath)
+	marker := filepath.Join("Contents", "MacOS") + string(filepath.Separator)
+	markerIndex := strings.LastIndex(cleanPath, marker)
+	if markerIndex <= 0 {
+		return "", false
+	}
+
+	bundlePath := strings.TrimRight(cleanPath[:markerIndex], string(filepath.Separator))
+	if !strings.HasSuffix(strings.ToLower(bundlePath), ".app") {
+		return "", false
+	}
+
+	return bundlePath, true
+}
+
+func renderLaunchAgentPlist(programArguments []string) ([]byte, error) {
+	if len(programArguments) == 0 {
+		return nil, fmt.Errorf("launch agent program arguments are required")
+	}
+
 	tpl := `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -1021,8 +1064,16 @@ func renderLaunchAgentPlist(executablePath string) ([]byte, error) {
   <string>{{.Label}}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>{{.ExecutablePath}}</string>
+{{- range .ProgramArguments }}
+    <string>{{.}}</string>
+{{- end }}
   </array>
+  <key>LimitLoadToSessionType</key>
+  <array>
+    <string>Aqua</string>
+  </array>
+  <key>ProcessType</key>
+  <string>Interactive</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -1037,11 +1088,11 @@ func renderLaunchAgentPlist(executablePath string) ([]byte, error) {
 		return nil, fmt.Errorf("parse launch agent template: %w", err)
 	}
 	if executeErr := parsed.Execute(&buffer, struct {
-		Label          string
-		ExecutablePath string
+		Label            string
+		ProgramArguments []string
 	}{
-		Label:          launchAgentLabel,
-		ExecutablePath: executablePath,
+		Label:            launchAgentLabel,
+		ProgramArguments: programArguments,
 	}); executeErr != nil {
 		return nil, fmt.Errorf("render launch agent template: %w", executeErr)
 	}

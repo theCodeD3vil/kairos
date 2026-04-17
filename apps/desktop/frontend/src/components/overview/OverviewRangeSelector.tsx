@@ -43,7 +43,6 @@ export function OverviewRangeSelector({
         active={value === 'custom'}
         onChange={(nextRange) => {
           onCustomRangeChange(nextRange);
-          if (nextRange) onChange('custom');
         }}
       />
     </div>

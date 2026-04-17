@@ -43,10 +43,24 @@ export type MachineTimeShare = {
 
 export type RecentSession = {
   project: string;
+  language?: string;
   durationMinutes: number;
   startAt: string;
+  rangeStartAt?: string;
+  rangeEndAt?: string;
   machineName: string;
   osLabel: string;
+  sessionCount?: number;
+  machineCount?: number;
+  subSessions?: Array<{
+    id: string;
+    language: string;
+    durationMinutes: number;
+    startAt: string;
+    endAt: string;
+    machineName: string;
+    osLabel: string;
+  }>;
 };
 
 export type SyncHealthBlock = {

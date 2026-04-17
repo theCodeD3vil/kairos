@@ -90,10 +90,6 @@ func validateExtension(input contracts.ExtensionSettings) (contracts.ExtensionSe
 }
 
 func validateAppBehavior(input contracts.AppBehaviorSettings) contracts.AppBehaviorSettings {
-	enabled := input.LaunchOnStartup || input.OpenOnSystemLogin
-	input.LaunchOnStartup = enabled
-	input.OpenOnSystemLogin = enabled
-
 	// Linux desktop environments can run without a reliable tray entry point.
 	// Keep startup behavior visible to avoid hidden-window lockouts.
 	if runtime.GOOS == "linux" {

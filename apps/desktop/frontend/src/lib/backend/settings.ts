@@ -22,6 +22,10 @@ import type {
   VscodeExtensionSettings,
 } from '@/data/mockSettings';
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+import {
+  readReopenLastViewedContextPreference,
+  saveReopenLastViewedContextPreference,
+} from '@/lib/settings/preferences';
 import { trackSyncOperation } from '@/lib/sync-status';
 
 type LoadSettingsOptions = {
@@ -178,7 +182,7 @@ function emptyViewModel(): SettingsDefaults {
       openOnSystemLogin: false,
       rememberLastSelectedPage: true,
       restoreLastSelectedDateRange: true,
-      reopenLastViewedContext: false,
+      reopenLastViewedContext: readReopenLastViewedContextPreference(true),
     },
     dataStorage: {
       localStoragePath: '—',
@@ -224,10 +228,24 @@ function toDatabaseStatus(status: string): DataStorageInfo['databaseStatus'] {
   return status === 'ready' ? 'Healthy' : 'Needs attention';
 }
 
+function normalizeGeneralDefaultDateRange(value: string): GeneralSettings['defaultDateRange'] {
+  switch (value) {
+    case 'today':
+      return 'today';
+    case 'month':
+    case 'last-30-days':
+      return 'month';
+    case 'week':
+    case 'last-7-days':
+    default:
+      return 'week';
+  }
+}
+
 function toGeneral(input: contracts.GeneralSettings): GeneralSettings {
   return {
     machineDisplayName: input.machineDisplayName,
-    defaultDateRange: input.defaultDateRange as GeneralSettings['defaultDateRange'],
+    defaultDateRange: normalizeGeneralDefaultDateRange(input.defaultDateRange),
     timeFormat: input.timeFormat as GeneralSettings['timeFormat'],
     themeMode: (input.themeMode as GeneralSettings['themeMode']) || 'light',
     weekStartDay: input.weekStartsOn === 'sunday' ? 'Sunday' : 'Monday',
@@ -306,7 +324,7 @@ function toAppBehavior(input: contracts.AppBehaviorSettings): AppBehaviorSetting
     openOnSystemLogin: input.openOnSystemLogin,
     rememberLastSelectedPage: input.rememberLastPage,
     restoreLastSelectedDateRange: input.restoreLastDateRange,
-    reopenLastViewedContext: false,
+    reopenLastViewedContext: readReopenLastViewedContextPreference(true),
   };
 }
 
@@ -553,6 +571,7 @@ export async function saveAppBehaviorSettings(input: AppBehaviorSettings): Promi
         rememberLastPage: input.rememberLastSelectedPage,
         restoreLastDateRange: input.restoreLastSelectedDateRange,
       });
+      saveReopenLastViewedContextPreference(input.reopenLastViewedContext);
       return toAppBehavior(updated);
     },
     {
@@ -566,6 +585,9 @@ export async function saveAppBehaviorSettings(input: AppBehaviorSettings): Promi
 export async function resetSettingsSectionViewModel(section: string): Promise<SettingsScreenData> {
   return trackSyncOperation(
     async () => {
+      if (section === settingsSections.appBehavior) {
+        saveReopenLastViewedContextPreference(true);
+      }
       const data = await ResetSettingsSection(section);
       return adaptSettingsScreenData(data);
     },

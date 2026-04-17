@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { KairosAreaChart } from '@/components/charts/kairos-charts';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
+import { SessionDetailsDialog, type SessionDetailRecord } from '@/components/sessions/SessionDetailsDialog';
 import type { OverviewSnapshot } from '@/components/overview/types';
+import { LanguageIcon } from '@/lib/languageIcons';
 import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 
 type OverviewSessionsTabProps = {
@@ -17,6 +20,8 @@ function SessionMetric({ title, value }: { title: string; value: string }) {
 }
 
 export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
+  const [selectedSession, setSelectedSession] = useState<SessionDetailRecord | null>(null);
+  const [isSessionDetailsOpen, setIsSessionDetailsOpen] = useState(false);
   const latestSession = snapshot.recentSessions[0];
   const sessionDurationTrend = [...snapshot.recentSessions]
     .reverse()
@@ -24,6 +29,32 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
       label: session.startAt,
       value: Number((session.durationMinutes / 60).toFixed(2)),
     }));
+
+  const openSessionDetails = (session: OverviewSnapshot['recentSessions'][number]) => {
+    const fallbackSubSession = {
+      id: `${session.project}-${session.startAt}`,
+      language: session.language ?? 'Unknown',
+      durationMinutes: session.durationMinutes,
+      startAt: session.startAt,
+      endAt: session.startAt,
+      machineName: session.machineName,
+      osLabel: session.osLabel,
+    };
+
+    setSelectedSession({
+      id: `${session.project}-${session.startAt}`,
+      project: session.project,
+      language: session.language ?? 'Unknown',
+      durationMinutes: session.durationMinutes,
+      startAt: session.startAt,
+      machineName: session.machineName,
+      osLabel: session.osLabel,
+      sessionCount: session.sessionCount ?? 1,
+      machineCount: session.machineCount ?? 1,
+      subSessions: session.subSessions ?? [fallbackSubSession],
+    });
+    setIsSessionDetailsOpen(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -40,16 +71,33 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
           <div className="mt-2 space-y-2">
             {snapshot.recentSessions.length > 0 ? (
               snapshot.recentSessions.map((session) => (
-                <div key={`${session.project}-${session.startAt}`} className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2">
+                <button
+                  key={`${session.project}-${session.startAt}`}
+                  type="button"
+                  onClick={() => openSessionDetails(session)}
+                  className="w-full rounded-lg bg-[var(--surface-subtle)] px-3 py-2 text-left transition-colors hover:bg-[var(--surface)]"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-[var(--ink-strong)]">{session.project}</span>
                     <span className="font-numeric text-sm text-[var(--ink-label)]">{formatDurationMinutes(session.durationMinutes, 'short')}</span>
                   </div>
-                  <p className="font-numeric text-xs text-[var(--ink-tertiary)]">{session.startAt}</p>
+                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--ink-tertiary)]">
+                    {session.language && !session.language.startsWith('Mixed') ? (
+                      <LanguageIcon language={session.language} size={14} />
+                    ) : null}
+                    <span>{session.language ?? 'Unknown'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {(session.sessionCount ?? 1)} {(session.sessionCount ?? 1) === 1 ? 'session' : 'sessions'}
+                    </span>
+                  </p>
+                  <p className="font-numeric text-xs text-[var(--ink-tertiary)]">
+                    {session.rangeStartAt ?? session.startAt} → {session.rangeEndAt ?? session.startAt}
+                  </p>
                   <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
                     {session.machineName} · {session.osLabel}
                   </p>
-                </div>
+                </button>
               ))
             ) : (
               <div className="rounded-lg bg-[var(--surface-subtle)] px-3 py-2 text-sm text-[var(--ink-tertiary)]">No recent sessions.</div>
@@ -79,6 +127,12 @@ export function OverviewSessionsTab({ snapshot }: OverviewSessionsTabProps) {
           </div>
         </article>
       </div>
+
+      <SessionDetailsDialog
+        open={isSessionDetailsOpen}
+        onOpenChange={setIsSessionDetailsOpen}
+        session={selectedSession}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { OverviewRange } from '@/components/overview/types';
 import type { AnalyticsFilters } from '@/data/mockAnalytics';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
+import { resolveRangeAfterCustomRangeChange } from '@/lib/overview-range';
 
 type AnalyticsFiltersProps = {
   filters: AnalyticsFilters;
@@ -11,6 +12,7 @@ type AnalyticsFiltersProps = {
   projectOptions: string[];
   languageOptions: string[];
   machineOptions: string[];
+  fallbackRange: Exclude<OverviewRange, 'custom'>;
 };
 
 export function AnalyticsFilters({
@@ -19,6 +21,7 @@ export function AnalyticsFilters({
   projectOptions,
   languageOptions,
   machineOptions,
+  fallbackRange,
 }: AnalyticsFiltersProps) {
   const update = (partial: Partial<AnalyticsFilters>) => onChange({ ...filters, ...partial });
 
@@ -42,7 +45,10 @@ export function AnalyticsFilters({
         value={filters.range as OverviewRange}
         onChange={(range) => update({ range })}
         customRange={filters.customRange ?? null}
-        onCustomRangeChange={(next: DateRange | null) => update({ customRange: next })}
+        onCustomRangeChange={(next: DateRange | null) => update({
+          customRange: next,
+          range: resolveRangeAfterCustomRangeChange(filters.range as OverviewRange, next, fallbackRange),
+        })}
       />
       {dropdown('Projects', filters.project, projectOptions, 'project')}
       {dropdown('Languages', filters.language, languageOptions, 'language')}

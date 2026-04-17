@@ -3,6 +3,7 @@ import { OverviewRangeSelector } from '@/components/overview/OverviewRangeSelect
 import { normalizeOverviewRange, type OverviewRange } from '@/components/overview/types';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
+import { SessionDetailsDialog, type SessionDetailRecord } from '@/components/sessions/SessionDetailsDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
 import {
@@ -13,13 +14,18 @@ import {
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { LanguageIcon } from '@/lib/languageIcons';
+import { resolveRangeAfterCustomRangeChange } from '@/lib/overview-range';
 import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 import { formatDurationMinutes } from '@/lib/time-format';
+import { createSessionDetailRecord } from '@/pages/sessions-helpers';
 
 export function SessionsPage() {
   const rangeTouchedRef = useRef(false);
   const [range, setRange] = useState<OverviewRange>('week');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const [isSessionDetailsOpen, setIsSessionDetailsOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionDetailRecord | null>(null);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
     cacheKey: desktopResourceKeys.settings(),
     emptyValue: emptySettingsScreenData(),
@@ -73,6 +79,11 @@ export function SessionsPage() {
     setRange(nextRange);
   };
 
+  const openSessionDetails = (session: SessionsScreenData['sessions'][number]) => {
+    setSelectedSession(createSessionDetailRecord(session));
+    setIsSessionDetailsOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] bg-[var(--surface-strong)] p-4">
@@ -91,7 +102,11 @@ export function SessionsPage() {
             onCustomRangeChange={(nextRange) => {
               rangeTouchedRef.current = true;
               setCustomRange(nextRange);
-              if (nextRange) handleRangeChange('custom');
+              setRange((current) => resolveRangeAfterCustomRangeChange(
+                current,
+                nextRange,
+                normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange),
+              ));
             }}
           />
         </div>
@@ -160,26 +175,39 @@ export function SessionsPage() {
                 </div>
               ) : (
                 screenData.sessions.map((session) => (
-                  <article
+                  <button
                     key={session.id}
-                    className="rounded-xl bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]"
+                    type="button"
+                    onClick={() => openSessionDetails(session)}
+                    className="w-full rounded-xl bg-[var(--surface-muted)] p-3 text-left shadow-[var(--shadow-inset-soft)] transition-colors hover:bg-[var(--surface-subtle)]"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-[var(--ink-strong)]">{session.project}</p>
-                        <p className="mt-1 text-xs text-[var(--ink-tertiary)]">{session.language}</p>
+                        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--ink-tertiary)]">
+                          {session.language && !session.language.startsWith('Mixed') ? (
+                            <LanguageIcon language={session.language} size={14} />
+                          ) : null}
+                          <span>{session.language}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>
+                            {session.sessionCount} {session.sessionCount === 1 ? 'session' : 'sessions'}
+                          </span>
+                        </p>
                       </div>
                       <p className="font-numeric text-sm text-[var(--ink-label)]">
                         {formatDurationMinutes(session.durationMinutes, 'short')}
                       </p>
                     </div>
-                    <p className="font-numeric mt-1 text-xs text-[var(--ink-tertiary)]">{session.startAt}</p>
+                    <p className="font-numeric mt-1 text-xs text-[var(--ink-tertiary)]">
+                      {session.rangeStartAt} → {session.rangeEndAt}
+                    </p>
                     {SHOW_MULTI_MACHINE_UI ? (
                       <p className="mt-1 text-xs text-[var(--ink-tertiary)]">
                         {session.machineName} · {session.osLabel}
                       </p>
                     ) : null}
-                  </article>
+                  </button>
                 ))
               )}
             </div>
@@ -202,6 +230,12 @@ export function SessionsPage() {
           </div>
         </section>
       ) : null}
+
+      <SessionDetailsDialog
+        open={isSessionDetailsOpen}
+        onOpenChange={setIsSessionDetailsOpen}
+        session={selectedSession}
+      />
     </div>
   );
 }

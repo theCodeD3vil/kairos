@@ -2,7 +2,7 @@ import { systemInfoSnapshot } from '@/mocks/system-info';
 
 export type GeneralSettings = {
   machineDisplayName: string;
-  defaultDateRange: 'today' | 'week' | 'month' | 'custom';
+  defaultDateRange: 'today' | 'week' | 'month';
   timeFormat: '12h' | '24h';
   themeMode: 'light' | 'dark' | 'system';
   weekStartDay: 'Sunday' | 'Monday';

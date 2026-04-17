@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  readAnalyticsContextPreference,
+  readCalendarMonthPreference,
+  readReopenLastViewedContextPreference,
   LAST_PAGE_STORAGE_KEY,
   readRangePreference,
   resolveInitialPagePath,
+  saveAnalyticsContextPreference,
+  saveCalendarMonthPreference,
+  saveReopenLastViewedContextPreference,
   saveRangePreference,
 } from '@/lib/settings/preferences';
 
@@ -64,5 +70,32 @@ describe('preferences', () => {
     expect(decoded?.customRange?.start.toISOString()).toBe(start.toISOString());
     expect(decoded?.customRange?.end.toISOString()).toBe(end.toISOString());
   });
-});
 
+  it('persists reopenLastViewedContext locally', () => {
+    expect(readReopenLastViewedContextPreference(true)).toBe(true);
+    saveReopenLastViewedContextPreference(false);
+    expect(readReopenLastViewedContextPreference(true)).toBe(false);
+  });
+
+  it('round-trips last viewed calendar month', () => {
+    const month = new Date('2026-03-15T12:30:00.000Z');
+    saveCalendarMonthPreference(month);
+    const restored = readCalendarMonthPreference();
+    expect(restored?.getFullYear()).toBe(2026);
+    expect(restored?.getMonth()).toBe(2);
+    expect(restored?.getDate()).toBe(1);
+  });
+
+  it('round-trips analytics context filters', () => {
+    saveAnalyticsContextPreference({
+      project: 'kairos-desktop',
+      language: 'TypeScript',
+      machine: 'work-macbook',
+    });
+    expect(readAnalyticsContextPreference()).toEqual({
+      project: 'kairos-desktop',
+      language: 'TypeScript',
+      machine: 'work-macbook',
+    });
+  });
+});

@@ -231,6 +231,40 @@ func TestUpdateAppBehaviorSettingsSanitizesHiddenStartupOnLinux(t *testing.T) {
 	}
 }
 
+func TestUpdateAppBehaviorSettingsPreservesIndependentStartupFlags(t *testing.T) {
+	service, _ := newTestSettingsService(t)
+
+	first, err := service.UpdateAppBehaviorSettings(context.Background(), contracts.AppBehaviorSettings{
+		LaunchOnStartup:      true,
+		OpenOnSystemLogin:    false,
+		StartMinimized:       false,
+		MinimizeToTray:       false,
+		RememberLastPage:     true,
+		RestoreLastDateRange: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateAppBehaviorSettings failed for first case: %v", err)
+	}
+	if !first.LaunchOnStartup || first.OpenOnSystemLogin {
+		t.Fatalf("expected launch=true, login=false; got %+v", first)
+	}
+
+	second, err := service.UpdateAppBehaviorSettings(context.Background(), contracts.AppBehaviorSettings{
+		LaunchOnStartup:      false,
+		OpenOnSystemLogin:    true,
+		StartMinimized:       false,
+		MinimizeToTray:       false,
+		RememberLastPage:     true,
+		RestoreLastDateRange: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateAppBehaviorSettings failed for second case: %v", err)
+	}
+	if second.LaunchOnStartup || !second.OpenOnSystemLogin {
+		t.Fatalf("expected launch=false, login=true; got %+v", second)
+	}
+}
+
 func TestPersistedAppBehaviorHiddenFlagsSanitizedOnLinux(t *testing.T) {
 	service, store := newTestSettingsService(t)
 

@@ -258,3 +258,51 @@ func TestLaunchBehaviorOptionsIgnoreHiddenStartupFlagsOnLinux(t *testing.T) {
 		t.Fatal("expected minimizeToTray retained on non-linux")
 	}
 }
+
+func TestMacAppBundlePathFromExecutable(t *testing.T) {
+	path, ok := macAppBundlePathFromExecutable("/Applications/Kairos.app/Contents/MacOS/Kairos")
+	if !ok {
+		t.Fatal("expected to derive app bundle path")
+	}
+	if path != "/Applications/Kairos.app" {
+		t.Fatalf("expected /Applications/Kairos.app, got %s", path)
+	}
+
+	_, ok = macAppBundlePathFromExecutable("/usr/local/bin/kairos")
+	if ok {
+		t.Fatal("expected non-app executable path to return no app bundle")
+	}
+}
+
+func TestMacLaunchProgramArgumentsFromAppBundle(t *testing.T) {
+	arguments := macLaunchProgramArguments("/Applications/Kairos.app/Contents/MacOS/Kairos")
+	if len(arguments) != 2 {
+		t.Fatalf("expected open command args, got %v", arguments)
+	}
+	if arguments[0] != "/usr/bin/open" {
+		t.Fatalf("expected /usr/bin/open launcher, got %s", arguments[0])
+	}
+	if arguments[1] != "/Applications/Kairos.app" {
+		t.Fatalf("expected app bundle launch target, got %s", arguments[1])
+	}
+}
+
+func TestRenderLaunchAgentPlistIncludesProgramArguments(t *testing.T) {
+	plist, err := renderLaunchAgentPlist([]string{"/usr/bin/open", "/Applications/Kairos.app"})
+	if err != nil {
+		t.Fatalf("render launch agent plist: %v", err)
+	}
+	content := string(plist)
+	if !strings.Contains(content, "<string>/usr/bin/open</string>") {
+		t.Fatalf("expected launcher program in plist, got %s", content)
+	}
+	if !strings.Contains(content, "<string>/Applications/Kairos.app</string>") {
+		t.Fatalf("expected app bundle target in plist, got %s", content)
+	}
+	if !strings.Contains(content, "<string>Aqua</string>") {
+		t.Fatalf("expected Aqua session type in plist, got %s", content)
+	}
+	if !strings.Contains(content, "<string>Interactive</string>") {
+		t.Fatalf("expected interactive process type in plist, got %s", content)
+	}
+}

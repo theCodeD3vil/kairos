@@ -19,6 +19,24 @@ export type SessionRecord = {
   durationMinutes: number;
 };
 
+export type RecentSessionRow = SessionRecord & {
+  dayLabel: string;
+  groupStart: string;
+  groupEnd: string;
+  sessionCount: number;
+  machineCount: number;
+  osLabel: string;
+  subSessions: Array<{
+    id: string;
+    language: string;
+    durationMinutes: number;
+    start: string;
+    end: string;
+    machine: string;
+    osLabel: string;
+  }>;
+};
+
 export type DailyStat = {
   date: string;
   label: string;
@@ -67,7 +85,7 @@ export type AnalyticsSnapshot = {
     topLanguage: string | null;
   };
   sessions: {
-    recent: Array<SessionRecord & { dayLabel: string }>;
+    recent: RecentSessionRow[];
     longestSession: number;
     averageSessionMinutes: number;
     totalSessions: number;
@@ -196,12 +214,12 @@ function computeWeeklyTotals(daily: DailyStat[]) {
   });
 
   return Array.from(buckets.entries())
+    .sort(([leftWeekStart], [rightWeekStart]) => leftWeekStart.localeCompare(rightWeekStart))
     .map(([weekStart, minutes]) => {
       const labelDate = new Date(weekStart);
       const label = `${labelDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
       return { label, minutes };
-    })
-    .sort((a, b) => (a.label < b.label ? -1 : 1));
+    });
 }
 
 function computeBreakdown(
@@ -244,6 +262,110 @@ function computeHourBuckets(sessions: SessionRecord[]) {
       minutes,
     }))
     .sort((a, b) => a.hourLabel.localeCompare(b.hourLabel));
+}
+
+function summarizeLanguages(languages: Set<string>) {
+  const values = [...languages].filter(Boolean);
+  if (values.length === 0) return 'Unknown';
+  if (values.length === 1) return values[0];
+  return `Mixed (${values.length})`;
+}
+
+function groupRecentSessions(sessions: SessionRecord[]): RecentSessionRow[] {
+  const grouped = new Map<string, {
+    dateKey: string;
+    project: string;
+    latestStart: string;
+    earliestStart: string;
+    latestEnd: string;
+    durationMinutes: number;
+    sessionCount: number;
+    languages: Set<string>;
+    machines: Set<string>;
+    subSessions: Array<{
+      id: string;
+      language: string;
+      durationMinutes: number;
+      start: string;
+      end: string;
+      machine: string;
+      osLabel: string;
+    }>;
+  }>();
+
+  sessions.forEach((session) => {
+    const dateKey = session.start.slice(0, 10);
+    const key = `${dateKey}\u0000${session.project}`;
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        dateKey,
+        project: session.project,
+        latestStart: session.start,
+        earliestStart: session.start,
+        latestEnd: session.start,
+        durationMinutes: session.durationMinutes,
+        sessionCount: 1,
+        languages: new Set([session.language]),
+        machines: new Set([session.machine]),
+        subSessions: [{
+          id: session.id,
+          language: session.language,
+          durationMinutes: session.durationMinutes,
+          start: session.start,
+          end: session.start,
+          machine: session.machine,
+          osLabel: 'Unknown OS',
+        }],
+      });
+      return;
+    }
+
+    existing.durationMinutes += session.durationMinutes;
+    existing.sessionCount += 1;
+    existing.languages.add(session.language);
+    existing.machines.add(session.machine);
+    existing.subSessions.push({
+      id: session.id,
+      language: session.language,
+      durationMinutes: session.durationMinutes,
+      start: session.start,
+      end: session.start,
+      machine: session.machine,
+      osLabel: 'Unknown OS',
+    });
+    if (session.start > existing.latestStart) {
+      existing.latestStart = session.start;
+    }
+    if (session.start < existing.earliestStart) {
+      existing.earliestStart = session.start;
+    }
+    if (session.start > existing.latestEnd) {
+      existing.latestEnd = session.start;
+    }
+  });
+
+  return Array.from(grouped.values())
+    .sort((a, b) => (a.latestStart < b.latestStart ? 1 : -1))
+    .slice(0, 8)
+    .map((group) => {
+      const machineCount = group.machines.size;
+      return {
+        id: `${group.dateKey}:${group.project}`,
+        project: group.project,
+        language: summarizeLanguages(group.languages),
+        machine: machineCount > 1 ? `${machineCount} machines` : Array.from(group.machines)[0],
+        start: group.latestStart,
+        groupStart: group.earliestStart,
+        groupEnd: group.latestEnd,
+        durationMinutes: group.durationMinutes,
+        dayLabel: formatDayLabel(new Date(group.dateKey)),
+        sessionCount: group.sessionCount,
+        machineCount,
+        osLabel: machineCount > 1 ? 'Mixed OS' : 'Unknown OS',
+        subSessions: [...group.subSessions].sort((a, b) => (a.start < b.start ? 1 : -1)),
+      };
+    });
 }
 
 function computeStreak(daily: DailyStat[]) {
@@ -316,10 +438,7 @@ export function getAnalyticsSnapshot(filters: AnalyticsFilters): AnalyticsSnapsh
   const comparisonActiveDaysDelta =
     previousActiveDays === 0 ? 100 : ((activeDays - previousActiveDays) / previousActiveDays) * 100;
 
-  const recentSessions = [...sessions]
-    .sort((a, b) => (a.start < b.start ? 1 : -1))
-    .slice(0, 8)
-    .map((session) => ({ ...session, dayLabel: formatDayLabel(new Date(session.start)) }));
+  const recentSessions = groupRecentSessions(sessions);
 
   const projectChange = {
     current: breakdownProjects[0]?.name ?? null,

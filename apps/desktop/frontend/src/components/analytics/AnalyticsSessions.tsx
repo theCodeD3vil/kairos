@@ -1,29 +1,38 @@
-import type { SessionRecord } from '@/data/mockAnalytics';
+import type { RecentSessionRow } from '@/data/mockAnalytics';
 import { formatMinutes } from '@/components/analytics/AnalyticsCards';
 import { AnimatedTable, type ColumnDef } from '@/components/ui/animated-table';
 import { LanguageIcon } from '@/lib/languageIcons';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 
 type AnalyticsSessionsProps = {
-  sessions: Array<SessionRecord & { dayLabel: string }>;
+  sessions: RecentSessionRow[];
+  onRowSelect?: (session: RecentSessionRow) => void;
 };
 
-export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
-  const columns: ColumnDef<SessionRecord & { dayLabel: string }>[] = [
+export function AnalyticsSessionsTable({ sessions, onRowSelect }: AnalyticsSessionsProps) {
+  const columns: ColumnDef<RecentSessionRow>[] = [
     { id: 'day', header: 'Day', cell: (row) => row.dayLabel, width: '100px' },
     { id: 'project', header: 'Project', cell: (row) => row.project },
     {
       id: 'language',
       header: 'Language',
       cell: (row) =>
-        row.language ? (
+        row.language && !row.language.startsWith('Mixed') ? (
           <span className="inline-flex items-center gap-1.5">
             <LanguageIcon language={row.language} size={16} />
             {row.language}
           </span>
+        ) : row.language ? (
+          row.language
         ) : (
           '—'
         ),
+    },
+    {
+      id: 'sessions',
+      header: 'Sessions',
+      cell: (row) => row.sessionCount,
+      width: '80px',
     },
     {
       id: 'start',
@@ -37,6 +46,12 @@ export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
       cell: (row) => formatMinutes(row.durationMinutes),
       width: '90px',
     },
+    {
+      id: 'machine',
+      header: 'Machine',
+      cell: (row) => row.machine,
+      width: '120px',
+    },
   ];
 
   const visibleColumns = SHOW_MULTI_MACHINE_UI
@@ -49,6 +64,7 @@ export function AnalyticsSessionsTable({ sessions }: AnalyticsSessionsProps) {
       columns={visibleColumns}
       striped
       stickyHeader
+      onRowClick={onRowSelect}
       emptyMessage="No sessions for this filter."
       className="rounded-[14px] border border-[var(--surface-subtle)] bg-[var(--surface-muted)] shadow-[var(--shadow-inset-soft)]"
     />
