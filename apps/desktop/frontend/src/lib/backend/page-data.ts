@@ -10,7 +10,7 @@ import {
 } from '../../../wailsjs/go/main/App';
 import type { contracts } from '../../../wailsjs/go/models';
 import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
-import type { OverviewRange, OverviewSnapshot } from '@/components/overview/types';
+import type { OverviewRange, OverviewSnapshot, TodayTrendInterval } from '@/components/overview/types';
 import type {
   AnalyticsFilters,
   AnalyticsSnapshot,
@@ -300,13 +300,18 @@ function buildTrend(points: DailyStat[] | Array<{ label: string; minutes: number
   }));
 }
 
-function buildHourlyTrendForDay(
+function buildDayTrendForInterval(
   sessions: contracts.Session[],
   dayStart: Date,
   hour12: boolean,
+  intervalMinutes: number,
 ): Array<{ label: string; value: number }> {
-  const totals = Array.from({ length: 24 }, () => 0);
+  const totalBuckets = Math.floor((24 * 60) / intervalMinutes);
+  const totals = Array.from({ length: totalBuckets }, () => 0);
+  const intervalMs = intervalMinutes * 60_000;
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const dayStartMs = dayStart.getTime();
+  const dayEndMs = dayEnd.getTime();
 
   for (const session of sessions) {
     const sessionStart = new Date(session.startTime);
@@ -318,58 +323,62 @@ function buildHourlyTrendForDay(
     let remaining = session.durationMinutes;
 
     while (remaining > 0) {
-      const hourBoundary = new Date(Date.UTC(
-        current.getUTCFullYear(),
-        current.getUTCMonth(),
-        current.getUTCDate(),
-        current.getUTCHours() + 1,
-        0,
-        0,
-        0,
-      ));
+      const currentMs = current.getTime();
+      const bucketIndex = Math.floor((currentMs - dayStartMs) / intervalMs);
+      const bucketBoundaryMs = dayStartMs + (bucketIndex + 1) * intervalMs;
       const minutesUntilBoundary = Math.max(
         1,
-        Math.ceil((hourBoundary.getTime() - current.getTime()) / 60_000),
+        Math.ceil((bucketBoundaryMs - currentMs) / 60_000),
       );
       const allocated = Math.min(remaining, minutesUntilBoundary);
-      const currentMs = current.getTime();
-      if (currentMs >= dayStart.getTime() && currentMs < dayEnd.getTime()) {
-        const hourIndex = current.getUTCHours();
-        totals[hourIndex] += allocated;
+      if (currentMs >= dayStartMs && currentMs < dayEndMs && bucketIndex >= 0 && bucketIndex < totals.length) {
+        totals[bucketIndex] += allocated;
       }
 
       remaining -= allocated;
       current = new Date(current.getTime() + allocated * 60_000);
-      if (current.getTime() >= dayEnd.getTime() && remaining <= 0) {
+      if (current.getTime() >= dayEndMs && remaining <= 0) {
         break;
       }
     }
   }
 
-  return Array.from({ length: 24 }, (_, hour) => {
+  return Array.from({ length: totalBuckets }, (_, index) => {
+    const minuteOffset = index * intervalMinutes;
     const labelDate = new Date(Date.UTC(
       dayStart.getUTCFullYear(),
       dayStart.getUTCMonth(),
       dayStart.getUTCDate(),
-      hour,
-      0,
+      Math.floor(minuteOffset / 60),
+      minuteOffset % 60,
       0,
       0,
     ));
-    const label = hour % 2 === 0
-      ? labelDate.toLocaleTimeString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12,
-        timeZone: 'UTC',
-      })
-      // Keep category keys unique while visually hiding odd-hour ticks.
-      : '\u200B'.repeat(hour + 1);
+    const label = labelDate.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12,
+      timeZone: 'UTC',
+    });
     return {
       label,
-      value: Number((totals[hour] / 60).toFixed(2)),
+      value: Number((totals[index] / 60).toFixed(2)),
     };
   });
+}
+
+function buildTodayTrendByInterval(
+  sessions: contracts.Session[],
+  dayStart: Date,
+  hour12: boolean,
+): Record<TodayTrendInterval, Array<{ label: string; value: number }>> {
+  return {
+    '5m': buildDayTrendForInterval(sessions, dayStart, hour12, 5),
+    '30m': buildDayTrendForInterval(sessions, dayStart, hour12, 30),
+    '1h': buildDayTrendForInterval(sessions, dayStart, hour12, 60),
+    '2h': buildDayTrendForInterval(sessions, dayStart, hour12, 120),
+    '6h': buildDayTrendForInterval(sessions, dayStart, hour12, 360),
+  };
 }
 
 function buildSyncHealth(
@@ -412,8 +421,8 @@ function buildSyncHealth(
     bridgeReachable,
     lastSyncAt: formatDateTime(status.lastHandshakeAt ?? lastUpdatedAt, preferences.hour12),
     blocks: Array.from({ length: syncHistoryWindowMinutes / syncHistoryBucketMinutes }, (_, index) => {
-      const bucketOffset = syncHistoryWindowMinutes - (index + 1) * syncHistoryBucketMinutes;
-      const bucketStart = new Date(now.getTime() - bucketOffset * 60_000);
+      const windowStart = new Date(now.getTime() - syncHistoryWindowMinutes * 60_000);
+      const bucketStart = new Date(windowStart.getTime() + index * syncHistoryBucketMinutes * 60_000);
       const bucketEnd = new Date(bucketStart.getTime() + syncHistoryBucketMinutes * 60_000);
       const slotStatus = resolveStatusAt(bucketEnd);
       const startLabel = bucketStart.toLocaleTimeString(undefined, {
@@ -1162,11 +1171,17 @@ export async function loadOverviewSnapshot(
       share: Math.round(machine.share),
       color: overviewChartPalette[index % overviewChartPalette.length],
     }));
-    const trend = range === 'today'
-      ? buildHourlyTrendForDay(dailySessions, rangeWindow.start, preferences.hour12)
-      : range === 'month'
-        ? buildTrend(analytics.time.weekly)
-        : buildTrend(analytics.time.daily);
+    const todayTrendByInterval = range === 'today'
+      ? buildTodayTrendByInterval(dailySessions, rangeWindow.start, preferences.hour12)
+      : undefined;
+    let trend: Array<{ label: string; value: number }>;
+    if (range === 'today') {
+      trend = todayTrendByInterval!['1h'];
+    } else if (range === 'month') {
+      trend = buildTrend(analytics.time.weekly);
+    } else {
+      trend = buildTrend(analytics.time.daily);
+    }
 
     return {
       range,
@@ -1184,6 +1199,7 @@ export async function loadOverviewSnapshot(
       appStatus: buildAppStatus(settings, overview.lastUpdatedAt),
       lastActiveMachine: analytics.machines.lastActiveMachine ?? currentMachine.machineName,
       weeklyTrend: trend,
+      todayTrendByInterval,
       topProjects: analytics.projects.items.slice(0, 5).map((project, index) => ({
         project: mapProjectLabel(project.name),
         minutes: project.minutes,

@@ -61,6 +61,7 @@ type KairosAreaChartProps = {
   tooltipValueFormatter?: (value: number) => string;
   seriesLabels?: Partial<Record<string, string>>;
   yAxisWidth?: number;
+  xTickFormatter?: (value: string | number, index: number) => string;
 };
 
 function toDisplayLabel(value: string) {
@@ -91,6 +92,7 @@ export function KairosAreaChart({
   tooltipValueFormatter = valueFormatter,
   seriesLabels,
   yAxisWidth = 56,
+  xTickFormatter,
 }: KairosAreaChartProps) {
   const shouldShowLegend = showLegend ?? categories.length > 1;
 
@@ -111,6 +113,7 @@ export function KairosAreaChart({
           tick={{ fontSize: 12, fill: 'var(--ink-tertiary)' }}
           axisLine={false}
           tickLine={false}
+          tickFormatter={xTickFormatter}
         />
         <YAxis
           width={yAxisWidth}

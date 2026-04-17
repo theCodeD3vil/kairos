@@ -114,18 +114,20 @@ func kairosMenubarSnapshotJSON() *C.char {
 		snapshot.WeekLabel = formatDurationLabel(overview.WeekMinutes)
 		snapshot.SessionCount = overview.SessionCount
 		snapshot.AverageLabel = formatDurationLabel(overview.AverageSessionMinutes)
-		snapshot.Timeline = buildMenubarTimeline(overview.WeeklyTrend)
 	}
 
 	todaySessions, err := app.viewService.GetSessionsPageData(ctx, "today")
-	if err == nil && len(todaySessions.Sessions) > 0 {
-		latest := todaySessions.Sessions[0]
-		snapshot.CurrentSession = &menubarCurrentSession{
-			Project:       defaultString(latest.ProjectName, "Unknown Project"),
-			Language:      defaultString(latest.Language, "Unknown Language"),
-			DurationLabel: formatDurationLabel(latest.DurationMinutes),
-			StartLabel:    formatSessionTimeLabel(latest.StartTime),
-			EndLabel:      formatSessionTimeLabel(latest.EndTime),
+	if err == nil {
+		snapshot.Timeline = buildMenubarDailyTimelineTwoHour(todaySessions.Sessions, time.Now())
+		if len(todaySessions.Sessions) > 0 {
+			latest := todaySessions.Sessions[0]
+			snapshot.CurrentSession = &menubarCurrentSession{
+				Project:       defaultString(latest.ProjectName, "Unknown Project"),
+				Language:      defaultString(latest.Language, "Unknown Language"),
+				DurationLabel: formatDurationLabel(latest.DurationMinutes),
+				StartLabel:    formatSessionTimeLabel(latest.StartTime),
+				EndLabel:      formatSessionTimeLabel(latest.EndTime),
+			}
 		}
 	}
 
@@ -148,20 +150,66 @@ func marshalMenubarSnapshot(snapshot menubarSnapshot) *C.char {
 	return C.CString(string(payload))
 }
 
-func buildMenubarTimeline(points []contracts.WeeklyTrendPoint) []menubarTimelinePoint {
-	if len(points) == 0 {
-		return []menubarTimelinePoint{}
+func buildMenubarDailyTimelineTwoHour(sessions []contracts.Session, now time.Time) []menubarTimelinePoint {
+	localNow := now.Local()
+	dayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, localNow.Location())
+	dayEnd := dayStart.Add(24 * time.Hour)
+	bucketWidth := 2 * time.Hour
+	bucketCount := 12
+	bucketMinutes := make([]int, bucketCount)
+
+	for _, session := range sessions {
+		start, startErr := time.Parse(time.RFC3339, session.StartTime)
+		if startErr != nil {
+			continue
+		}
+		start = start.Local()
+
+		end, endErr := time.Parse(time.RFC3339, session.EndTime)
+		if endErr != nil || !end.After(start) {
+			end = start.Add(time.Duration(session.DurationMinutes) * time.Minute)
+		}
+		end = end.Local()
+
+		if !end.After(dayStart) || !start.Before(dayEnd) {
+			continue
+		}
+		if start.Before(dayStart) {
+			start = dayStart
+		}
+		if end.After(dayEnd) {
+			end = dayEnd
+		}
+
+		current := start
+		for current.Before(end) {
+			offset := current.Sub(dayStart)
+			bucketIndex := int(offset / bucketWidth)
+			if bucketIndex < 0 || bucketIndex >= bucketCount {
+				break
+			}
+
+			bucketStart := dayStart.Add(time.Duration(bucketIndex) * bucketWidth)
+			bucketEnd := bucketStart.Add(bucketWidth)
+			if end.Before(bucketEnd) {
+				bucketEnd = end
+			}
+
+			segment := bucketEnd.Sub(current)
+			segmentMinutes := int((segment + 30*time.Second) / time.Minute)
+			if segmentMinutes > 0 {
+				bucketMinutes[bucketIndex] += segmentMinutes
+			}
+			current = bucketEnd
+		}
 	}
 
-	result := make([]menubarTimelinePoint, 0, len(points))
-	for _, point := range points {
-		label := point.Date
-		if parsed, err := time.Parse("2006-01-02", point.Date); err == nil {
-			label = parsed.Format("Jan 2")
-		}
+	result := make([]menubarTimelinePoint, 0, bucketCount)
+	for i := 0; i < bucketCount; i++ {
+		bucketStart := dayStart.Add(time.Duration(i) * bucketWidth)
 		result = append(result, menubarTimelinePoint{
-			Label:   label,
-			Minutes: point.TotalMinutes,
+			Label:   bucketStart.Format("15:04"),
+			Minutes: bucketMinutes[i],
 		})
 	}
 	return result

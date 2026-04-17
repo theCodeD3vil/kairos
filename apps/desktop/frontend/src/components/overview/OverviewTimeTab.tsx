@@ -10,12 +10,22 @@ import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
+import SegmentedButton from '@/components/ui/segmented-button';
+import { useEffect, useMemo, useState } from 'react';
+import type { TodayTrendInterval } from '@/components/overview/types';
 
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
 };
 
 const areaChartColors = [...overviewChartPalette];
+const todayTrendIntervalOptions: Array<{ id: TodayTrendInterval; label: string }> = [
+  { id: '5m', label: '5m' },
+  { id: '30m', label: '30m' },
+  { id: '1h', label: '1h' },
+  { id: '2h', label: '2h' },
+  { id: '6h', label: '6h' },
+];
 
 function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
@@ -111,6 +121,29 @@ function SyncHealthLegend() {
 }
 
 export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
+  const [todayTrendInterval, setTodayTrendInterval] = useState<TodayTrendInterval>('1h');
+
+  useEffect(() => {
+    if (snapshot.range !== 'today') {
+      setTodayTrendInterval('1h');
+    }
+  }, [snapshot.range]);
+
+  const trendData = useMemo(() => {
+    if (snapshot.range !== 'today') {
+      return snapshot.weeklyTrend;
+    }
+    return snapshot.todayTrendByInterval?.[todayTrendInterval] ?? snapshot.weeklyTrend;
+  }, [snapshot.range, snapshot.todayTrendByInterval, snapshot.weeklyTrend, todayTrendInterval]);
+
+  const tickStep = useMemo(() => {
+    if (snapshot.range !== 'today') {
+      return 1;
+    }
+    const buckets = trendData.length;
+    return Math.max(1, Math.ceil(buckets / 8));
+  }, [snapshot.range, trendData.length]);
+
   const syncStatus: StatusBadgeStatus =
     snapshot.syncHealth.status === 'Healthy'
       ? 'healthy'
@@ -137,10 +170,22 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
 
       <div className="grid gap-3 xl:grid-cols-2">
         <article className="rounded-xl bg-[var(--surface-muted)] p-3">
-          <h3 className="text-sm font-medium text-[var(--ink-secondary)]">{trendTitleByRange[snapshot.range]}</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-[var(--ink-secondary)]">{trendTitleByRange[snapshot.range]}</h3>
+            {snapshot.range === 'today' ? (
+              <SegmentedButton
+                size="sm"
+                buttons={todayTrendIntervalOptions}
+                value={todayTrendInterval}
+                onChange={(activeId) => {
+                  setTodayTrendInterval(activeId as TodayTrendInterval);
+                }}
+              />
+            ) : null}
+          </div>
           <div className="mt-2 h-52">
             <KairosAreaChart
-              data={snapshot.weeklyTrend}
+              data={trendData}
               index="label"
               categories={['value']}
               colors={areaChartColors}
@@ -148,6 +193,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
               showGridLines
               valueFormatter={(value) => formatDurationHours(Number(value), 'axis')}
               tooltipValueFormatter={(value) => formatDurationHours(Number(value), 'long')}
+              xTickFormatter={(label, index) => (snapshot.range === 'today' && index % tickStep !== 0 ? '' : String(label))}
               seriesLabels={{ value: 'Total Time' }}
             />
           </div>

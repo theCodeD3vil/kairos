@@ -21,6 +21,8 @@ export type WeeklyTrendPoint = {
   value: number;
 };
 
+export type TodayTrendInterval = '5m' | '30m' | '1h' | '2h' | '6h';
+
 export type TopProject = {
   project: string;
   minutes: number;
@@ -92,6 +94,7 @@ export type OverviewSnapshot = {
   appStatus: AppStatus;
   lastActiveMachine: string;
   weeklyTrend: WeeklyTrendPoint[];
+  todayTrendByInterval?: Record<TodayTrendInterval, WeeklyTrendPoint[]>;
   topProjects: TopProject[];
   topLanguages: TopLanguage[];
   machineDistribution: MachineTimeShare[];

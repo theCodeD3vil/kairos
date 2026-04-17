@@ -109,28 +109,40 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
     maxValue = MAX(maxValue, point.floatValue);
   }
 
-  NSBezierPath *line = [NSBezierPath bezierPath];
-  NSBezierPath *fill = [NSBezierPath bezierPath];
   CGFloat step = bounds.size.width / (CGFloat)(count - 1);
-
+  NSMutableArray<NSValue *> *plotPoints = [NSMutableArray arrayWithCapacity:(NSUInteger)count];
   for (NSInteger index = 0; index < count; index++) {
     CGFloat value = self.points[index].floatValue;
     CGFloat normalized = value / maxValue;
     CGFloat x = bounds.origin.x + step * (CGFloat)index;
     CGFloat y = bounds.origin.y + bounds.size.height - (bounds.size.height * normalized);
-    NSPoint point = NSMakePoint(x, y);
-
-    if (index == 0) {
-      [line moveToPoint:point];
-      [fill moveToPoint:NSMakePoint(x, NSMaxY(bounds))];
-      [fill lineToPoint:point];
-    } else {
-      [line lineToPoint:point];
-      [fill lineToPoint:point];
-    }
+    [plotPoints addObject:[NSValue valueWithPoint:NSMakePoint(x, y)]];
   }
 
-  [fill lineToPoint:NSMakePoint(bounds.origin.x + step * (CGFloat)(count - 1), NSMaxY(bounds))];
+  NSPoint firstPoint = plotPoints.firstObject.pointValue;
+  NSPoint lastPoint = plotPoints.lastObject.pointValue;
+  NSBezierPath *line = [NSBezierPath bezierPath];
+  NSBezierPath *fill = [NSBezierPath bezierPath];
+  [line moveToPoint:firstPoint];
+  [fill moveToPoint:NSMakePoint(firstPoint.x, NSMaxY(bounds))];
+  [fill lineToPoint:firstPoint];
+
+  // Smooth sparkline using Catmull-Rom to cubic Bezier conversion.
+  CGFloat controlScale = 1.0 / 6.0;
+  for (NSInteger index = 0; index < count - 1; index++) {
+    NSPoint p0 = (index > 0) ? plotPoints[index - 1].pointValue : plotPoints[index].pointValue;
+    NSPoint p1 = plotPoints[index].pointValue;
+    NSPoint p2 = plotPoints[index + 1].pointValue;
+    NSPoint p3 = (index + 2 < count) ? plotPoints[index + 2].pointValue : plotPoints[index + 1].pointValue;
+
+    NSPoint cp1 = NSMakePoint(p1.x + (p2.x - p0.x) * controlScale, p1.y + (p2.y - p0.y) * controlScale);
+    NSPoint cp2 = NSMakePoint(p2.x - (p3.x - p1.x) * controlScale, p2.y - (p3.y - p1.y) * controlScale);
+
+    [line curveToPoint:p2 controlPoint1:cp1 controlPoint2:cp2];
+    [fill curveToPoint:p2 controlPoint1:cp1 controlPoint2:cp2];
+  }
+
+  [fill lineToPoint:NSMakePoint(lastPoint.x, NSMaxY(bounds))];
   [fill closePath];
 
   [self.fillColor setFill];
