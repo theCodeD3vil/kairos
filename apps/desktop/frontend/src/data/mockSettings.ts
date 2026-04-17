@@ -69,6 +69,11 @@ export type AppBehaviorSettings = {
   startMinimized: boolean;
   minimizeToTray: boolean;
   openOnSystemLogin: boolean;
+  enableMenubar: boolean;
+  menubarPreset: 'full' | 'minimal' | 'off' | 'none';
+  showMenubarTimeline: boolean;
+  showMenubarSession: boolean;
+  loginLaunchMode: 'desktop' | 'menubar';
   rememberLastSelectedPage: boolean;
   restoreLastSelectedDateRange: boolean;
   reopenLastViewedContext: boolean;
@@ -114,6 +119,7 @@ export const settingsTabOrder = [
   { label: 'VS Code Extension', value: 'extension' },
   { label: 'Device / System', value: 'system' },
   { label: 'App Behavior', value: 'behavior' },
+  { label: 'Menubar', value: 'menubar' },
   { label: 'Data & Storage', value: 'storage' },
   { label: 'About', value: 'about' },
 ] as const;
@@ -183,6 +189,11 @@ export const settingsDefaults: SettingsDefaults = {
     startMinimized: false,
     minimizeToTray: true,
     openOnSystemLogin: false,
+    enableMenubar: true,
+    menubarPreset: 'none',
+    showMenubarTimeline: true,
+    showMenubarSession: true,
+    loginLaunchMode: 'desktop',
     rememberLastSelectedPage: true,
     restoreLastSelectedDateRange: true,
     reopenLastViewedContext: true,

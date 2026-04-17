@@ -300,6 +300,36 @@ func TestPersistedAppBehaviorHiddenFlagsSanitizedOnLinux(t *testing.T) {
 	}
 }
 
+func TestPersistedLegacyAppBehaviorBackfillsMenubarDefaults(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.SetSettingsSection(
+		context.Background(),
+		SectionAppBehavior,
+		`{"launchOnStartup":false,"startMinimized":false,"minimizeToTray":false,"openOnSystemLogin":false,"rememberLastPage":true,"restoreLastDateRange":true}`,
+		"2026-04-10T09:45:00Z",
+	); err != nil {
+		t.Fatalf("seed legacy app behavior section failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if runtime.GOOS == "darwin" {
+		if !data.AppBehavior.EnableMenubar {
+			t.Fatal("expected menubar enabled default for legacy payload on darwin")
+		}
+		if !data.AppBehavior.ShowMenubarTimeline || !data.AppBehavior.ShowMenubarSession {
+			t.Fatalf("expected menubar content defaults for legacy payload, got %+v", data.AppBehavior)
+		}
+	}
+	if data.AppBehavior.LoginLaunchMode != "desktop" {
+		t.Fatalf("expected loginLaunchMode desktop default, got %q", data.AppBehavior.LoginLaunchMode)
+	}
+}
+
 func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
 	service, _ := newTestSettingsService(t)
 

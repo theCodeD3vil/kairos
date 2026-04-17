@@ -275,7 +275,7 @@ func TestMacAppBundlePathFromExecutable(t *testing.T) {
 }
 
 func TestMacLaunchProgramArgumentsFromAppBundle(t *testing.T) {
-	arguments := macLaunchProgramArguments("/Applications/Kairos.app/Contents/MacOS/Kairos")
+	arguments := macLaunchProgramArguments("/Applications/Kairos.app/Contents/MacOS/Kairos", false)
 	if len(arguments) != 2 {
 		t.Fatalf("expected open command args, got %v", arguments)
 	}
@@ -284,6 +284,16 @@ func TestMacLaunchProgramArgumentsFromAppBundle(t *testing.T) {
 	}
 	if arguments[1] != "/Applications/Kairos.app" {
 		t.Fatalf("expected app bundle launch target, got %s", arguments[1])
+	}
+}
+
+func TestMacLaunchProgramArgumentsFromAppBundleForLoginLaunch(t *testing.T) {
+	arguments := macLaunchProgramArguments("/Applications/Kairos.app/Contents/MacOS/Kairos", true)
+	if len(arguments) != 4 {
+		t.Fatalf("expected open command args with login launch marker, got %v", arguments)
+	}
+	if arguments[2] != "--args" || arguments[3] != "--login-launch" {
+		t.Fatalf("expected login launch args, got %v", arguments)
 	}
 }
 
@@ -304,5 +314,14 @@ func TestRenderLaunchAgentPlistIncludesProgramArguments(t *testing.T) {
 	}
 	if !strings.Contains(content, "<string>Interactive</string>") {
 		t.Fatalf("expected interactive process type in plist, got %s", content)
+	}
+}
+
+func TestIsLoginLaunchInvocation(t *testing.T) {
+	if !isLoginLaunchInvocation([]string{"--login-launch"}) {
+		t.Fatal("expected login launch marker to be detected")
+	}
+	if isLoginLaunchInvocation([]string{"--foo", "--bar"}) {
+		t.Fatal("expected non-login args to return false")
 	}
 }

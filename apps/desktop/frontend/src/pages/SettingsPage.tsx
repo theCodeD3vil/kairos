@@ -71,7 +71,10 @@ import {
 } from '@/lib/exclusion-presets';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import {
+  applyMenubarPreset,
+  canConfigureMenubarBehavior,
   canConfigureStartupWindowBehavior,
+  isMenubarPresetActive,
   withLaunchOnStartup,
   withOpenOnSystemLogin,
 } from '@/pages/settings-behavior';
@@ -131,6 +134,8 @@ export function SettingsPage() {
   const persistCountRef = useRef(0);
   const changelogQueryHandledRef = useRef(false);
   const canConfigureStartupWindowBehaviorControls = canConfigureStartupWindowBehavior(currentMachine.os);
+  const canConfigureMenubarBehaviorControls = canConfigureMenubarBehavior(currentMachine.os);
+  const menubarPresetActive = isMenubarPresetActive(appBehavior.menubarPreset);
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -1029,6 +1034,91 @@ export function SettingsPage() {
             <SettingsToggle
               checked={appBehavior.reopenLastViewedContext}
               onChange={(next) => updateAppBehaviorState({ ...appBehavior, reopenLastViewedContext: next })}
+            />
+          </SettingsRow>
+        </SettingsSection>
+      ),
+    },
+    {
+      label: 'Menubar',
+      value: 'menubar',
+      content: (
+        <SettingsSection title="Menubar" action={<ResetButton onClick={() => void handleResetSection(settingsSections.appBehavior, 'Menubar Settings')} />}>
+          <SettingsRow
+            label="Preset"
+            helper={canConfigureMenubarBehaviorControls
+              ? 'Preset mode applies a predefined menu bar configuration and locks manual controls until set to None.'
+              : 'Available only on macOS desktop builds.'}
+          >
+            <SettingsSelect
+              value={appBehavior.menubarPreset}
+              onChange={(event) => {
+                const raw = event.target.value;
+                const preset = raw === 'full' || raw === 'minimal' || raw === 'off' ? raw : 'none';
+                updateAppBehaviorState(applyMenubarPreset(appBehavior, preset));
+              }}
+              disabled={!canConfigureMenubarBehaviorControls}
+              options={[
+                { label: 'Full (Recommended)', value: 'full' },
+                { label: 'Minimal', value: 'minimal' },
+                { label: 'Off', value: 'off' },
+                { label: 'None', value: 'none' },
+              ]}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Enable menu bar"
+            helper={canConfigureMenubarBehaviorControls
+              ? 'Shows Kairos in the macOS menu bar for quick access.'
+              : 'Available only on macOS desktop builds.'}
+          >
+            <SettingsToggle
+              checked={appBehavior.enableMenubar}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, enableMenubar: next })}
+              disabled={!canConfigureMenubarBehaviorControls || menubarPresetActive}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Login launch mode"
+            helper={canConfigureMenubarBehaviorControls
+              ? 'When launched by OS login item: open desktop window, or stay menu bar only.'
+              : 'Available only on macOS desktop builds.'}
+          >
+            <SettingsSelect
+              value={appBehavior.loginLaunchMode}
+              onChange={(event) => {
+                const mode = event.target.value === 'menubar' ? 'menubar' : 'desktop';
+                updateAppBehaviorState({ ...appBehavior, loginLaunchMode: mode });
+              }}
+              disabled={!canConfigureMenubarBehaviorControls || !appBehavior.openOnSystemLogin || menubarPresetActive}
+              options={[
+                { label: 'Desktop window', value: 'desktop' },
+                { label: 'Menu bar only', value: 'menubar' },
+              ]}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Show menu bar timeline"
+            helper={canConfigureMenubarBehaviorControls
+              ? 'Displays the daily trend chart in the menu bar popover.'
+              : 'Available only on macOS desktop builds.'}
+          >
+            <SettingsToggle
+              checked={appBehavior.showMenubarTimeline}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, showMenubarTimeline: next })}
+              disabled={!canConfigureMenubarBehaviorControls || !appBehavior.enableMenubar || menubarPresetActive}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Show current session in menu bar"
+            helper={canConfigureMenubarBehaviorControls
+              ? 'Displays the current session card in the menu bar popover.'
+              : 'Available only on macOS desktop builds.'}
+          >
+            <SettingsToggle
+              checked={appBehavior.showMenubarSession}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, showMenubarSession: next })}
+              disabled={!canConfigureMenubarBehaviorControls || !appBehavior.enableMenubar || menubarPresetActive}
             />
           </SettingsRow>
         </SettingsSection>

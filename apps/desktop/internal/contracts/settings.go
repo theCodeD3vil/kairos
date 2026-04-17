@@ -134,12 +134,17 @@ type SystemInfo struct {
 }
 
 type AppBehaviorSettings struct {
-	LaunchOnStartup      bool `json:"launchOnStartup"`
-	StartMinimized       bool `json:"startMinimized"`
-	MinimizeToTray       bool `json:"minimizeToTray"`
-	OpenOnSystemLogin    bool `json:"openOnSystemLogin"`
-	RememberLastPage     bool `json:"rememberLastPage"`
-	RestoreLastDateRange bool `json:"restoreLastDateRange"`
+	LaunchOnStartup      bool   `json:"launchOnStartup"`
+	StartMinimized       bool   `json:"startMinimized"`
+	MinimizeToTray       bool   `json:"minimizeToTray"`
+	OpenOnSystemLogin    bool   `json:"openOnSystemLogin"`
+	EnableMenubar        bool   `json:"enableMenubar"`
+	MenubarPreset        string `json:"menubarPreset"`
+	ShowMenubarTimeline  bool   `json:"showMenubarTimeline"`
+	ShowMenubarSession   bool   `json:"showMenubarSession"`
+	LoginLaunchMode      string `json:"loginLaunchMode"`
+	RememberLastPage     bool   `json:"rememberLastPage"`
+	RestoreLastDateRange bool   `json:"restoreLastDateRange"`
 }
 
 type DataStorageInfo struct {

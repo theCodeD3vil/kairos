@@ -345,7 +345,7 @@ func loadSection[T any](ctx context.Context, store *storage.Store, section strin
 		return fallback, nil
 	}
 
-	var decoded T
+	decoded := fallback
 	if err := json.Unmarshal([]byte(payload), &decoded); err != nil {
 		log.Printf("settings: invalid persisted %s section, using defaults: %v", section, err)
 		return fallback, nil

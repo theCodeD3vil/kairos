@@ -6,7 +6,9 @@ package main
 #cgo CFLAGS: -x objective-c -fobjc-arc
 #cgo LDFLAGS: -framework Cocoa
 #include <stdlib.h>
+#include <stdbool.h>
 void kairosInstallMenubar(void);
+void kairosSetMenubarEnabled(bool enabled);
 */
 import "C"
 
@@ -26,11 +28,19 @@ var (
 	macMenubarAppLock sync.RWMutex
 )
 
-func setupMacMenubar(app *App) {
+func setupMacMenubar(app *App, enabled bool) {
 	macMenubarAppLock.Lock()
 	macMenubarApp = app
 	macMenubarAppLock.Unlock()
-	C.kairosInstallMenubar()
+	if enabled {
+		C.kairosInstallMenubar()
+		return
+	}
+	C.kairosSetMenubarEnabled(C.bool(false))
+}
+
+func setMacMenubarEnabled(enabled bool) {
+	C.kairosSetMenubarEnabled(C.bool(enabled))
 }
 
 func currentMacMenubarApp() *App {
@@ -62,6 +72,8 @@ func kairosMenubarQuit() {
 type menubarSnapshot struct {
 	Now            string                 `json:"now"`
 	ThemeMode      string                 `json:"themeMode"`
+	ShowTimeline   bool                   `json:"showTimeline"`
+	ShowSession    bool                   `json:"showSession"`
 	TodayLabel     string                 `json:"todayLabel"`
 	WeekLabel      string                 `json:"weekLabel"`
 	SessionCount   int                    `json:"sessionCount"`
@@ -89,6 +101,8 @@ func kairosMenubarSnapshotJSON() *C.char {
 	snapshot := menubarSnapshot{
 		Now:          time.Now().Format("15:04"),
 		ThemeMode:    "system",
+		ShowTimeline: true,
+		ShowSession:  true,
 		TodayLabel:   "0m",
 		WeekLabel:    "0m",
 		SessionCount: 0,
@@ -100,12 +114,19 @@ func kairosMenubarSnapshotJSON() *C.char {
 	}
 
 	ctx := app.requestContext()
+	menubarEnabled := true
 	if app.settingsService != nil {
 		if settingsData, settingsErr := app.settingsService.GetSettingsData(ctx); settingsErr == nil {
 			if settingsData.General.ThemeMode != "" {
 				snapshot.ThemeMode = settingsData.General.ThemeMode
 			}
+			menubarEnabled = settingsData.AppBehavior.EnableMenubar
+			snapshot.ShowTimeline = settingsData.AppBehavior.ShowMenubarTimeline
+			snapshot.ShowSession = settingsData.AppBehavior.ShowMenubarSession
 		}
+	}
+	if !menubarEnabled {
+		return marshalMenubarSnapshot(snapshot)
 	}
 
 	overview, err := app.viewService.GetOverviewData(ctx)
@@ -118,8 +139,10 @@ func kairosMenubarSnapshotJSON() *C.char {
 
 	todaySessions, err := app.viewService.GetSessionsPageData(ctx, "today")
 	if err == nil {
-		snapshot.Timeline = buildMenubarDailyTimelineTwoHour(todaySessions.Sessions, time.Now())
-		if len(todaySessions.Sessions) > 0 {
+		if snapshot.ShowTimeline {
+			snapshot.Timeline = buildMenubarDailyTimelineTwoHour(todaySessions.Sessions, time.Now())
+		}
+		if snapshot.ShowSession && len(todaySessions.Sessions) > 0 {
 			latest := todaySessions.Sessions[0]
 			snapshot.CurrentSession = &menubarCurrentSession{
 				Project:       defaultString(latest.ProjectName, "Unknown Project"),

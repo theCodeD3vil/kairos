@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
+#import <stdbool.h>
 #import <stdlib.h>
 #import <string.h>
 
@@ -168,7 +169,9 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
 @property(nonatomic, strong) NSTextField *todayValueLabel;
 @property(nonatomic, strong) NSTextField *weekValueLabel;
 @property(nonatomic, strong) NSTextField *sessionCountLabel;
+@property(nonatomic, strong) NSTextField *timelineLabel;
 @property(nonatomic, strong) NSTextField *averageValueLabel;
+@property(nonatomic, strong) NSView *currentSessionCard;
 @property(nonatomic, strong) NSTextField *currentSessionDurationLabel;
 @property(nonatomic, strong) NSTextField *currentSessionProjectLabel;
 @property(nonatomic, strong) NSTextField *currentSessionTimeLabel;
@@ -208,29 +211,29 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
   self.clockLabel.frame = NSMakeRect(220, 4, 128, 24);
   [header addSubview:self.clockLabel];
 
-  NSView *currentCard = [self cardViewWithFrame:NSMakeRect(16, 56, 348, 100)];
-  [self.cardViews addObject:currentCard];
-  [root addSubview:currentCard];
+  self.currentSessionCard = [self cardViewWithFrame:NSMakeRect(16, 56, 348, 100)];
+  [self.cardViews addObject:self.currentSessionCard];
+  [root addSubview:self.currentSessionCard];
 
   NSTextField *currentTitle = [self labelWithString:@"Current Session" size:12 weight:NSFontWeightSemibold color:KairosMutedInkColor()];
   [self.mutedLabels addObject:currentTitle];
   currentTitle.frame = NSMakeRect(14, 10, 320, 18);
-  [currentCard addSubview:currentTitle];
+  [self.currentSessionCard addSubview:currentTitle];
 
   self.currentSessionDurationLabel = [self labelWithString:@"0m" size:28 weight:NSFontWeightSemibold color:KairosInkColor()];
   [self.primaryLabels addObject:self.currentSessionDurationLabel];
   self.currentSessionDurationLabel.frame = NSMakeRect(14, 30, 120, 38);
-  [currentCard addSubview:self.currentSessionDurationLabel];
+  [self.currentSessionCard addSubview:self.currentSessionDurationLabel];
 
   self.currentSessionProjectLabel = [self labelWithString:@"No active session yet" size:13 weight:NSFontWeightMedium color:KairosMutedInkColor()];
   [self.mutedLabels addObject:self.currentSessionProjectLabel];
   self.currentSessionProjectLabel.frame = NSMakeRect(140, 40, 194, 22);
-  [currentCard addSubview:self.currentSessionProjectLabel];
+  [self.currentSessionCard addSubview:self.currentSessionProjectLabel];
 
   self.currentSessionTimeLabel = [self labelWithString:@"--:-- → --:--" size:12 weight:NSFontWeightRegular color:KairosMutedInkColor()];
   [self.mutedLabels addObject:self.currentSessionTimeLabel];
   self.currentSessionTimeLabel.frame = NSMakeRect(140, 63, 194, 18);
-  [currentCard addSubview:self.currentSessionTimeLabel];
+  [self.currentSessionCard addSubview:self.currentSessionTimeLabel];
 
   NSView *metricsRow = [[NSView alloc] initWithFrame:NSMakeRect(16, 166, 348, 88)];
   [root addSubview:metricsRow];
@@ -276,10 +279,10 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
   self.sessionCountLabel.frame = NSMakeRect(16, 258, 348, 18);
   [root addSubview:self.sessionCountLabel];
 
-  NSTextField *timelineLabel = [self labelWithString:@"Timeline" size:12 weight:NSFontWeightSemibold color:KairosMutedInkColor()];
-  [self.mutedLabels addObject:timelineLabel];
-  timelineLabel.frame = NSMakeRect(16, 280, 180, 18);
-  [root addSubview:timelineLabel];
+  self.timelineLabel = [self labelWithString:@"Timeline" size:12 weight:NSFontWeightSemibold color:KairosMutedInkColor()];
+  [self.mutedLabels addObject:self.timelineLabel];
+  self.timelineLabel.frame = NSMakeRect(16, 280, 180, 18);
+  [root addSubview:self.timelineLabel];
 
   self.timelineView = [[KairosTimelineView alloc] initWithFrame:NSMakeRect(16, 302, 348, 84)];
   [root addSubview:self.timelineView];
@@ -348,6 +351,16 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
     self.themeMode = themeMode;
     [self applyTheme];
   }
+  BOOL showTimeline = YES;
+  id showTimelineValue = snapshot[@"showTimeline"];
+  if ([showTimelineValue isKindOfClass:[NSNumber class]]) {
+    showTimeline = ((NSNumber *)showTimelineValue).boolValue;
+  }
+  BOOL showSession = YES;
+  id showSessionValue = snapshot[@"showSession"];
+  if ([showSessionValue isKindOfClass:[NSNumber class]]) {
+    showSession = ((NSNumber *)showSessionValue).boolValue;
+  }
 
   NSString *clock = snapshot[@"now"];
   if ([clock isKindOfClass:[NSString class]]) {
@@ -375,7 +388,7 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
   }
 
   NSDictionary *current = snapshot[@"currentSession"];
-  if ([current isKindOfClass:[NSDictionary class]]) {
+  if (showSession && [current isKindOfClass:[NSDictionary class]]) {
     NSString *duration = current[@"durationLabel"];
     NSString *project = current[@"project"];
     NSString *language = current[@"language"];
@@ -401,7 +414,7 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
 
   NSArray *timeline = snapshot[@"timeline"];
   NSMutableArray<NSNumber *> *points = [NSMutableArray array];
-  if ([timeline isKindOfClass:[NSArray class]]) {
+  if (showTimeline && [timeline isKindOfClass:[NSArray class]]) {
     for (id item in timeline) {
       if (![item isKindOfClass:[NSDictionary class]]) {
         continue;
@@ -413,6 +426,10 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
     }
   }
   self.timelineView.points = points;
+  self.currentSessionCard.hidden = !showSession;
+  self.timelineView.hidden = !showTimeline;
+  self.timelineLabel.hidden = !showTimeline;
+  self.sessionCountLabel.hidden = !showTimeline;
   [self.timelineView setNeedsDisplay:YES];
 }
 
@@ -590,5 +607,21 @@ void kairosInstallMenubar(void) {
     kairosStatusItem.button.image = KairosTemplateIcon();
     kairosStatusItem.button.target = kairosTarget;
     kairosStatusItem.button.action = @selector(togglePopover:);
+  });
+}
+
+void kairosSetMenubarEnabled(bool enabled) {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (!enabled) {
+      if (kairosTarget != nil && kairosTarget.popover.shown) {
+        [kairosTarget.popover performClose:nil];
+      }
+      if (kairosStatusItem != nil) {
+        [[NSStatusBar systemStatusBar] removeStatusItem:kairosStatusItem];
+        kairosStatusItem = nil;
+      }
+      return;
+    }
+    kairosInstallMenubar();
   });
 }

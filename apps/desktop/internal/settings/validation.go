@@ -90,11 +90,57 @@ func validateExtension(input contracts.ExtensionSettings) (contracts.ExtensionSe
 }
 
 func validateAppBehavior(input contracts.AppBehaviorSettings) contracts.AppBehaviorSettings {
+	legacyPayload := strings.TrimSpace(input.LoginLaunchMode) == ""
+	if legacyPayload {
+		input.EnableMenubar = runtime.GOOS == "darwin"
+		input.MenubarPreset = "none"
+		input.ShowMenubarTimeline = true
+		input.ShowMenubarSession = true
+	}
+
+	input.MenubarPreset = strings.TrimSpace(strings.ToLower(input.MenubarPreset))
+	switch input.MenubarPreset {
+	case "full", "minimal", "off", "none":
+	default:
+		input.MenubarPreset = "none"
+	}
+
+	input.LoginLaunchMode = strings.TrimSpace(strings.ToLower(input.LoginLaunchMode))
+	if input.LoginLaunchMode == "" {
+		input.LoginLaunchMode = "desktop"
+	}
+	if input.LoginLaunchMode != "desktop" && input.LoginLaunchMode != "menubar" {
+		input.LoginLaunchMode = "desktop"
+	}
+
 	// Linux desktop environments can run without a reliable tray entry point.
 	// Keep startup behavior visible to avoid hidden-window lockouts.
 	if runtime.GOOS == "linux" {
 		input.StartMinimized = false
 		input.MinimizeToTray = false
+	}
+	if runtime.GOOS != "darwin" {
+		input.EnableMenubar = false
+		input.MenubarPreset = "none"
+		input.LoginLaunchMode = "desktop"
+	}
+
+	switch input.MenubarPreset {
+	case "full":
+		input.EnableMenubar = true
+		input.ShowMenubarTimeline = true
+		input.ShowMenubarSession = true
+		input.LoginLaunchMode = "desktop"
+	case "minimal":
+		input.EnableMenubar = true
+		input.ShowMenubarTimeline = false
+		input.ShowMenubarSession = true
+		input.LoginLaunchMode = "menubar"
+	case "off":
+		input.EnableMenubar = false
+		input.ShowMenubarTimeline = false
+		input.ShowMenubarSession = false
+		input.LoginLaunchMode = "desktop"
 	}
 
 	return input

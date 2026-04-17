@@ -4,7 +4,9 @@ import (
 	"context"
 	"embed"
 	"log"
+	"os"
 	"runtime"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/menu"
@@ -26,8 +28,10 @@ func main() {
 	if err := app.applyCurrentStartupBehavior(context.Background()); err != nil {
 		log.Printf("app: unable to apply startup behavior: %v", err)
 	}
+	loginLaunch := isLoginLaunchInvocation(os.Args[1:])
+	startMinimized := behavior.startMinimized || (loginLaunch && behavior.loginLaunchMode == "menubar")
 	startState := options.Normal
-	if behavior.startMinimized {
+	if startMinimized {
 		startState = options.Minimised
 	}
 
@@ -39,7 +43,7 @@ func main() {
 		MinHeight:         600,
 		DisableResize:     false,
 		WindowStartState:  startState,
-		StartHidden:       behavior.startMinimized,
+		StartHidden:       startMinimized,
 		HideWindowOnClose: behavior.minimizeToTray,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -69,4 +73,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func isLoginLaunchInvocation(args []string) bool {
+	for _, arg := range args {
+		if strings.EqualFold(strings.TrimSpace(arg), "--login-launch") {
+			return true
+		}
+	}
+	return false
 }

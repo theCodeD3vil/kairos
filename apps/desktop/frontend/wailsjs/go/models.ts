@@ -223,6 +223,11 @@ export namespace contracts {
 	    startMinimized: boolean;
 	    minimizeToTray: boolean;
 	    openOnSystemLogin: boolean;
+	    enableMenubar: boolean;
+	    menubarPreset: string;
+	    showMenubarTimeline: boolean;
+	    showMenubarSession: boolean;
+	    loginLaunchMode: string;
 	    rememberLastPage: boolean;
 	    restoreLastDateRange: boolean;
 	
@@ -236,6 +241,11 @@ export namespace contracts {
 	        this.startMinimized = source["startMinimized"];
 	        this.minimizeToTray = source["minimizeToTray"];
 	        this.openOnSystemLogin = source["openOnSystemLogin"];
+	        this.enableMenubar = source["enableMenubar"];
+	        this.menubarPreset = source["menubarPreset"];
+	        this.showMenubarTimeline = source["showMenubarTimeline"];
+	        this.showMenubarSession = source["showMenubarSession"];
+	        this.loginLaunchMode = source["loginLaunchMode"];
 	        this.rememberLastPage = source["rememberLastPage"];
 	        this.restoreLastDateRange = source["restoreLastDateRange"];
 	    }

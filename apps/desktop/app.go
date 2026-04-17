@@ -66,6 +66,8 @@ type launchBehaviorOptions struct {
 	openOnSystemLogin bool
 	startMinimized    bool
 	minimizeToTray    bool
+	enableMenubar     bool
+	loginLaunchMode   string
 }
 
 type autostartRegistrationStatus struct {
@@ -357,7 +359,8 @@ func ensureSessionsCurrent(ctx context.Context, sqliteStore *storage.Store, sess
 // startup stores the application context.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	setupMacMenubar(a)
+	behavior := a.launchBehaviorOptions(a.requestContext())
+	setupMacMenubar(a, behavior.enableMenubar)
 }
 
 func (a *App) shutdown(_ context.Context) {
@@ -509,6 +512,7 @@ func (a *App) UpdateAppBehaviorSettings(data contracts.AppBehaviorSettings) (con
 		if applyErr := a.applyStartupBehavior(a.requestContext(), updated); applyErr != nil {
 			return contracts.AppBehaviorSettings{}, applyErr
 		}
+		setMacMenubarEnabled(updated.EnableMenubar)
 	}
 	if err == nil {
 		a.emitDataChanged("settings")
@@ -772,6 +776,8 @@ func (a *App) launchBehaviorOptions(ctx context.Context) launchBehaviorOptions {
 		openOnSystemLogin: data.AppBehavior.OpenOnSystemLogin,
 		startMinimized:    data.AppBehavior.StartMinimized,
 		minimizeToTray:    data.AppBehavior.MinimizeToTray,
+		enableMenubar:     data.AppBehavior.EnableMenubar,
+		loginLaunchMode:   data.AppBehavior.LoginLaunchMode,
 	}
 
 	// Linux desktop environments (especially Wayland sessions) can become
@@ -779,6 +785,9 @@ func (a *App) launchBehaviorOptions(ctx context.Context) launchBehaviorOptions {
 	if stdruntime.GOOS == "linux" {
 		behavior.startMinimized = false
 		behavior.minimizeToTray = false
+	}
+	if behavior.loginLaunchMode == "" {
+		behavior.loginLaunchMode = "desktop"
 	}
 
 	return behavior
@@ -789,18 +798,19 @@ func (a *App) applyCurrentStartupBehavior(ctx context.Context) error {
 	return a.applyStartupBehavior(ctx, contracts.AppBehaviorSettings{
 		LaunchOnStartup:   behavior.launchOnStartup,
 		OpenOnSystemLogin: behavior.openOnSystemLogin,
+		LoginLaunchMode:   behavior.loginLaunchMode,
 	})
 }
 
 func (a *App) applyStartupBehavior(ctx context.Context, behavior contracts.AppBehaviorSettings) error {
 	enabled := behavior.LaunchOnStartup || behavior.OpenOnSystemLogin
-	return ensureAutostart(enabled)
+	return ensureAutostart(enabled, behavior.LoginLaunchMode)
 }
 
-func ensureAutostart(enabled bool) error {
+func ensureAutostart(enabled bool, loginLaunchMode string) error {
 	switch stdruntime.GOOS {
 	case "darwin":
-		return ensureMacLaunchAgent(enabled)
+		return ensureMacLaunchAgent(enabled, loginLaunchMode)
 	case "linux":
 		return ensureLinuxAutostartDesktopEntry(enabled)
 	case "windows":
@@ -810,7 +820,7 @@ func ensureAutostart(enabled bool) error {
 	}
 }
 
-func ensureMacLaunchAgent(enabled bool) error {
+func ensureMacLaunchAgent(enabled bool, loginLaunchMode string) error {
 	agentPath, err := launchAgentPlistPath()
 	if err != nil {
 		return err
@@ -827,7 +837,7 @@ func ensureMacLaunchAgent(enabled bool) error {
 	if err != nil {
 		return fmt.Errorf("resolve executable path: %w", err)
 	}
-	programArguments := macLaunchProgramArguments(executablePath)
+	programArguments := macLaunchProgramArguments(executablePath, strings.EqualFold(strings.TrimSpace(loginLaunchMode), "menubar"))
 
 	if err := os.MkdirAll(filepath.Dir(agentPath), 0o755); err != nil {
 		return fmt.Errorf("create launch agents directory: %w", err)
@@ -1028,11 +1038,18 @@ func resolveCurrentUserHomeDir() (string, error) {
 	return trimmed, nil
 }
 
-func macLaunchProgramArguments(executablePath string) []string {
+func macLaunchProgramArguments(executablePath string, loginLaunch bool) []string {
+	loginArgs := []string{}
+	if loginLaunch {
+		loginArgs = []string{"--args", "--login-launch"}
+	}
 	if appBundlePath, ok := macAppBundlePathFromExecutable(executablePath); ok {
-		return []string{"/usr/bin/open", appBundlePath}
+		return append([]string{"/usr/bin/open", appBundlePath}, loginArgs...)
 	}
 
+	if loginLaunch {
+		return []string{executablePath, "--login-launch"}
+	}
 	return []string{executablePath}
 }
 
