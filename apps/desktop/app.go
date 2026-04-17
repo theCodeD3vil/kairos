@@ -357,6 +357,7 @@ func ensureSessionsCurrent(ctx context.Context, sqliteStore *storage.Store, sess
 // startup stores the application context.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	setupMacMenubar(a)
 }
 
 func (a *App) shutdown(_ context.Context) {
