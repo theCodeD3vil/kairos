@@ -60,6 +60,81 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
 }
 @end
 
+static NSString *KairosCompactLanguageID(NSString *language) {
+  if (![language isKindOfClass:[NSString class]]) {
+    return @"";
+  }
+  NSString *lower = [[language lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  if (lower.length == 0) {
+    return @"";
+  }
+  NSCharacterSet *strip = [NSCharacterSet characterSetWithCharactersInString:@" _-"];
+  NSArray<NSString *> *parts = [lower componentsSeparatedByCharactersInSet:strip];
+  return [parts componentsJoinedByString:@""];
+}
+
+static NSString *KairosFileTypeForLanguage(NSString *language) {
+  NSString *compact = KairosCompactLanguageID(language);
+  if (compact.length == 0) {
+    return @"txt";
+  }
+  // Respect aliasing rules for icon query: React display maps to typescriptreact.
+  if ([compact isEqualToString:@"react"] || [compact isEqualToString:@"typescriptreact"] || [compact isEqualToString:@"tsx"]) {
+    return @"tsx";
+  }
+  if ([compact isEqualToString:@"javascriptreact"] || [compact isEqualToString:@"jsx"]) {
+    return @"jsx";
+  }
+  if ([compact isEqualToString:@"typescript"] || [compact isEqualToString:@"ts"]) {
+    return @"ts";
+  }
+  if ([compact isEqualToString:@"javascript"] || [compact isEqualToString:@"js"]) {
+    return @"js";
+  }
+  if ([compact isEqualToString:@"python"] || [compact isEqualToString:@"py"]) {
+    return @"py";
+  }
+  if ([compact isEqualToString:@"golang"] || [compact isEqualToString:@"go"]) {
+    return @"go";
+  }
+  if ([compact isEqualToString:@"shellscript"] || [compact isEqualToString:@"bash"] || [compact isEqualToString:@"zsh"] || [compact isEqualToString:@"sh"]) {
+    return @"sh";
+  }
+  if ([compact isEqualToString:@"json"]) {
+    return @"json";
+  }
+  if ([compact isEqualToString:@"vue"]) {
+    return @"vue";
+  }
+  if ([compact isEqualToString:@"rust"] || [compact isEqualToString:@"rs"]) {
+    return @"rs";
+  }
+  if ([compact isEqualToString:@"markdown"] || [compact isEqualToString:@"md"]) {
+    return @"md";
+  }
+  if ([compact isEqualToString:@"yaml"] || [compact isEqualToString:@"yml"]) {
+    return @"yml";
+  }
+  return compact;
+}
+
+static NSImage *KairosFileIconForLanguage(NSString *language) {
+  NSString *fileType = KairosFileTypeForLanguage(language);
+  NSImage *icon = [[NSWorkspace sharedWorkspace] iconForFileType:fileType];
+  if (icon != nil) {
+    icon.size = NSMakeSize(14.0, 14.0);
+  }
+  return icon;
+}
+
+static NSImage *KairosFolderIcon(void) {
+  NSImage *icon = [NSImage imageNamed:NSImageNameFolder];
+  if (icon != nil) {
+    icon.size = NSMakeSize(14.0, 14.0);
+  }
+  return icon;
+}
+
 @interface KairosTimelineView : NSView
 @property(nonatomic, copy) NSArray<NSNumber *> *points;
 @property(nonatomic, strong) NSColor *lineColor;
@@ -174,6 +249,9 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
 @property(nonatomic, strong) NSView *currentSessionCard;
 @property(nonatomic, strong) NSTextField *currentSessionDurationLabel;
 @property(nonatomic, strong) NSTextField *currentSessionProjectLabel;
+@property(nonatomic, strong) NSImageView *currentSessionProjectIconView;
+@property(nonatomic, strong) NSTextField *currentSessionLanguageLabel;
+@property(nonatomic, strong) NSImageView *currentSessionLanguageIconView;
 @property(nonatomic, strong) NSTextField *currentSessionTimeLabel;
 @property(nonatomic, strong) KairosTimelineView *timelineView;
 @property(nonatomic, strong) NSTimer *refreshTimer;
@@ -225,14 +303,29 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
   self.currentSessionDurationLabel.frame = NSMakeRect(14, 30, 120, 38);
   [self.currentSessionCard addSubview:self.currentSessionDurationLabel];
 
+  self.currentSessionProjectIconView = [[NSImageView alloc] initWithFrame:NSMakeRect(140, 43, 14, 14)];
+  self.currentSessionProjectIconView.imageScaling = NSImageScaleProportionallyUpOrDown;
+  self.currentSessionProjectIconView.image = KairosFolderIcon();
+  [self.currentSessionCard addSubview:self.currentSessionProjectIconView];
+
   self.currentSessionProjectLabel = [self labelWithString:@"No active session yet" size:13 weight:NSFontWeightMedium color:KairosMutedInkColor()];
   [self.mutedLabels addObject:self.currentSessionProjectLabel];
-  self.currentSessionProjectLabel.frame = NSMakeRect(140, 40, 194, 22);
+  self.currentSessionProjectLabel.frame = NSMakeRect(158, 39, 176, 20);
   [self.currentSessionCard addSubview:self.currentSessionProjectLabel];
+
+  self.currentSessionLanguageIconView = [[NSImageView alloc] initWithFrame:NSMakeRect(140, 62, 14, 14)];
+  self.currentSessionLanguageIconView.imageScaling = NSImageScaleProportionallyUpOrDown;
+  self.currentSessionLanguageIconView.image = KairosFileIconForLanguage(@"txt");
+  [self.currentSessionCard addSubview:self.currentSessionLanguageIconView];
+
+  self.currentSessionLanguageLabel = [self labelWithString:@"Unknown Language" size:12 weight:NSFontWeightMedium color:KairosMutedInkColor()];
+  [self.mutedLabels addObject:self.currentSessionLanguageLabel];
+  self.currentSessionLanguageLabel.frame = NSMakeRect(158, 60, 176, 18);
+  [self.currentSessionCard addSubview:self.currentSessionLanguageLabel];
 
   self.currentSessionTimeLabel = [self labelWithString:@"--:-- → --:--" size:12 weight:NSFontWeightRegular color:KairosMutedInkColor()];
   [self.mutedLabels addObject:self.currentSessionTimeLabel];
-  self.currentSessionTimeLabel.frame = NSMakeRect(140, 63, 194, 18);
+  self.currentSessionTimeLabel.frame = NSMakeRect(140, 78, 194, 18);
   [self.currentSessionCard addSubview:self.currentSessionTimeLabel];
 
   NSView *metricsRow = [[NSView alloc] initWithFrame:NSMakeRect(16, 166, 348, 88)];
@@ -396,11 +489,10 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
     NSString *end = current[@"endLabel"];
 
     self.currentSessionDurationLabel.stringValue = [duration isKindOfClass:[NSString class]] ? duration : @"0m";
-    if ([project isKindOfClass:[NSString class]] && [language isKindOfClass:[NSString class]]) {
-      self.currentSessionProjectLabel.stringValue = [NSString stringWithFormat:@"%@ · %@", project, language];
-    } else {
-      self.currentSessionProjectLabel.stringValue = @"No active session yet";
-    }
+    self.currentSessionProjectLabel.stringValue = [project isKindOfClass:[NSString class]] ? project : @"No active session yet";
+    self.currentSessionLanguageLabel.stringValue = [language isKindOfClass:[NSString class]] ? language : @"Unknown Language";
+    self.currentSessionProjectIconView.image = KairosFolderIcon();
+    self.currentSessionLanguageIconView.image = KairosFileIconForLanguage([language isKindOfClass:[NSString class]] ? language : @"txt");
     if ([start isKindOfClass:[NSString class]] && [end isKindOfClass:[NSString class]]) {
       self.currentSessionTimeLabel.stringValue = [NSString stringWithFormat:@"%@ → %@", start, end];
     } else {
@@ -409,6 +501,9 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
   } else {
     self.currentSessionDurationLabel.stringValue = @"0m";
     self.currentSessionProjectLabel.stringValue = @"No active session yet";
+    self.currentSessionLanguageLabel.stringValue = @"Unknown Language";
+    self.currentSessionProjectIconView.image = KairosFolderIcon();
+    self.currentSessionLanguageIconView.image = KairosFileIconForLanguage(@"txt");
     self.currentSessionTimeLabel.stringValue = @"--:-- → --:--";
   }
 

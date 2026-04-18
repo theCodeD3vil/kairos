@@ -106,6 +106,14 @@ describe('resolveKairosLanguageIcon', () => {
     });
   });
 
+  it('maps React display aliases to typescriptreact for icon lookup', () => {
+    expect(resolveKairosLanguageIcon('React')).toMatchObject({
+      iconKey: 'typescript-react',
+      resolutionSource: 'language-id',
+      isFallback: false,
+    });
+  });
+
   it('supports local aliases for language names not exposed upstream', () => {
     expect(resolveKairosLanguageIcon('mdc')).toMatchObject({
       iconKey: 'markdown',

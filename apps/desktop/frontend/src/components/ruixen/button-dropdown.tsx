@@ -17,6 +17,13 @@ export interface ButtonDropdownProps {
 export function ButtonDropdown({ label, items, className }: ButtonDropdownProps) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({
+    top: 'calc(100% + 6px)',
+    left: 0,
+    maxHeight: 320,
+    minWidth: 180,
+  });
 
   React.useEffect(() => {
     if (!open) return;
@@ -41,6 +48,48 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
     };
   }, [open]);
 
+  React.useLayoutEffect(() => {
+    if (!open) return;
+
+    const updateMenuLayout = () => {
+      const trigger = ref.current;
+      if (!trigger) return;
+
+      const viewportPadding = 8;
+      const dropdownGap = 6;
+      const triggerRect = trigger.getBoundingClientRect();
+      const minWidth = Math.max(180, Math.ceil(triggerRect.width));
+      const measuredMenuHeight = menuRef.current?.offsetHeight ?? 260;
+      const measuredMenuWidth = menuRef.current?.offsetWidth ?? minWidth;
+
+      const availableBelow = Math.max(96, window.innerHeight - triggerRect.bottom - dropdownGap - viewportPadding);
+      const availableAbove = Math.max(96, triggerRect.top - dropdownGap - viewportPadding);
+      const openAbove = availableBelow < 180 && availableAbove > availableBelow;
+      const maxHeight = openAbove ? availableAbove : availableBelow;
+      const alignRight = triggerRect.left + measuredMenuWidth > window.innerWidth - viewportPadding;
+
+      setMenuStyle({
+        top: openAbove ? undefined : `calc(100% + ${dropdownGap}px)`,
+        bottom: openAbove ? `calc(100% + ${dropdownGap}px)` : undefined,
+        left: alignRight ? undefined : 0,
+        right: alignRight ? 0 : undefined,
+        minWidth,
+        maxHeight: Math.min(Math.max(160, maxHeight), measuredMenuHeight),
+      });
+    };
+
+    updateMenuLayout();
+    const raf = window.requestAnimationFrame(updateMenuLayout);
+    window.addEventListener('resize', updateMenuLayout);
+    window.addEventListener('scroll', updateMenuLayout, true);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('resize', updateMenuLayout);
+      window.removeEventListener('scroll', updateMenuLayout, true);
+    };
+  }, [open, items.length]);
+
   return (
     <div ref={ref} className={cn('relative inline-block', className)}>
       <motion.button
@@ -48,7 +97,7 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
         onClick={() => setOpen((v) => !v)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="inline-flex items-center gap-2 rounded-[10px] border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light)] px-3 py-1.5 text-xs font-medium text-[var(--ink-strong-alt)] shadow-[var(--shadow-glass)] backdrop-blur-[20px]"
+        className="inline-flex items-center gap-2 rounded-[10px] border border-[hsl(var(--border)/0.65)] [background:var(--glass-light)] px-3 py-1.5 text-xs font-medium text-[var(--ink-strong-alt)] shadow-[var(--shadow-glass)] backdrop-blur-[20px]"
       >
         <span>{label}</span>
         <motion.svg
@@ -71,11 +120,13 @@ export function ButtonDropdown({ label, items, className }: ButtonDropdownProps)
       <AnimatePresence>
         {open ? (
           <motion.div
+            ref={menuRef}
             initial={{ opacity: 0, y: -4, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] rounded-xl border border-[hsl(var(--border)/0.65)] bg-[var(--glass-light-strong)] p-1 shadow-[var(--shadow-layered)] backdrop-blur-[20px]"
+            style={menuStyle}
+            className="absolute z-50 overflow-y-auto overflow-x-hidden rounded-xl border border-[hsl(var(--border)/0.65)] [background:var(--glass-light-strong)] p-1 shadow-[var(--shadow-layered)] backdrop-blur-[20px] supports-[backdrop-filter]:bg-[hsl(var(--popover)/0.68)]"
           >
             {items.map((item) => (
               <motion.button

@@ -42,6 +42,10 @@ const languageAliases: Record<string, string> = {
   yml: 'yaml',
 };
 
+const languageQueryAliases: Record<string, string> = {
+  react: 'typescriptreact',
+};
+
 function sanitizeInput(input: string) {
   return input.trim().replace(/[?#].*$/, '').replace(/\\/g, '/');
 }
@@ -126,15 +130,17 @@ export function resolveKairosLanguageIcon(
     return buildResolution('file.txt', fallbackIconKey, 'fallback');
   }
 
-  const directMatch = catppuccinLanguageIdToIconKey[normalized];
+  const queryLanguage = languageQueryAliases[normalized] ?? normalized;
+
+  const directMatch = catppuccinLanguageIdToIconKey[queryLanguage];
   if (directMatch) {
-    return buildResolution(normalized, directMatch, 'language-id');
+    return buildResolution(queryLanguage, directMatch, 'language-id');
   }
 
-  const aliasedMatch = languageAliases[normalized];
+  const aliasedMatch = languageAliases[queryLanguage];
   if (aliasedMatch) {
-    return buildResolution(normalized, aliasedMatch, 'language-alias');
+    return buildResolution(queryLanguage, aliasedMatch, 'language-alias');
   }
 
-  return buildResolution(normalized, fallbackIconKey, 'fallback');
+  return buildResolution(queryLanguage, fallbackIconKey, 'fallback');
 }
