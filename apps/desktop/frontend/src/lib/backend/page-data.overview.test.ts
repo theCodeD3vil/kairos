@@ -139,6 +139,51 @@ describe('loadOverviewSnapshot 1D trend intervals', () => {
     expect(result.todayTrendByInterval).toBeUndefined();
   });
 
+  it('uses daily points for monthly trend instead of weekly aggregates', async () => {
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const isoForDay = (offsetFromMonthStart: number) => {
+      const day = new Date(monthStart);
+      day.setUTCDate(day.getUTCDate() + offsetFromMonthStart);
+      return day.toISOString().slice(0, 10);
+    };
+
+    const sessions = [6, 7, 8].map((offset, index) => {
+      const isoDay = isoForDay(offset);
+      return {
+        id: `session-month-${index + 1}`,
+        date: isoDay,
+        startTime: `${isoDay}T00:00:00Z`,
+        endTime: `${isoDay}T01:00:00Z`,
+        durationMinutes: 60,
+        machineId: 'current-machine',
+        projectName: 'kairos',
+        language: 'TypeScript',
+        sourceEventCount: 6,
+      };
+    });
+    bridge.ListSessionsForRange.mockResolvedValue(sessions);
+
+    const result = await loadOverviewSnapshot('month', null);
+
+    // Daily trend should keep one point per active day (3), whereas weekly would collapse to 1.
+    expect(result.weeklyTrend).toHaveLength(3);
+  });
+
+  it('requests full month boundaries for month range', async () => {
+    bridge.ListSessionsForRange.mockResolvedValue([]);
+
+    await loadOverviewSnapshot('month', null);
+
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+    const expectedStart = monthStart.toISOString().slice(0, 10);
+    const expectedEnd = monthEnd.toISOString().slice(0, 10);
+
+    expect(bridge.ListSessionsForRange).toHaveBeenCalledWith(expectedStart, expectedEnd);
+  });
+
   it('does not mark the newest sync-health block offline when connection is healthy', async () => {
     const nowIso = new Date().toISOString();
     bridge.GetSettingsData.mockResolvedValue({

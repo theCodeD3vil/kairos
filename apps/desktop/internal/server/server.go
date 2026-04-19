@@ -97,7 +97,33 @@ var (
 	wsPingInterval        = 15 * time.Second
 	wsPongWait            = 45 * time.Second
 	wsControlWriteTimeout = 5 * time.Second
+	wsKeepAliveSettingsMu sync.RWMutex
 )
+
+func webSocketKeepAliveSettings() (time.Duration, time.Duration, time.Duration) {
+	wsKeepAliveSettingsMu.RLock()
+	defer wsKeepAliveSettingsMu.RUnlock()
+	return wsPingInterval, wsPongWait, wsControlWriteTimeout
+}
+
+func setWebSocketKeepAliveSettingsForTest(pingInterval time.Duration, pongWait time.Duration, controlWriteTimeout time.Duration) func() {
+	wsKeepAliveSettingsMu.Lock()
+	previousPingInterval := wsPingInterval
+	previousPongWait := wsPongWait
+	previousControlWriteTimeout := wsControlWriteTimeout
+	wsPingInterval = pingInterval
+	wsPongWait = pongWait
+	wsControlWriteTimeout = controlWriteTimeout
+	wsKeepAliveSettingsMu.Unlock()
+
+	return func() {
+		wsKeepAliveSettingsMu.Lock()
+		wsPingInterval = previousPingInterval
+		wsPongWait = previousPongWait
+		wsControlWriteTimeout = previousControlWriteTimeout
+		wsKeepAliveSettingsMu.Unlock()
+	}
+}
 
 type wsRequestEnvelope struct {
 	ID              string          `json:"id"`
@@ -196,10 +222,12 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 			log.Printf("server: websocket upgrade failed: %v", err)
 			return
 		}
+		_, pongWait, _ := webSocketKeepAliveSettings()
 		conn.SetReadLimit(config.MaxRequestBodyBytes + 4096)
-		_ = conn.SetReadDeadline(time.Now().Add(wsPongWait))
+		_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 		conn.SetPongHandler(func(string) error {
-			return conn.SetReadDeadline(time.Now().Add(wsPongWait))
+			_, pongWaitForPong, _ := webSocketKeepAliveSettings()
+			return conn.SetReadDeadline(time.Now().Add(pongWaitForPong))
 		})
 		pingDone := make(chan struct{})
 		go runWebSocketKeepAlive(conn, pingDone)
@@ -218,7 +246,8 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 			if err := conn.ReadJSON(&envelope); err != nil {
 				break
 			}
-			_ = conn.SetReadDeadline(time.Now().Add(wsPongWait))
+			_, pongWaitForRead, _ := webSocketKeepAliveSettings()
+			_ = conn.SetReadDeadline(time.Now().Add(pongWaitForRead))
 			if envelope.ProtocolVersion != wsProtocolVersion {
 				writeWebSocketError(
 					conn,
@@ -345,7 +374,8 @@ func writeWebSocketEnvelope(conn *websocket.Conn, envelope wsResponseEnvelope) e
 }
 
 func runWebSocketKeepAlive(conn *websocket.Conn, done <-chan struct{}) {
-	ticker := time.NewTicker(wsPingInterval)
+	pingInterval, _, controlWriteTimeout := webSocketKeepAliveSettings()
+	ticker := time.NewTicker(pingInterval)
 	defer ticker.Stop()
 
 	for {
@@ -353,7 +383,7 @@ func runWebSocketKeepAlive(conn *websocket.Conn, done <-chan struct{}) {
 		case <-done:
 			return
 		case <-ticker.C:
-			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(wsControlWriteTimeout)); err != nil {
+			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(controlWriteTimeout)); err != nil {
 				_ = conn.Close()
 				return
 			}

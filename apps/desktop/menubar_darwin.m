@@ -60,69 +60,59 @@ static NSColor *KairosDarkTimelineBackgroundColor(void) {
 }
 @end
 
-static NSString *KairosCompactLanguageID(NSString *language) {
-  if (![language isKindOfClass:[NSString class]]) {
-    return @"";
-  }
-  NSString *lower = [[language lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  if (lower.length == 0) {
-    return @"";
-  }
-  NSCharacterSet *strip = [NSCharacterSet characterSetWithCharactersInString:@" _-"];
-  NSArray<NSString *> *parts = [lower componentsSeparatedByCharactersInSet:strip];
-  return [parts componentsJoinedByString:@""];
+static NSString *KairosCatppuccinIconRoot(void) {
+  static NSString *cachedRoot = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSString *resourceRoot = [[NSBundle mainBundle] resourcePath] ?: @"";
+    NSString *cwd = [[NSFileManager defaultManager] currentDirectoryPath] ?: @"";
+    NSArray<NSString *> *candidates = @[
+      [resourceRoot stringByAppendingPathComponent:@"frontend/dist/file-icons/catppuccin/latte"],
+      [resourceRoot stringByAppendingPathComponent:@"file-icons/catppuccin/latte"],
+      [cwd stringByAppendingPathComponent:@"apps/desktop/frontend/public/file-icons/catppuccin/latte"],
+      [cwd stringByAppendingPathComponent:@"frontend/public/file-icons/catppuccin/latte"],
+    ];
+    BOOL isDirectory = NO;
+    for (NSString *candidate in candidates) {
+      if ([fm fileExistsAtPath:candidate isDirectory:&isDirectory] && isDirectory) {
+        cachedRoot = candidate;
+        break;
+      }
+    }
+  });
+  return cachedRoot;
 }
 
-static NSString *KairosFileTypeForLanguage(NSString *language) {
-  NSString *compact = KairosCompactLanguageID(language);
-  if (compact.length == 0) {
-    return @"txt";
-  }
-  // Respect aliasing rules for icon query: React display maps to typescriptreact.
-  if ([compact isEqualToString:@"react"] || [compact isEqualToString:@"typescriptreact"] || [compact isEqualToString:@"tsx"]) {
-    return @"tsx";
-  }
-  if ([compact isEqualToString:@"javascriptreact"] || [compact isEqualToString:@"jsx"]) {
-    return @"jsx";
-  }
-  if ([compact isEqualToString:@"typescript"] || [compact isEqualToString:@"ts"]) {
-    return @"ts";
-  }
-  if ([compact isEqualToString:@"javascript"] || [compact isEqualToString:@"js"]) {
-    return @"js";
-  }
-  if ([compact isEqualToString:@"python"] || [compact isEqualToString:@"py"]) {
-    return @"py";
-  }
-  if ([compact isEqualToString:@"golang"] || [compact isEqualToString:@"go"]) {
-    return @"go";
-  }
-  if ([compact isEqualToString:@"shellscript"] || [compact isEqualToString:@"bash"] || [compact isEqualToString:@"zsh"] || [compact isEqualToString:@"sh"]) {
-    return @"sh";
-  }
-  if ([compact isEqualToString:@"json"]) {
-    return @"json";
-  }
-  if ([compact isEqualToString:@"vue"]) {
-    return @"vue";
-  }
-  if ([compact isEqualToString:@"rust"] || [compact isEqualToString:@"rs"]) {
-    return @"rs";
-  }
-  if ([compact isEqualToString:@"markdown"] || [compact isEqualToString:@"md"]) {
-    return @"md";
-  }
-  if ([compact isEqualToString:@"yaml"] || [compact isEqualToString:@"yml"]) {
-    return @"yml";
-  }
-  return compact;
-}
+static NSImage *KairosCatppuccinIconForKey(NSString *iconKey) {
+  static NSMutableDictionary<NSString *, NSImage *> *cache = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    cache = [NSMutableDictionary dictionary];
+  });
 
-static NSImage *KairosFileIconForLanguage(NSString *language) {
-  NSString *fileType = KairosFileTypeForLanguage(language);
-  NSImage *icon = [[NSWorkspace sharedWorkspace] iconForFileType:fileType];
+  NSString *resolvedKey = ([iconKey isKindOfClass:[NSString class]] && iconKey.length > 0) ? iconKey : @"_file";
+  NSImage *cached = cache[resolvedKey];
+  if (cached != nil) {
+    return cached;
+  }
+
+  NSString *iconRoot = KairosCatppuccinIconRoot();
+  NSImage *icon = nil;
+  if (iconRoot != nil) {
+    NSString *iconPath = [iconRoot stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.svg", resolvedKey]];
+    icon = [[NSImage alloc] initWithContentsOfFile:iconPath];
+    if (icon == nil && ![resolvedKey isEqualToString:@"_file"]) {
+      NSString *fallbackPath = [iconRoot stringByAppendingPathComponent:@"_file.svg"];
+      icon = [[NSImage alloc] initWithContentsOfFile:fallbackPath];
+    }
+  }
+  if (icon == nil) {
+    icon = [[NSWorkspace sharedWorkspace] iconForFileType:@"txt"];
+  }
   if (icon != nil) {
     icon.size = NSMakeSize(14.0, 14.0);
+    cache[resolvedKey] = icon;
   }
   return icon;
 }
@@ -315,7 +305,7 @@ static NSImage *KairosFolderIcon(void) {
 
   self.currentSessionLanguageIconView = [[NSImageView alloc] initWithFrame:NSMakeRect(140, 62, 14, 14)];
   self.currentSessionLanguageIconView.imageScaling = NSImageScaleProportionallyUpOrDown;
-  self.currentSessionLanguageIconView.image = KairosFileIconForLanguage(@"txt");
+  self.currentSessionLanguageIconView.image = KairosCatppuccinIconForKey(@"_file");
   [self.currentSessionCard addSubview:self.currentSessionLanguageIconView];
 
   self.currentSessionLanguageLabel = [self labelWithString:@"Unknown Language" size:12 weight:NSFontWeightMedium color:KairosMutedInkColor()];
@@ -485,6 +475,7 @@ static NSImage *KairosFolderIcon(void) {
     NSString *duration = current[@"durationLabel"];
     NSString *project = current[@"project"];
     NSString *language = current[@"language"];
+    NSString *languageIconKey = current[@"languageIconKey"];
     NSString *start = current[@"startLabel"];
     NSString *end = current[@"endLabel"];
 
@@ -492,7 +483,7 @@ static NSImage *KairosFolderIcon(void) {
     self.currentSessionProjectLabel.stringValue = [project isKindOfClass:[NSString class]] ? project : @"No active session yet";
     self.currentSessionLanguageLabel.stringValue = [language isKindOfClass:[NSString class]] ? language : @"Unknown Language";
     self.currentSessionProjectIconView.image = KairosFolderIcon();
-    self.currentSessionLanguageIconView.image = KairosFileIconForLanguage([language isKindOfClass:[NSString class]] ? language : @"txt");
+    self.currentSessionLanguageIconView.image = KairosCatppuccinIconForKey([languageIconKey isKindOfClass:[NSString class]] ? languageIconKey : @"_file");
     if ([start isKindOfClass:[NSString class]] && [end isKindOfClass:[NSString class]]) {
       self.currentSessionTimeLabel.stringValue = [NSString stringWithFormat:@"%@ → %@", start, end];
     } else {
@@ -503,7 +494,7 @@ static NSImage *KairosFolderIcon(void) {
     self.currentSessionProjectLabel.stringValue = @"No active session yet";
     self.currentSessionLanguageLabel.stringValue = @"Unknown Language";
     self.currentSessionProjectIconView.image = KairosFolderIcon();
-    self.currentSessionLanguageIconView.image = KairosFileIconForLanguage(@"txt");
+    self.currentSessionLanguageIconView.image = KairosCatppuccinIconForKey(@"_file");
     self.currentSessionTimeLabel.stringValue = @"--:-- → --:--";
   }
 

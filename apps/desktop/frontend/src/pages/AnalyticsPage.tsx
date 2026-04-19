@@ -257,7 +257,7 @@ export function AnalyticsPage() {
             hint={`${snapshot.summary.activeDays} active days`}
           />
         </div>
-        <AnalyticsTimeBreakdown daily={snapshot.time.daily} weekly={snapshot.time.weekly} />
+        <AnalyticsTimeBreakdown daily={snapshot.time.daily} weekly={snapshot.time.weekly} range={filters.range} />
       </section>
 
       <section className="space-y-3 rounded-[16px] bg-[var(--surface)] p-3">

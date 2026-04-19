@@ -1178,7 +1178,7 @@ export async function loadOverviewSnapshot(
     if (range === 'today') {
       trend = todayTrendByInterval!['1h'];
     } else if (range === 'month') {
-      trend = buildTrend(analytics.time.weekly);
+      trend = buildTrend(analytics.time.daily);
     } else {
       trend = buildTrend(analytics.time.daily);
     }

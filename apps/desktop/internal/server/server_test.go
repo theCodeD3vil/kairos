@@ -253,17 +253,8 @@ func TestWebSocketEndpointRequiresHandshakeBeforeIngest(t *testing.T) {
 }
 
 func TestWebSocketEndpointMarksDisconnectedWhenClientStopsRespondingToPing(t *testing.T) {
-	previousPingInterval := wsPingInterval
-	previousPongWait := wsPongWait
-	previousControlWriteTimeout := wsControlWriteTimeout
-	wsPingInterval = 20 * time.Millisecond
-	wsPongWait = 90 * time.Millisecond
-	wsControlWriteTimeout = 20 * time.Millisecond
-	t.Cleanup(func() {
-		wsPingInterval = previousPingInterval
-		wsPongWait = previousPongWait
-		wsControlWriteTimeout = previousControlWriteTimeout
-	})
+	restoreKeepAlive := setWebSocketKeepAliveSettingsForTest(20*time.Millisecond, 90*time.Millisecond, 20*time.Millisecond)
+	t.Cleanup(restoreKeepAlive)
 
 	service := &stubIngestionService{
 		handshakeResponse: contracts.ExtensionHandshakeResponse{

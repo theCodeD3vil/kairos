@@ -83,11 +83,12 @@ type menubarSnapshot struct {
 }
 
 type menubarCurrentSession struct {
-	Project       string `json:"project"`
-	Language      string `json:"language"`
-	DurationLabel string `json:"durationLabel"`
-	StartLabel    string `json:"startLabel"`
-	EndLabel      string `json:"endLabel"`
+	Project         string `json:"project"`
+	Language        string `json:"language"`
+	LanguageIconKey string `json:"languageIconKey"`
+	DurationLabel   string `json:"durationLabel"`
+	StartLabel      string `json:"startLabel"`
+	EndLabel        string `json:"endLabel"`
 }
 
 type menubarTimelinePoint struct {
@@ -144,12 +145,14 @@ func kairosMenubarSnapshotJSON() *C.char {
 		}
 		if snapshot.ShowSession && len(todaySessions.Sessions) > 0 {
 			latest := todaySessions.Sessions[0]
+			displayLanguage := normalizeMenubarLanguageLabel(defaultString(latest.Language, "Unknown Language"))
 			snapshot.CurrentSession = &menubarCurrentSession{
-				Project:       defaultString(latest.ProjectName, "Unknown Project"),
-				Language:      defaultString(latest.Language, "Unknown Language"),
-				DurationLabel: formatDurationLabel(latest.DurationMinutes),
-				StartLabel:    formatSessionTimeLabel(latest.StartTime),
-				EndLabel:      formatSessionTimeLabel(latest.EndTime),
+				Project:         defaultString(latest.ProjectName, "Unknown Project"),
+				Language:        displayLanguage,
+				LanguageIconKey: resolveMenubarCatppuccinLanguageIconKey(displayLanguage),
+				DurationLabel:   formatDurationLabel(latest.DurationMinutes),
+				StartLabel:      formatSessionTimeLabel(latest.StartTime),
+				EndLabel:        formatSessionTimeLabel(latest.EndTime),
 			}
 		}
 	}

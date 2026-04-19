@@ -177,4 +177,22 @@ describe('loadSessionsScreenData regressions', () => {
     expect(result.sessions[0]?.language).toBe('React');
     expect(result.sessions[0]?.subSessions[0]?.language).toBe('React');
   });
+
+  it('uses full month boundaries when loading month range sessions', async () => {
+    bridge.GetSessionsPageData.mockResolvedValue({
+      totalSessions: 0,
+      averageSessionMinutes: 0,
+      longestSessionMinutes: 0,
+      sessions: [],
+    });
+
+    await loadSessionsScreenData('month', null);
+
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+    const expectedRange = `${monthStart.toISOString().slice(0, 10)}..${monthEnd.toISOString().slice(0, 10)}`;
+
+    expect(bridge.GetSessionsPageData).toHaveBeenCalledWith(expectedRange);
+  });
 });

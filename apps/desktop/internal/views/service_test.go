@@ -149,6 +149,71 @@ func TestGetAnalyticsDataSummarizesCurrentAndPreviousPeriod(t *testing.T) {
 	}
 }
 
+func TestGetAnalyticsDataMonthRangeReturnsDailyBucketsForFullMonth(t *testing.T) {
+	service, _ := newTestViewService(t)
+
+	data, err := service.GetAnalyticsData(context.Background(), "month")
+	if err != nil {
+		t.Fatalf("GetAnalyticsData month failed: %v", err)
+	}
+
+	if data.RangeLabel != "month" {
+		t.Fatalf("expected range label month, got %q", data.RangeLabel)
+	}
+	if len(data.DailyTotals) != 30 {
+		t.Fatalf("expected 30 daily buckets for April 2026, got %d", len(data.DailyTotals))
+	}
+	if data.DailyTotals[0].Date != "2026-04-01" {
+		t.Fatalf("expected first month bucket 2026-04-01, got %+v", data.DailyTotals[0])
+	}
+	if data.DailyTotals[len(data.DailyTotals)-1].Date != "2026-04-30" {
+		t.Fatalf("expected last month bucket 2026-04-30, got %+v", data.DailyTotals[len(data.DailyTotals)-1])
+	}
+
+	byDate := make(map[string]int, len(data.DailyTotals))
+	for _, point := range data.DailyTotals {
+		byDate[point.Date] = point.TotalMinutes
+	}
+	if byDate["2026-04-06"] != 45 || byDate["2026-04-07"] != 90 || byDate["2026-04-08"] != 30 {
+		t.Fatalf("unexpected month daily totals for active dates: %+v", byDate)
+	}
+}
+
+func TestResolveRangeCustomValidatesAndNormalizesDates(t *testing.T) {
+	service, _ := newTestViewService(t)
+
+	period, err := service.resolveRange(context.Background(), " 2026-04-06 .. 2026-04-08 ", "last-30-days")
+	if err != nil {
+		t.Fatalf("expected trimmed custom range to resolve, got %v", err)
+	}
+	if period.startDate != "2026-04-06" || period.endDate != "2026-04-08" {
+		t.Fatalf("unexpected normalized custom range: %+v", period)
+	}
+	if period.label != "2026-04-06..2026-04-08" {
+		t.Fatalf("unexpected custom range label %q", period.label)
+	}
+
+	if _, err := service.resolveRange(context.Background(), "2026-04-08..2026-04-06", "last-30-days"); err == nil {
+		t.Fatal("expected end-before-start custom range to fail")
+	}
+}
+
+func TestResolveRangeMonthUsesCalendarBoundaries(t *testing.T) {
+	service := &ServiceImpl{
+		now: func() time.Time {
+			return time.Date(2024, time.February, 29, 15, 45, 0, 0, time.UTC)
+		},
+	}
+
+	period, err := service.resolveRange(context.Background(), "month", "last-30-days")
+	if err != nil {
+		t.Fatalf("resolveRange month failed: %v", err)
+	}
+	if period.startDate != "2024-02-01" || period.endDate != "2024-02-29" {
+		t.Fatalf("expected leap-year month boundaries, got %+v", period)
+	}
+}
+
 func TestProjectNameNormalizationCollapsesWorkspaceSentinels(t *testing.T) {
 	sessions := []contracts.Session{
 		{
@@ -264,6 +329,25 @@ func TestViewMethodsReturnCoherentEmptyStates(t *testing.T) {
 	}
 	if day.HadActivity || day.TotalMinutes != 0 || len(day.Sessions) != 0 {
 		t.Fatalf("expected empty day payload, got %+v", day)
+	}
+}
+
+func TestGetCalendarMonthDataSupportsLeapYearFebruary(t *testing.T) {
+	service, _ := newTestViewService(t)
+
+	data, err := service.GetCalendarMonthData(context.Background(), "2024-02")
+	if err != nil {
+		t.Fatalf("GetCalendarMonthData failed: %v", err)
+	}
+
+	if len(data.Days) != 29 {
+		t.Fatalf("expected 29 days for February 2024, got %d", len(data.Days))
+	}
+	if data.Days[0].Date != "2024-02-01" {
+		t.Fatalf("unexpected first day %+v", data.Days[0])
+	}
+	if data.Days[len(data.Days)-1].Date != "2024-02-29" {
+		t.Fatalf("unexpected last day %+v", data.Days[len(data.Days)-1])
 	}
 }
 

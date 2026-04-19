@@ -1,7 +1,7 @@
 import { KairosAreaChart, KairosBarChart, KairosDonutChart } from '@/components/charts/kairos-charts';
 import { cn } from '@/lib/utils';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
-import type { BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
+import type { AnalyticsRange, BreakdownItem, DailyStat, MachineBreakdown } from '@/data/mockAnalytics';
 import { LanguageIcon } from '@/lib/languageIcons';
 import { formatDurationMinutes } from '@/lib/time-format';
 
@@ -74,10 +74,41 @@ export function AnalyticsBreakdownList({ title, items, emptyMessage, showLanguag
   );
 }
 
-type TimeListProps = { daily: DailyStat[]; weekly: Array<{ label: string; minutes: number }> };
+type TimeListProps = {
+  daily: DailyStat[];
+  weekly: Array<{ label: string; minutes: number }>;
+  range: AnalyticsRange;
+};
 
-export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
+export function resolveTrendPresentation(
+  range: AnalyticsRange,
+  daily: DailyStat[],
+  weekly: Array<{ label: string; minutes: number }>,
+) {
   const dailyData = daily.map((day) => ({ label: day.label, minutes: day.minutes }));
+  const trendTitle = range === 'week'
+    ? 'Weekly trend'
+    : range === 'month'
+      ? 'Monthly trend'
+      : range === 'today'
+        ? 'Today trend'
+        : 'Custom trend';
+  const trendData = range === 'week' ? weekly : dailyData;
+  const maxVisibleTicks = range === 'month' ? 9 : range === 'custom' ? 8 : range === 'today' ? 8 : trendData.length;
+  const tickStep = trendData.length === 0
+    ? 1
+    : Math.max(1, Math.ceil(trendData.length / Math.max(1, maxVisibleTicks)));
+
+  return {
+    dailyData,
+    trendData,
+    trendTitle,
+    tickStep,
+  };
+}
+
+export function AnalyticsTimeBreakdown({ daily, weekly, range }: TimeListProps) {
+  const { dailyData, trendData, trendTitle, tickStep } = resolveTrendPresentation(range, daily, weekly);
 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -103,18 +134,19 @@ export function AnalyticsTimeBreakdown({ daily, weekly }: TimeListProps) {
         </div>
       </article>
       <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
-        <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Weekly trend</h3>
+        <h3 className="text-sm font-semibold text-[var(--ink-strong)]">{trendTitle}</h3>
         <div className="mt-2 h-60">
-          {weekly.length === 0 ? (
+          {trendData.length === 0 ? (
             <p className="text-sm text-[var(--ink-tertiary)]">No sessions in range.</p>
           ) : (
             <KairosAreaChart
-              data={weekly}
+              data={trendData}
               index="label"
               categories={['minutes']}
               colors={[overviewChartPalette[1]]}
               height={224}
               showGridLines
+              xTickFormatter={(label, index) => (index % tickStep === 0 ? String(label) : '')}
               valueFormatter={(value) => formatDurationMinutes(Number(value), 'axis')}
               tooltipValueFormatter={(value) => formatDurationMinutes(Number(value), 'long')}
               seriesLabels={{ minutes: 'Total Time' }}
