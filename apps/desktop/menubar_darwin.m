@@ -590,11 +590,21 @@ static NSImage *KairosFolderIcon(void) {
 @interface KairosMenubarTarget : NSObject <NSPopoverDelegate>
 @property(nonatomic, strong) NSPopover *popover;
 @property(nonatomic, strong) KairosMenubarContentController *contentController;
+@property(nonatomic, strong) id localClickMonitor;
+@property(nonatomic, strong) id globalClickMonitor;
 - (void)togglePopover:(id)sender;
 - (void)configurePopoverWindowForActiveSpace;
+- (void)startOutsideClickMonitor;
+- (void)stopOutsideClickMonitor;
+- (void)handleOutsideClickIfNeeded;
+- (BOOL)isMouseInsidePopoverOrStatusButton;
 @end
 
 @implementation KairosMenubarTarget
+- (void)dealloc {
+  [self stopOutsideClickMonitor];
+}
+
 - (void)togglePopover:(id)sender {
   if (kairosStatusItem == nil || kairosStatusItem.button == nil) {
     return;
@@ -613,6 +623,7 @@ static NSImage *KairosFolderIcon(void) {
                             ofView:kairosStatusItem.button
                      preferredEdge:NSRectEdgeMinY];
   [self configurePopoverWindowForActiveSpace];
+  [self startOutsideClickMonitor];
   // Run one more refresh on the next runloop once the popover is fully attached.
   dispatch_async(dispatch_get_main_queue(), ^{
     [self configurePopoverWindowForActiveSpace];
@@ -634,10 +645,73 @@ static NSImage *KairosFolderIcon(void) {
 
 - (void)popoverWillShow:(NSNotification *)notification {
   [self configurePopoverWindowForActiveSpace];
+  [self startOutsideClickMonitor];
 }
 
 - (void)popoverDidClose:(NSNotification *)notification {
   [self.contentController stopAutoRefresh];
+  [self stopOutsideClickMonitor];
+}
+
+- (void)startOutsideClickMonitor {
+  [self stopOutsideClickMonitor];
+
+  __weak typeof(self) weakSelf = self;
+  NSEventMask mask = NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown | NSEventMaskOtherMouseDown;
+  self.globalClickMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask:mask
+                                                                    handler:^(NSEvent *event) {
+                                                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                                                      if (strongSelf == nil) {
+                                                                        return;
+                                                                      }
+                                                                      [strongSelf handleOutsideClickIfNeeded];
+                                                                    }];
+  self.localClickMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:mask
+                                                                  handler:^NSEvent * _Nullable(NSEvent *event) {
+                                                                    __strong typeof(weakSelf) strongSelf = weakSelf;
+                                                                    if (strongSelf != nil) {
+                                                                      [strongSelf handleOutsideClickIfNeeded];
+                                                                    }
+                                                                    return event;
+                                                                  }];
+}
+
+- (void)stopOutsideClickMonitor {
+  if (self.globalClickMonitor != nil) {
+    [NSEvent removeMonitor:self.globalClickMonitor];
+    self.globalClickMonitor = nil;
+  }
+  if (self.localClickMonitor != nil) {
+    [NSEvent removeMonitor:self.localClickMonitor];
+    self.localClickMonitor = nil;
+  }
+}
+
+- (void)handleOutsideClickIfNeeded {
+  if (!self.popover.shown) {
+    return;
+  }
+  if ([self isMouseInsidePopoverOrStatusButton]) {
+    return;
+  }
+  [self.popover performClose:nil];
+}
+
+- (BOOL)isMouseInsidePopoverOrStatusButton {
+  NSPoint mousePoint = [NSEvent mouseLocation];
+
+  NSWindow *popoverWindow = self.popover.contentViewController.view.window;
+  if (popoverWindow != nil && NSPointInRect(mousePoint, popoverWindow.frame)) {
+    return YES;
+  }
+
+  if (kairosStatusItem == nil || kairosStatusItem.button == nil || kairosStatusItem.button.window == nil) {
+    return NO;
+  }
+
+  NSRect buttonRectInWindow = [kairosStatusItem.button convertRect:kairosStatusItem.button.bounds toView:nil];
+  NSRect buttonRectInScreen = [kairosStatusItem.button.window convertRectToScreen:buttonRectInWindow];
+  return NSPointInRect(mousePoint, buttonRectInScreen);
 }
 @end
 static KairosMenubarTarget *kairosTarget = nil;
