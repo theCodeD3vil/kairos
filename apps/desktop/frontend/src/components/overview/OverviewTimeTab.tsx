@@ -1,11 +1,5 @@
 import { KairosAreaChart, KairosTracker } from '@/components/charts/kairos-charts';
 import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
-import {
-  AverageSessionBarsIllustration,
-  CodingOrbitIllustration,
-  SessionsTimelineIllustration,
-  WeeklyMomentumIllustration,
-} from '@/components/illustrations/KairosStatIllustrations';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
@@ -13,6 +7,10 @@ import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 import SegmentedButton from '@/components/ui/segmented-button';
 import { useEffect, useMemo, useState } from 'react';
 import type { TodayTrendInterval } from '@/components/overview/types';
+import calendarIcon from '../../../public/kairos-icons/calendar.svg?raw';
+import chartIcon from '../../../public/kairos-icons/chart.svg?raw';
+import gridIcon from '../../../public/kairos-icons/grid.svg?raw';
+import stopwatchIcon from '../../../public/kairos-icons/stopwatch.svg?raw';
 
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
@@ -26,6 +24,27 @@ const todayTrendIntervalOptions: Array<{ id: TodayTrendInterval; label: string }
   { id: '2h', label: '2h' },
   { id: '6h', label: '6h' },
 ];
+
+type MetricIconName = 'stopwatch' | 'calendar' | 'grid' | 'chart';
+
+const metricIconMarkup: Record<MetricIconName, string> = {
+  stopwatch: stopwatchIcon,
+  calendar: calendarIcon,
+  grid: gridIcon,
+  chart: chartIcon,
+};
+const metricIconContainerClass = 'hidden h-16 w-16 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2 lg:inline-flex';
+
+function MetricIcon({ name, label }: { name: MetricIconName; label: string }) {
+  return (
+    <div
+      aria-label={label}
+      role="img"
+      className="h-full w-full [&_svg]:h-full [&_svg]:w-full"
+      dangerouslySetInnerHTML={{ __html: metricIconMarkup[name] }}
+    />
+  );
+}
 
 function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
@@ -41,8 +60,8 @@ function CodingTimeTodayCard({ value }: { value: string }) {
   return (
     <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
-          <CodingOrbitIllustration />
+        <div className={metricIconContainerClass}>
+          <MetricIcon name="stopwatch" label="Today" />
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Today</h3>
@@ -57,8 +76,8 @@ function CodingTimeWeekCard({ value }: { value: string }) {
   return (
     <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
-          <WeeklyMomentumIllustration />
+        <div className={metricIconContainerClass}>
+          <MetricIcon name="calendar" label="This week" />
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">This Week</h3>
@@ -73,8 +92,8 @@ function SessionsCard({ value }: { value: string }) {
   return (
     <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
-          <SessionsTimelineIllustration />
+        <div className={metricIconContainerClass}>
+          <MetricIcon name="grid" label="Sessions" />
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Sessions</h3>
@@ -89,8 +108,8 @@ function AvgSessionCard({ value }: { value: string }) {
   return (
     <article className="rounded-xl bg-[var(--surface-muted)] p-3 ">
       <div className="flex items-center gap-3">
-        <div className="aspect-square hidden lg:inline-flex h-16 lg:w-24 shrink-0 rounded-lg bg-[var(--surface-contrast)] p-2">
-          <AverageSessionBarsIllustration />
+        <div className={metricIconContainerClass}>
+          <MetricIcon name="chart" label="Average session" />
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Avg Session</h3>

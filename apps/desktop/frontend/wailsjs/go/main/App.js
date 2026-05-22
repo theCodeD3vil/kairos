@@ -14,10 +14,6 @@ export function ExportLocalDataToDisk() {
   return window['go']['main']['App']['ExportLocalDataToDisk']();
 }
 
-export function ImportLocalDataFromDisk(arg1) {
-  return window['go']['main']['App']['ImportLocalDataFromDisk'](arg1);
-}
-
 export function GetAnalyticsData(arg1) {
   return window['go']['main']['App']['GetAnalyticsData'](arg1);
 }
@@ -76,6 +72,10 @@ export function GetSystemInfo() {
 
 export function GetVSCodeBridgeHealth() {
   return window['go']['main']['App']['GetVSCodeBridgeHealth']();
+}
+
+export function ImportLocalDataFromDisk(arg1) {
+  return window['go']['main']['App']['ImportLocalDataFromDisk'](arg1);
 }
 
 export function IngestEvents(arg1) {

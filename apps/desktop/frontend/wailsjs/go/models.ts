@@ -1287,3 +1287,4 @@ export namespace updates {
 	}
 
 }
+
