@@ -1,5 +1,5 @@
 import type { DateRange } from '@/components/ruixen/range-calendar';
-import type { OverviewRange } from '@/components/overview/types';
+import { normalizeOverviewRange, type OverviewRange } from '@/components/overview/types';
 import type { GeneralSettings } from '@/data/mockSettings';
 
 export const LAST_PAGE_STORAGE_KEY = 'kairos:last-page';
@@ -80,6 +80,24 @@ export function readRangePreference(storageKey: string): { range: OverviewRange;
   }
 }
 
+export function resolveInitialRangePreference(
+  storageKey: string,
+  restoreLastSelectedDateRange: boolean,
+  defaultDateRange: string | null | undefined,
+): { range: OverviewRange; customRange: DateRange | null } {
+  if (restoreLastSelectedDateRange) {
+    const saved = readRangePreference(storageKey);
+    if (saved) {
+      return saved;
+    }
+  }
+
+  return {
+    range: normalizeOverviewRange(defaultDateRange),
+    customRange: null,
+  };
+}
+
 export function resolveInitialPagePath(rememberLastPage: boolean, landingPage: GeneralSettings['landingPage']): string {
   if (rememberLastPage) {
     const lastPage = localStorage.getItem(LAST_PAGE_STORAGE_KEY);
@@ -91,7 +109,11 @@ export function resolveInitialPagePath(rememberLastPage: boolean, landingPage: G
 }
 
 function isOverviewRange(value: unknown): value is OverviewRange {
-  return value === 'today' || value === 'week' || value === 'month' || value === 'custom';
+  return value === 'today'
+    || value === 'week'
+    || value === 'month'
+    || value === 'all-time'
+    || value === 'custom';
 }
 
 function isPagePath(value: string | null): value is '/overview' | '/analytics' | '/sessions' | '/calendar' | '/settings' {

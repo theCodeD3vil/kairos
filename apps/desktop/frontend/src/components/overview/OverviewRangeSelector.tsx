@@ -14,6 +14,7 @@ const overviewRangeOptions: Array<{ label: string; value: Exclude<OverviewRange,
   { label: '1D', value: 'today' },
   { label: '7D', value: 'week' },
   { label: '1M', value: 'month' },
+  { label: 'All', value: 'all-time' },
 ];
 
 export function OverviewRangeSelector({

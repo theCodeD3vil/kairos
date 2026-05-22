@@ -54,7 +54,7 @@ export function DesktopBootstrapGate({ children }: PropsWithChildren) {
 
   return (
     <>
-      {children}
+      {bootstrapped ? children : null}
       <AnimatePresence>
         {showSplash ? splash : null}
       </AnimatePresence>

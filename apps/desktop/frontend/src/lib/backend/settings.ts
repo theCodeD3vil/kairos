@@ -237,6 +237,8 @@ function normalizeGeneralDefaultDateRange(value: string): GeneralSettings['defau
   switch (value) {
     case 'today':
       return 'today';
+    case 'all-time':
+      return 'all-time';
     case 'month':
     case 'last-30-days':
       return 'month';

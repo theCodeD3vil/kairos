@@ -36,8 +36,9 @@ function buildSyncBlocks(
 }
 
 type PresetOverviewRange = Exclude<OverviewRange, 'custom'>;
+type SeededOverviewRange = Exclude<PresetOverviewRange, 'all-time'>;
 
-const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> = {
+const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> = {
   today: {
     todayMinutes: 408,
     weekMinutes: 1694,
@@ -250,7 +251,7 @@ const rangeSeeds: Record<PresetOverviewRange, Omit<OverviewSnapshot, 'range'>> =
 };
 
 export function getOverviewSnapshot(range: OverviewRange): OverviewSnapshot {
-  const resolvedRange: PresetOverviewRange = range === 'custom' ? 'week' : range;
+  const resolvedRange: SeededOverviewRange = range === 'today' || range === 'month' ? range : 'week';
   return {
     range,
     ...rangeSeeds[resolvedRange],
@@ -261,5 +262,6 @@ export const overviewRanges: Array<{ label: string; value: OverviewRange }> = [
   { label: '1D', value: 'today' },
   { label: '7D', value: 'week' },
   { label: '1M', value: 'month' },
+  { label: 'All', value: 'all-time' },
   { label: 'custom', value: 'custom' },
 ];

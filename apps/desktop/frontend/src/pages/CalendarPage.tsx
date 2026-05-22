@@ -8,9 +8,9 @@ import { DayMachines } from '@/components/calendar/DayMachines';
 import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
 import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { desktopResourceKeys, getCachedDesktopResource } from '@/app/DesktopDataContext';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
-import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { emptySettingsScreenData, loadSettingsScreenData, type SettingsScreenData } from '@/lib/backend/settings';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { readCalendarMonthPreference, saveCalendarMonthPreference } from '@/lib/settings/preferences';
@@ -23,6 +23,17 @@ function addMonths(base: Date, delta: number) {
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function isSameMonth(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function leadingEmptyDays(date: Date) {
@@ -38,10 +49,28 @@ function findInitialSelection(monthDays: CalendarDay[], fallbackDate: string) {
   return active?.date ?? fallbackDate;
 }
 
+function resolveInitialCalendarState() {
+  const settings = getCachedDesktopResource<SettingsScreenData>(desktopResourceKeys.settings());
+  const today = new Date();
+  const savedMonth = settings?.viewModel.appBehavior.reopenLastViewedContext
+    ? readCalendarMonthPreference()
+    : null;
+  const monthRef = startOfMonth(savedMonth ?? today);
+
+  return {
+    monthRef,
+    selectedDate: isSameMonth(monthRef, today) ? formatDateKey(today) : formatDateKey(monthRef),
+  };
+}
+
 export function CalendarPage() {
   const monthTouchedRef = useRef(false);
-  const [monthRef, setMonthRef] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const initialStateRef = useRef<ReturnType<typeof resolveInitialCalendarState> | null>(null);
+  if (!initialStateRef.current) {
+    initialStateRef.current = resolveInitialCalendarState();
+  }
+  const [monthRef, setMonthRef] = useState(() => initialStateRef.current!.monthRef);
+  const [selectedDate, setSelectedDate] = useState<string>(() => initialStateRef.current!.selectedDate);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
     cacheKey: desktopResourceKeys.settings(),
     emptyValue: emptySettingsScreenData(),
@@ -120,7 +149,7 @@ export function CalendarPage() {
     const current = new Date();
     const today = startOfMonth(current);
     setMonthRef(today);
-    const todaysDate = current.toISOString().slice(0, 10);
+    const todaysDate = formatDateKey(current);
     setSelectedDate(todaysDate);
   };
 

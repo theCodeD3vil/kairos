@@ -11,18 +11,28 @@ import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceho
 import { LiveRefreshIndicator } from '@/components/system/LiveRefreshIndicator';
 import { normalizeOverviewRange, type OverviewRange, type OverviewSnapshot } from '@/components/overview/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { desktopResourceKeys, getCachedDesktopResource } from '@/app/DesktopDataContext';
 import { emptyOverviewSnapshot, loadOverviewSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
-import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { emptySettingsScreenData, loadSettingsScreenData, type SettingsScreenData } from '@/lib/backend/settings';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
 import { resolveRangeAfterCustomRangeChange } from '@/lib/overview-range';
-import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
+import { getRangeStorageKey, resolveInitialRangePreference, saveRangePreference } from '@/lib/settings/preferences';
+
+function resolveInitialOverviewRange() {
+  const settings = getCachedDesktopResource<SettingsScreenData>(desktopResourceKeys.settings());
+  return resolveInitialRangePreference(
+    getRangeStorageKey('overview'),
+    settings?.viewModel.appBehavior.restoreLastSelectedDateRange ?? false,
+    settings?.viewModel.general.defaultDateRange,
+  );
+}
 
 export function OverviewPage() {
   const rangeTouchedRef = useRef(false);
-  const [range, setRange] = useState<OverviewRange>('week');
-  const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const initialRange = resolveInitialOverviewRange();
+  const [range, setRange] = useState<OverviewRange>(initialRange.range);
+  const [customRange, setCustomRange] = useState<DateRange | null>(initialRange.customRange);
   const [activeTab, setActiveTab] = useState('time');
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
     cacheKey: desktopResourceKeys.settings(),
@@ -48,17 +58,13 @@ export function OverviewPage() {
       return;
     }
 
-    const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
-    const saved = restoreLast ? readRangePreference(getRangeStorageKey('overview')) : null;
-    if (saved) {
-      setRange(saved.range);
-      setCustomRange(saved.customRange);
-      rangeTouchedRef.current = true;
-      return;
-    }
-
-    setRange(normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange));
-    setCustomRange(null);
+    const nextRange = resolveInitialRangePreference(
+      getRangeStorageKey('overview'),
+      settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
+      settingsData.viewModel.general.defaultDateRange,
+    );
+    setRange(nextRange.range);
+    setCustomRange(nextRange.customRange);
     rangeTouchedRef.current = true;
   }, [
     hasResolvedSettings,

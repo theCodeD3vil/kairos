@@ -116,6 +116,13 @@ type SessionRecordInternal = SessionRecord & {
   osLabel: string;
 };
 
+type AnalyticsSourceData = {
+  shouldCompare: boolean;
+  allCurrentRecords: SessionRecordInternal[];
+  allPreviousRecords: SessionRecordInternal[];
+  filters: AnalyticsSnapshot['filters'];
+};
+
 type DateWindow = {
   rangeLabel: string;
   startDate: string;
@@ -123,6 +130,8 @@ type DateWindow = {
   start: Date;
   end: Date;
 };
+
+const analyticsSourceCache = new Map<string, Promise<AnalyticsSourceData>>();
 
 function formatDateTime(value?: string, hour12?: boolean) {
   if (!value) {
@@ -246,6 +255,16 @@ function resolveDateWindow(
       startDate: day,
       endDate: day,
       start: today,
+      end: today,
+    };
+  }
+
+  if (range === 'all-time') {
+    return {
+      rangeLabel: 'all-time',
+      startDate: '0000-00-00',
+      endDate: '9999-99-99',
+      start: new Date(Date.UTC(0, 0, 1)),
       end: today,
     };
   }
@@ -994,6 +1013,78 @@ export function emptySessionsScreenData(range: OverviewRange): SessionsScreenDat
   };
 }
 
+function analyticsSourceCacheKey(
+  window: DateWindow,
+  shouldCompare: boolean,
+  settings: contracts.SettingsData,
+  preferences: DisplayPreferences,
+) {
+  return [
+    window.rangeLabel,
+    shouldCompare ? 'compare' : 'no-compare',
+    settings.dataStorage?.lastProcessedAt ?? '',
+    settings.extensionStatus?.lastEventAt ?? '',
+    preferences.hour12 ? '12h' : '24h',
+    preferences.weekStartsOn,
+    preferences.showMachineNames ? 'machines' : 'machines-hidden',
+    preferences.showHostname ? 'hostnames' : 'hostnames-hidden',
+    preferences.obfuscateProjectNames ? 'projects-obfuscated' : 'projects-plain',
+    settings.privacy.sensitiveProjectNames?.join('\u0000') ?? '',
+  ].join('\u0001');
+}
+
+function loadAnalyticsSource(
+  filters: AnalyticsFilters,
+  settings: contracts.SettingsData,
+  preferences: DisplayPreferences,
+  mapProjectLabel: (projectName: string) => string,
+): Promise<AnalyticsSourceData> {
+  const window = resolveDateWindow(filters.range, filters.customRange ?? null, preferences.weekStartsOn);
+  const shouldCompare = filters.range !== 'all-time';
+  const cacheKey = analyticsSourceCacheKey(window, shouldCompare, settings, preferences);
+  const shouldUseCache = Boolean(settings.dataStorage);
+  if (shouldUseCache) {
+    const cached = analyticsSourceCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const promise = (async () => {
+    const previous = shouldCompare ? previousWindow(window) : null;
+    const [currentSessions, previousSessions, machines] = await Promise.all([
+      ListSessionsForRange(window.startDate, window.endDate),
+      previous ? ListSessionsForRange(previous.startDate, previous.endDate) : Promise.resolve([] as contracts.Session[]),
+      ListKnownMachines(),
+    ]);
+
+    const machinesById = machineIndex(machines);
+    const allCurrentRecords = currentSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
+    const allPreviousRecords = previousSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
+
+    return {
+      shouldCompare,
+      allCurrentRecords,
+      allPreviousRecords,
+      filters: {
+        projects: unique(allCurrentRecords.map((record) => record.project)).sort(),
+        languages: unique(allCurrentRecords.map((record) => record.language)).sort(),
+        machines: unique(allCurrentRecords.map((record) => record.machine)).sort(),
+      },
+    };
+  })().catch((error: unknown) => {
+    if (shouldUseCache) {
+      analyticsSourceCache.delete(cacheKey);
+    }
+    throw error;
+  });
+
+  if (shouldUseCache) {
+    analyticsSourceCache.set(cacheKey, promise);
+  }
+  return promise;
+}
+
 async function fetchAnalyticsSnapshot(
   filters: AnalyticsFilters,
   settingsInput?: contracts.SettingsData,
@@ -1004,22 +1095,10 @@ async function fetchAnalyticsSnapshot(
     preferences.obfuscateProjectNames,
     settings.privacy.sensitiveProjectNames ?? [],
   );
-  const window = resolveDateWindow(filters.range, filters.customRange ?? null, preferences.weekStartsOn);
-  const previous = previousWindow(window);
-
-  const [currentSessions, previousSessions, machines] = await Promise.all([
-    ListSessionsForRange(window.startDate, window.endDate),
-    ListSessionsForRange(previous.startDate, previous.endDate),
-    ListKnownMachines(),
-  ]);
-
-  const machinesById = machineIndex(machines);
-  const allCurrentRecords = currentSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
+  const analyticsSource = await loadAnalyticsSource(filters, settings, preferences, mapProjectLabel);
+  const { allCurrentRecords, allPreviousRecords, shouldCompare } = analyticsSource;
   const filteredCurrentRecords = filterSessionRecords(allCurrentRecords, filters);
-  const filteredPreviousRecords = filterSessionRecords(
-    previousSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel)),
-    filters,
-  );
+  const filteredPreviousRecords = filterSessionRecords(allPreviousRecords, filters);
 
   const totalMinutes = filteredCurrentRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
   const previousMinutes = filteredPreviousRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
@@ -1056,9 +1135,9 @@ async function fetchAnalyticsSnapshot(
       sessions: filteredCurrentRecords.length,
       averageSessionMinutes,
       comparison: {
-        previousMinutes,
-        previousSessions: filteredPreviousRecords.length,
-        previousActiveDays: previousDaily.length,
+        previousMinutes: shouldCompare ? previousMinutes : 0,
+        previousSessions: shouldCompare ? filteredPreviousRecords.length : 0,
+        previousActiveDays: shouldCompare ? previousDaily.length : 0,
       },
     },
     time: {
@@ -1097,23 +1176,19 @@ async function fetchAnalyticsSnapshot(
       hourBuckets,
     },
     comparison: {
-      minutesDeltaPct: computeDelta(totalMinutes, previousMinutes),
-      sessionsDeltaPct: computeDelta(filteredCurrentRecords.length, filteredPreviousRecords.length),
-      activeDaysDeltaPct: computeDelta(daily.length, previousDaily.length),
+      minutesDeltaPct: shouldCompare ? computeDelta(totalMinutes, previousMinutes) : 0,
+      sessionsDeltaPct: shouldCompare ? computeDelta(filteredCurrentRecords.length, filteredPreviousRecords.length) : 0,
+      activeDaysDeltaPct: shouldCompare ? computeDelta(daily.length, previousDaily.length) : 0,
       topProjectChange: {
         current: breakdownProjects[0]?.name ?? null,
-        previous: previousProjects[0]?.name ?? null,
+        previous: shouldCompare ? previousProjects[0]?.name ?? null : null,
       },
       topLanguageChange: {
         current: breakdownLanguages[0]?.name ?? null,
-        previous: previousLanguages[0]?.name ?? null,
+        previous: shouldCompare ? previousLanguages[0]?.name ?? null : null,
       },
     },
-    filters: {
-      projects: unique(allCurrentRecords.map((record) => record.project)).sort(),
-      languages: unique(allCurrentRecords.map((record) => record.language)).sort(),
-      machines: unique(allCurrentRecords.map((record) => record.machine)).sort(),
-    },
+    filters: analyticsSource.filters,
   };
 }
 

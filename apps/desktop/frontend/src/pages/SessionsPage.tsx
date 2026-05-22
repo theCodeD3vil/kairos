@@ -5,7 +5,7 @@ import type { DateRange } from '@/components/ruixen/range-calendar';
 import { MachineScopePlaceholder } from '@/components/system/MachineScopePlaceholder';
 import { SessionDetailsDialog, type SessionDetailRecord } from '@/components/sessions/SessionDetailsDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { desktopResourceKeys, getCachedDesktopResource } from '@/app/DesktopDataContext';
 import {
   emptySessionsScreenData,
   loadSessionsScreenData,
@@ -13,17 +13,27 @@ import {
 } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
-import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { emptySettingsScreenData, loadSettingsScreenData, type SettingsScreenData } from '@/lib/backend/settings';
 import { LanguageIcon } from '@/lib/languageIcons';
 import { resolveRangeAfterCustomRangeChange } from '@/lib/overview-range';
-import { getRangeStorageKey, readRangePreference, saveRangePreference } from '@/lib/settings/preferences';
+import { getRangeStorageKey, resolveInitialRangePreference, saveRangePreference } from '@/lib/settings/preferences';
 import { formatDurationMinutes } from '@/lib/time-format';
 import { createSessionDetailRecord } from '@/pages/sessions-helpers';
 
+function resolveInitialSessionsRange() {
+  const settings = getCachedDesktopResource<SettingsScreenData>(desktopResourceKeys.settings());
+  return resolveInitialRangePreference(
+    getRangeStorageKey('sessions'),
+    settings?.viewModel.appBehavior.restoreLastSelectedDateRange ?? false,
+    settings?.viewModel.general.defaultDateRange,
+  );
+}
+
 export function SessionsPage() {
   const rangeTouchedRef = useRef(false);
-  const [range, setRange] = useState<OverviewRange>('week');
-  const [customRange, setCustomRange] = useState<DateRange | null>(null);
+  const initialRange = resolveInitialSessionsRange();
+  const [range, setRange] = useState<OverviewRange>(initialRange.range);
+  const [customRange, setCustomRange] = useState<DateRange | null>(initialRange.customRange);
   const [isSessionDetailsOpen, setIsSessionDetailsOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionDetailRecord | null>(null);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
@@ -49,17 +59,13 @@ export function SessionsPage() {
       return;
     }
 
-    const restoreLast = settingsData.viewModel.appBehavior.restoreLastSelectedDateRange;
-    const saved = restoreLast ? readRangePreference(getRangeStorageKey('sessions')) : null;
-    if (saved) {
-      setRange(saved.range);
-      setCustomRange(saved.customRange);
-      rangeTouchedRef.current = true;
-      return;
-    }
-
-    setRange(normalizeOverviewRange(settingsData.viewModel.general.defaultDateRange));
-    setCustomRange(null);
+    const nextRange = resolveInitialRangePreference(
+      getRangeStorageKey('sessions'),
+      settingsData.viewModel.appBehavior.restoreLastSelectedDateRange,
+      settingsData.viewModel.general.defaultDateRange,
+    );
+    setRange(nextRange.range);
+    setCustomRange(nextRange.customRange);
     rangeTouchedRef.current = true;
   }, [
     hasResolvedSettings,

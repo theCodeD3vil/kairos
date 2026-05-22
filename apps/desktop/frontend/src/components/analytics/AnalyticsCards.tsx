@@ -92,9 +92,11 @@ export function resolveTrendPresentation(
       ? 'Monthly trend'
       : range === 'today'
         ? 'Today trend'
-        : 'Custom trend';
+        : range === 'all-time'
+          ? 'All-time trend'
+          : 'Custom trend';
   const trendData = range === 'week' ? weekly : dailyData;
-  const maxVisibleTicks = range === 'month' ? 9 : range === 'custom' ? 8 : range === 'today' ? 8 : trendData.length;
+  const maxVisibleTicks = range === 'month' || range === 'all-time' ? 9 : range === 'custom' ? 8 : range === 'today' ? 8 : trendData.length;
   const tickStep = trendData.length === 0
     ? 1
     : Math.max(1, Math.ceil(trendData.length / Math.max(1, maxVisibleTicks)));

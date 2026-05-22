@@ -1,11 +1,15 @@
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 
-export type OverviewRange = 'today' | 'week' | 'month' | 'custom';
+export type OverviewRange = 'today' | 'week' | 'month' | 'all-time' | 'custom';
+
+export const presetOverviewRanges: Array<Exclude<OverviewRange, 'custom'>> = ['today', 'week', 'month', 'all-time'];
 
 export function normalizeOverviewRange(value: string | null | undefined): Exclude<OverviewRange, 'custom'> {
   switch (value) {
     case 'today':
       return 'today';
+    case 'all-time':
+      return 'all-time';
     case 'month':
     case 'last-30-days':
       return 'month';

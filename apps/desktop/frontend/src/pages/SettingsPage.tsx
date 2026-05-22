@@ -519,6 +519,7 @@ export function SettingsPage() {
                 { label: '1D', value: 'today' },
                 { label: '7D', value: 'week' },
                 { label: '1M', value: 'month' },
+                { label: 'All', value: 'all-time' },
               ]}
             />
           </SettingsRow>

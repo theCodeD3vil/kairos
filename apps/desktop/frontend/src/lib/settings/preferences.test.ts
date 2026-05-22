@@ -5,6 +5,7 @@ import {
   readReopenLastViewedContextPreference,
   LAST_PAGE_STORAGE_KEY,
   readRangePreference,
+  resolveInitialRangePreference,
   resolveInitialPagePath,
   saveAnalyticsContextPreference,
   saveCalendarMonthPreference,
@@ -69,6 +70,24 @@ describe('preferences', () => {
     expect(decoded?.range).toBe('custom');
     expect(decoded?.customRange?.start.toISOString()).toBe(start.toISOString());
     expect(decoded?.customRange?.end.toISOString()).toBe(end.toISOString());
+  });
+
+  it('round-trips all-time range preferences', () => {
+    saveRangePreference('kairos:test-range', 'all-time', null);
+
+    expect(readRangePreference('kairos:test-range')).toEqual({
+      range: 'all-time',
+      customRange: null,
+    });
+  });
+
+  it('resolves saved range before default range when restoring last selection', () => {
+    saveRangePreference('kairos:test-range', 'month', null);
+
+    expect(resolveInitialRangePreference('kairos:test-range', true, 'week')).toEqual({
+      range: 'month',
+      customRange: null,
+    });
   });
 
   it('persists reopenLastViewedContext locally', () => {

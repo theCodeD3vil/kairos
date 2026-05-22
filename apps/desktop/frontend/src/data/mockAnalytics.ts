@@ -1,6 +1,6 @@
 import type { DateRange } from '@/components/ruixen/range-calendar';
 
-export type AnalyticsRange = 'today' | 'week' | 'month' | 'custom';
+export type AnalyticsRange = 'today' | 'week' | 'month' | 'all-time' | 'custom';
 
 export type AnalyticsFilters = {
   range: AnalyticsRange;
@@ -172,6 +172,10 @@ function getRangeWindow(range: AnalyticsRange, customRange?: DateRange | null) {
   if (range === 'month') {
     const start = new Date(end.getFullYear(), end.getMonth(), 1);
     return { start, end };
+  }
+
+  if (range === 'all-time') {
+    return { start: new Date('1970-01-01T00:00:00'), end };
   }
 
   const days = range === 'today' ? 1 : range === 'week' ? 7 : 30;

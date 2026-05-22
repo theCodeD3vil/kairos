@@ -15,33 +15,46 @@ import { overviewChartPalette } from '@/components/overview/chart-colors';
 import { SessionDetailsDialog, type SessionDetailRecord } from '@/components/sessions/SessionDetailsDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { desktopResourceKeys, getCachedDesktopResource } from '@/app/DesktopDataContext';
 import type { AnalyticsFilters as Filters, RecentSessionRow } from '@/data/mockAnalytics';
 import { emptyAnalyticsSnapshot, loadAnalyticsSnapshot } from '@/lib/backend/page-data';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
-import { emptySettingsScreenData, loadSettingsScreenData } from '@/lib/backend/settings';
+import { emptySettingsScreenData, loadSettingsScreenData, type SettingsScreenData } from '@/lib/backend/settings';
 import { normalizeOverviewRange } from '@/components/overview/types';
 import {
   getRangeStorageKey,
   readAnalyticsContextPreference,
   readRangePreference,
+  resolveInitialRangePreference,
   saveAnalyticsContextPreference,
   saveRangePreference,
 } from '@/lib/settings/preferences';
 import { formatDurationMinutes } from '@/lib/time-format';
 
-const analyticsDefaultFilters: Filters = {
-  range: 'week',
-  customRange: null,
-  project: 'all',
-  language: 'all',
-  machine: 'all',
-};
+function resolveInitialAnalyticsFilters(): Filters {
+  const settings = getCachedDesktopResource<SettingsScreenData>(desktopResourceKeys.settings());
+  const initialRange = resolveInitialRangePreference(
+    getRangeStorageKey('analytics'),
+    settings?.viewModel.appBehavior.restoreLastSelectedDateRange ?? false,
+    settings?.viewModel.general.defaultDateRange,
+  );
+  const context = settings?.viewModel.appBehavior.reopenLastViewedContext
+    ? readAnalyticsContextPreference()
+    : null;
+
+  return {
+    range: initialRange.range,
+    customRange: initialRange.customRange,
+    project: context?.project ?? 'all',
+    language: context?.language ?? 'all',
+    machine: context?.machine ?? 'all',
+  };
+}
 
 export function AnalyticsPage() {
   const rangeTouchedRef = useRef(false);
-  const [filters, setFilters] = useState<Filters>(analyticsDefaultFilters);
+  const [filters, setFilters] = useState<Filters>(() => resolveInitialAnalyticsFilters());
   const [isSessionDetailsOpen, setIsSessionDetailsOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionDetailRecord | null>(null);
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
@@ -370,10 +383,12 @@ export function AnalyticsPage() {
         </article>
       </section>
 
-          <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-4">
-            <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Period comparison</h2>
-            <AnalyticsComparison snapshot={snapshot} />
-          </section>
+          {filters.range !== 'all-time' ? (
+            <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-4">
+              <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Period comparison</h2>
+              <AnalyticsComparison snapshot={snapshot} />
+            </section>
+          ) : null}
         </>
       ) : null}
 

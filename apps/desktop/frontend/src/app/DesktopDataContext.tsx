@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { DateRange } from '@/components/ruixen/range-calendar';
-import { normalizeOverviewRange, type OverviewRange } from '@/components/overview/types';
+import { presetOverviewRanges, type OverviewRange } from '@/components/overview/types';
 import type { AnalyticsFilters } from '@/data/mockAnalytics';
 import {
   loadAnalyticsSnapshot,
@@ -18,7 +18,14 @@ import {
   loadOverviewSnapshot,
   loadSessionsScreenData,
 } from '@/lib/backend/page-data';
-import { loadSettingsScreenData, probeVSCodeExtensionStatus } from '@/lib/backend/settings';
+import { loadSettingsScreenData, probeVSCodeExtensionStatus, type SettingsScreenData } from '@/lib/backend/settings';
+import {
+  getRangeStorageKey,
+  readAnalyticsContextPreference,
+  readCalendarMonthPreference,
+  resolveInitialRangePreference,
+  resolveInitialPagePath,
+} from '@/lib/settings/preferences';
 
 export const DATA_REFRESH_INTERVAL_MS = 60_000;
 const EXTENSION_PROBE_INTERVAL_MS = DATA_REFRESH_INTERVAL_MS;
@@ -35,9 +42,20 @@ type DesktopDataContextValue = {
   registerRefresher: (key: string, refresher: (signal: DesktopRefreshSignal) => Promise<void> | void) => () => void;
 };
 
+type DesktopCacheResource = {
+  key: string;
+  load: () => Promise<unknown>;
+};
+
+type StoredRangeSelection = {
+  range: OverviewRange;
+  customRange: DateRange | null;
+};
+
 const DesktopDataContext = createContext<DesktopDataContextValue | null>(null);
 const desktopDataCache = new Map<string, unknown>();
 const dataChangedEventName = 'kairos:data-changed';
+const desktopWarmupConcurrency = 4;
 
 function mergeRefreshReason(
   current: DesktopRefreshReason | null,
@@ -195,51 +213,203 @@ function currentMonthRef() {
   };
 }
 
-async function bootstrapDesktopCache(): Promise<void> {
-  const monthRef = currentMonthRef();
-  const settings = await loadSettingsScreenData({ quiet: true }).catch(() => null);
-  const defaultRange = normalizeOverviewRange(settings?.viewModel.general.defaultDateRange);
-  const defaultAnalyticsFilters: AnalyticsFilters = {
-    range: defaultRange,
-    customRange: null,
-    project: 'all',
-    language: 'all',
-    machine: 'all',
-  };
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
-  const resources = [
-    {
-      key: desktopResourceKeys.overview(defaultRange, null),
-      load: () => loadOverviewSnapshot(defaultRange, null, { quiet: true }),
-    },
-    {
-      key: desktopResourceKeys.analytics(defaultAnalyticsFilters),
-      load: () => loadAnalyticsSnapshot(defaultAnalyticsFilters, { quiet: true }),
-    },
-    {
-      key: desktopResourceKeys.sessions(defaultRange, null),
-      load: () => loadSessionsScreenData(defaultRange, null, { quiet: true }),
-    },
-    {
-      key: desktopResourceKeys.calendarMonth(monthRef.year, monthRef.month),
-      load: () => loadCalendarMonth(monthRef.year, monthRef.month, { quiet: true }),
-    },
-    {
-      key: desktopResourceKeys.calendarDay(monthRef.today),
-      load: () => loadCalendarDay(monthRef.today, { quiet: true }),
-    },
-    {
-      key: desktopResourceKeys.settings(),
-      load: () => settings ?? loadSettingsScreenData({ quiet: true }),
-    },
+function isSameMonth(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+}
+
+function resourceForSettings(settings: SettingsScreenData | null): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.settings(),
+    load: () => settings ? Promise.resolve(settings) : loadSettingsScreenData({ quiet: true }),
+  };
+}
+
+function resourceForOverview(range: OverviewRange, customRange: DateRange | null): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.overview(range, customRange),
+    load: () => loadOverviewSnapshot(range, customRange, { quiet: true }),
+  };
+}
+
+function resourceForAnalytics(filters: AnalyticsFilters): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.analytics(filters),
+    load: () => loadAnalyticsSnapshot(filters, { quiet: true }),
+  };
+}
+
+function resourceForSessions(range: OverviewRange, customRange: DateRange | null): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.sessions(range, customRange),
+    load: () => loadSessionsScreenData(range, customRange, { quiet: true }),
+  };
+}
+
+function resourceForCalendarMonth(year: number, month: number): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.calendarMonth(year, month),
+    load: () => loadCalendarMonth(year, month, { quiet: true }),
+  };
+}
+
+function resourceForCalendarDay(date: string): DesktopCacheResource {
+  return {
+    key: desktopResourceKeys.calendarDay(date),
+    load: () => loadCalendarDay(date, { quiet: true }),
+  };
+}
+
+function storedRangeSelection(
+  key: 'overview' | 'analytics' | 'sessions',
+  settings: SettingsScreenData,
+): StoredRangeSelection {
+  return resolveInitialRangePreference(
+    getRangeStorageKey(key),
+    settings.viewModel.appBehavior.restoreLastSelectedDateRange,
+    settings.viewModel.general.defaultDateRange,
+  );
+}
+
+function startupPath(settings: SettingsScreenData): string {
+  const hashPath = window.location.hash.replace(/^#/, '').split(/[?#]/)[0] || '/';
+  if (hashPath !== '/') {
+    return hashPath;
+  }
+
+  return resolveInitialPagePath(
+    settings.viewModel.appBehavior.rememberLastSelectedPage,
+    settings.viewModel.general.landingPage,
+  );
+}
+
+function startupAnalyticsFilters(settings: SettingsScreenData): AnalyticsFilters {
+  const range = storedRangeSelection('analytics', settings);
+  const context = settings.viewModel.appBehavior.reopenLastViewedContext
+    ? readAnalyticsContextPreference()
+    : null;
+
+  return {
+    range: range.range,
+    customRange: range.customRange,
+    project: context?.project ?? 'all',
+    language: context?.language ?? 'all',
+    machine: context?.machine ?? 'all',
+  };
+}
+
+function startupMonthRef(settings: SettingsScreenData): Date {
+  if (settings.viewModel.appBehavior.reopenLastViewedContext) {
+    const savedMonth = readCalendarMonthPreference();
+    if (savedMonth) {
+      return savedMonth;
+    }
+  }
+
+  return new Date();
+}
+
+function startupCalendarDay(monthRef: Date): string {
+  const today = new Date();
+  return isSameMonth(monthRef, today) ? formatDateKey(today) : formatDateKey(monthRef);
+}
+
+function startupResources(settings: SettingsScreenData): DesktopCacheResource[] {
+  const path = startupPath(settings);
+  const resources = [resourceForSettings(settings)];
+
+  if (path === '/overview') {
+    const range = storedRangeSelection('overview', settings);
+    resources.push(resourceForOverview(range.range, range.customRange));
+  } else if (path === '/analytics') {
+    resources.push(resourceForAnalytics(startupAnalyticsFilters(settings)));
+  } else if (path === '/sessions') {
+    const range = storedRangeSelection('sessions', settings);
+    resources.push(resourceForSessions(range.range, range.customRange));
+  } else if (path === '/calendar') {
+    const startupMonth = startupMonthRef(settings);
+    resources.push(resourceForCalendarMonth(startupMonth.getFullYear(), startupMonth.getMonth()));
+    resources.push(resourceForCalendarDay(startupCalendarDay(startupMonth)));
+  }
+
+  return resources;
+}
+
+function knownWarmupResources(settings: SettingsScreenData): DesktopCacheResource[] {
+  const monthRef = currentMonthRef();
+  const resources: DesktopCacheResource[] = [
+    resourceForSettings(settings),
+    resourceForCalendarMonth(monthRef.year, monthRef.month),
+    resourceForCalendarDay(monthRef.today),
   ];
 
+  if (settings.viewModel.appBehavior.reopenLastViewedContext) {
+    const savedMonth = readCalendarMonthPreference();
+    if (savedMonth) {
+      resources.push(resourceForCalendarMonth(savedMonth.getFullYear(), savedMonth.getMonth()));
+    }
+  }
+
+  for (const range of presetOverviewRanges) {
+    resources.push(resourceForOverview(range, null));
+    resources.push(resourceForSessions(range, null));
+    resources.push(resourceForAnalytics({
+      range,
+      customRange: null,
+      project: 'all',
+      language: 'all',
+      machine: 'all',
+    }));
+  }
+
+  return resources;
+}
+
+async function warmDesktopResources(
+  resources: DesktopCacheResource[],
+  { force = false, concurrency = desktopWarmupConcurrency }: { force?: boolean; concurrency?: number } = {},
+): Promise<void> {
+  const uniqueResources = [...new Map(resources.map((resource) => [resource.key, resource])).values()];
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrency, uniqueResources.length);
+
   await Promise.allSettled(
-    resources.map(async (resource) => {
-      const value = await resource.load();
-      setCachedDesktopResource(resource.key, value);
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < uniqueResources.length) {
+        const resource = uniqueResources[nextIndex];
+        nextIndex += 1;
+
+        if (!force && desktopDataCache.has(resource.key)) {
+          continue;
+        }
+
+        try {
+          const value = await resource.load();
+          setCachedDesktopResource(resource.key, value);
+        } catch {
+          // Warmup should never prevent the current page from opening.
+        }
+      }
     }),
   );
+}
+
+async function bootstrapDesktopCache(): Promise<void> {
+  const settings = await loadSettingsScreenData({ quiet: true }).catch(() => null);
+  if (!settings) {
+    await warmDesktopResources([resourceForSettings(null)], { concurrency: 1 });
+    return;
+  }
+
+  setCachedDesktopResource(desktopResourceKeys.settings(), settings);
+  await warmDesktopResources(startupResources(settings));
+  void warmDesktopResources(knownWarmupResources(settings));
 }
 
 export function DesktopDataProvider({ children }: PropsWithChildren) {
