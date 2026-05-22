@@ -27,6 +27,7 @@ import (
 	"github.com/michaelnji/kairos/apps/desktop/internal/sessionization"
 	desktopsettings "github.com/michaelnji/kairos/apps/desktop/internal/settings"
 	"github.com/michaelnji/kairos/apps/desktop/internal/storage"
+	"github.com/michaelnji/kairos/apps/desktop/internal/transfer"
 	"github.com/michaelnji/kairos/apps/desktop/internal/updates"
 	"github.com/michaelnji/kairos/apps/desktop/internal/views"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -549,9 +550,9 @@ func (a *App) ClearLocalData() error {
 	return err
 }
 
-func (a *App) ExportLocalDataToDisk() error {
+func (a *App) ExportLocalDataToDisk() (transfer.ExportResult, error) {
 	if a.initErr != nil {
-		return a.initErr
+		return transfer.ExportResult{}, a.initErr
 	}
 
 	ctx := a.requestContext()
@@ -567,43 +568,54 @@ func (a *App) ExportLocalDataToDisk() error {
 		}},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to open save dialog: %w", err)
+		return transfer.ExportResult{}, fmt.Errorf("failed to open save dialog: %w", err)
 	}
 	if exportPath == "" {
-		return nil
+		return transfer.ExportResult{Cancelled: true}, nil
 	}
 
-	events, err := a.sqliteStore.ListEventsForDateRange(ctx, "0000-00-00", "9999-99-99")
+	return transfer.ExportActivityDataToFile(ctx, a.sqliteStore, exportPath, buildinfo.DesktopVersion, time.Now())
+}
+
+func (a *App) PreviewImportLocalDataFromDisk() (transfer.ImportPreview, error) {
+	if a.initErr != nil {
+		return transfer.ImportPreview{}, a.initErr
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	importPath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title:            "Import Kairos Data",
+		DefaultDirectory: filepath.Join(homeDir, "Downloads"),
+		Filters: []wailsruntime.FileFilter{{
+			DisplayName: "JSON Files (*.json)",
+			Pattern:     "*.json",
+		}},
+	})
 	if err != nil {
-		return fmt.Errorf("failed to fetch events for export: %w", err)
+		return transfer.ImportPreview{}, fmt.Errorf("failed to open import dialog: %w", err)
+	}
+	if importPath == "" {
+		return transfer.ImportPreview{Cancelled: true}, nil
 	}
 
-	sessions, err := a.sqliteStore.ListSessionsForRange(ctx, "0000-00-00", "9999-99-99")
-	if err != nil {
-		return fmt.Errorf("failed to fetch sessions for export: %w", err)
+	return transfer.PreviewActivityImport(a.requestContext(), a.sqliteStore, importPath)
+}
+
+func (a *App) ImportLocalDataFromDisk(importPath string) (transfer.ImportResult, error) {
+	if a.initErr != nil {
+		return transfer.ImportResult{}, a.initErr
+	}
+	importPath = strings.TrimSpace(importPath)
+	if importPath == "" {
+		return transfer.ImportResult{Cancelled: true}, nil
 	}
 
-	file, err := os.Create(exportPath)
-	if err != nil {
-		return fmt.Errorf("failed to create export file: %w", err)
+	result, err := transfer.ImportActivityData(a.requestContext(), a.sqliteStore, a.sessionService, importPath, time.Now())
+	if err == nil && !result.Cancelled {
+		a.emitDataChanged("activity")
+		a.emitDataChanged("events")
 	}
-	defer file.Close()
-
-	payload := struct {
-		Events   []contracts.ActivityEvent `json:"events"`
-		Sessions []contracts.Session       `json:"sessions"`
-	}{
-		Events:   events,
-		Sessions: sessions,
-	}
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(payload); err != nil {
-		return fmt.Errorf("failed to encode export data: %w", err)
-	}
-
-	return nil
+	return result, err
 }
 
 func (a *App) ResetSettingsSection(section string) (contracts.SettingsData, error) {

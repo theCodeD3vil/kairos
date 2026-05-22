@@ -79,6 +79,42 @@ func (s *Store) ListRecentEvents(ctx context.Context, limit int) ([]contracts.Ac
 	return events, nil
 }
 
+func (s *Store) GetEvent(ctx context.Context, eventID string) (contracts.ActivityEvent, bool, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, timestamp, event_type, machine_id, workspace_id, project_name, language, file_path, git_branch
+		FROM events
+		WHERE id = ?
+	`, eventID)
+
+	var event contracts.ActivityEvent
+	var filePath sql.NullString
+	var gitBranch sql.NullString
+	if err := row.Scan(
+		&event.ID,
+		&event.Timestamp,
+		&event.EventType,
+		&event.MachineID,
+		&event.WorkspaceID,
+		&event.ProjectName,
+		&event.Language,
+		&filePath,
+		&gitBranch,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return contracts.ActivityEvent{}, false, nil
+		}
+		return contracts.ActivityEvent{}, false, fmt.Errorf("get event %s: %w", eventID, err)
+	}
+	if filePath.Valid {
+		event.FilePath = filePath.String
+	}
+	if gitBranch.Valid {
+		event.GitBranch = gitBranch.String
+	}
+
+	return event, true, nil
+}
+
 func (s *Store) CountAcceptedEvents(ctx context.Context) (int, error) {
 	return countQuery(ctx, s.db, `SELECT COUNT(*) FROM events`)
 }

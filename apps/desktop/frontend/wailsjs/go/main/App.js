@@ -14,6 +14,10 @@ export function ExportLocalDataToDisk() {
   return window['go']['main']['App']['ExportLocalDataToDisk']();
 }
 
+export function ImportLocalDataFromDisk(arg1) {
+  return window['go']['main']['App']['ImportLocalDataFromDisk'](arg1);
+}
+
 export function GetAnalyticsData(arg1) {
   return window['go']['main']['App']['GetAnalyticsData'](arg1);
 }
@@ -100,6 +104,10 @@ export function ListSessionsForRange(arg1, arg2) {
 
 export function Ping() {
   return window['go']['main']['App']['Ping']();
+}
+
+export function PreviewImportLocalDataFromDisk() {
+  return window['go']['main']['App']['PreviewImportLocalDataFromDisk']();
 }
 
 export function RebuildAllSessions() {

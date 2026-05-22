@@ -30,10 +30,13 @@ import {
 import {
   ClearLocalData,
   ExportLocalDataToDisk,
+  ImportLocalDataFromDisk,
+  PreviewImportLocalDataFromDisk,
   RebuildAllSessions,
   RebuildSessionsForDate,
   RebuildSessionsForRange,
 } from '../../wailsjs/go/main/App';
+import type { transfer } from '../../wailsjs/go/models';
 import { ExclusionEditor } from '@/components/settings/ExclusionEditor';
 import { ChangelogViewer } from '@/components/ui/changelog-viewer';
 import {
@@ -87,6 +90,13 @@ const OBFUSCATED_STORAGE_PATH_LABEL = '••••••••••';
 
 type RebuildScope = 'all' | 'date' | 'range';
 
+function formatImportRange(start?: string, end?: string): string {
+  if (!start || !end) {
+    return '—';
+  }
+  return start === end ? start : `${start} → ${end}`;
+}
+
 function toDateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -131,6 +141,9 @@ export function SettingsPage() {
   const [rebuildEndDate, setRebuildEndDate] = useState(() => toDateInputValue(new Date()));
   const [rebuildValidationError, setRebuildValidationError] = useState<string | null>(null);
   const [rebuildInProgress, setRebuildInProgress] = useState(false);
+  const [importPreview, setImportPreview] = useState<transfer.ImportPreview | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importInProgress, setImportInProgress] = useState(false);
   const persistCountRef = useRef(0);
   const changelogQueryHandledRef = useRef(false);
   const canConfigureStartupWindowBehaviorControls = canConfigureStartupWindowBehavior(currentMachine.os);
@@ -498,6 +511,48 @@ export function SettingsPage() {
       }
     })();
   }, [error, rebuildDate, rebuildEndDate, rebuildScope, rebuildStartDate, success]);
+
+  const openImportPreview = useCallback(() => {
+    void (async () => {
+      try {
+        const preview = await PreviewImportLocalDataFromDisk();
+        if (preview.cancelled) {
+          return;
+        }
+        setImportPreview(preview);
+        setImportDialogOpen(true);
+      } catch (cause) {
+        error('Import Preview Failed', cause instanceof Error ? cause.message : 'Unable to preview import file.');
+      }
+    })();
+  }, [error]);
+
+  const runImport = useCallback(() => {
+    if (!importPreview?.filePath || importInProgress) {
+      return;
+    }
+    setImportInProgress(true);
+    void (async () => {
+      try {
+        const result = await ImportLocalDataFromDisk(importPreview.filePath ?? '');
+        if (result.cancelled) {
+          return;
+        }
+        const importedCount = result.insertedEventCount + result.insertedSessionCount;
+        success(
+          'Import Complete',
+          `${importedCount} activity records merged. ${result.duplicateEventCount + result.duplicateSessionCount} duplicates skipped.`,
+        );
+        setImportDialogOpen(false);
+        setImportPreview(null);
+        await refreshSettings('manual');
+      } catch (cause) {
+        error('Import Failed', cause instanceof Error ? cause.message : 'Unable to import activity data.');
+      } finally {
+        setImportInProgress(false);
+      }
+    })();
+  }, [error, importInProgress, importPreview, refreshSettings, success]);
 
   const tabs = [
     {
@@ -1196,8 +1251,11 @@ export function SettingsPage() {
                     onClick={() => {
                       void (async () => {
                         try {
-                          await ExportLocalDataToDisk();
-                          success('Export Complete', 'Your local tracking history has been successfully exported to disk.');
+                          const result = await ExportLocalDataToDisk();
+                          if (result.cancelled) {
+                            return;
+                          }
+                          success('Export Complete', `${result.eventCount} events and ${result.sessionCount} sessions exported.`);
                         } catch (err: unknown) {
                           // Note: Error catching triggers on Wails backend failures
                           // A cancelled dialog returns nil implicitly and does not throw
@@ -1208,9 +1266,83 @@ export function SettingsPage() {
                   >
                     Export Data
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                    onClick={openImportPreview}
+                  >
                     Import Data
                   </Button>
+                  <Dialog
+                    open={importDialogOpen}
+                    onOpenChange={(nextOpen) => {
+                      if (importInProgress) {
+                        return;
+                      }
+                      setImportDialogOpen(nextOpen);
+                      if (!nextOpen) {
+                        setImportPreview(null);
+                      }
+                    }}
+                  >
+                    <DialogContent className="max-w-2xl rounded-[20px] border-[var(--surface-subtle)] bg-[var(--surface)] p-4">
+                      <DialogHeader className="pr-8">
+                        <DialogTitle className="text-xl text-[var(--ink-strong)]">Import Data</DialogTitle>
+                      </DialogHeader>
+                      {importPreview ? (
+                        <div className="space-y-3">
+                          <SettingsInfoGrid
+                            items={[
+                              { label: 'Format', value: importPreview.legacyFormat ? 'Legacy' : `v${importPreview.formatVersion}` },
+                              { label: 'Data range', value: formatImportRange(importPreview.startDate, importPreview.endDate), mono: true },
+                              { label: 'Affected range', value: formatImportRange(importPreview.affectedStartDate, importPreview.affectedEndDate), mono: true },
+                              { label: 'Machines', value: `${importPreview.machineCount}`, mono: true },
+                              { label: 'New events', value: `${importPreview.newEventCount}`, mono: true },
+                              { label: 'Duplicate events', value: `${importPreview.duplicateEventCount}`, mono: true },
+                              { label: 'Conflicting events', value: `${importPreview.conflictingEventCount}`, mono: true },
+                              { label: 'Invalid events', value: `${importPreview.invalidEventCount}`, mono: true },
+                              { label: 'New sessions', value: `${importPreview.newSessionCount}`, mono: true },
+                            ]}
+                          />
+                          {importPreview.warnings?.length ? (
+                            <div className="rounded-xl bg-[var(--surface-subtle)] p-3">
+                              <p className="text-sm font-medium text-[var(--ink-strong)]">Warnings</p>
+                              <ul className="mt-2 space-y-1 text-xs text-[var(--ink-tertiary)]">
+                                {importPreview.warnings.map((warning) => (
+                                  <li key={warning}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <DialogFooter className="mt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                          onClick={() => {
+                            setImportDialogOpen(false);
+                            setImportPreview(null);
+                          }}
+                          disabled={importInProgress}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-full!"
+                          onClick={runImport}
+                          disabled={!importPreview?.canImport || importInProgress}
+                        >
+                          {importInProgress ? 'Importing…' : 'Import'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </>
               }
             />

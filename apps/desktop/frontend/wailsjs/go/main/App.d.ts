@@ -4,12 +4,15 @@ import {updates} from '../models';
 import {contracts} from '../models';
 import {main} from '../models';
 import {storage} from '../models';
+import {transfer} from '../models';
 
 export function CheckForDesktopUpdate():Promise<updates.CheckResult>;
 
 export function ClearLocalData():Promise<void>;
 
-export function ExportLocalDataToDisk():Promise<void>;
+export function ExportLocalDataToDisk():Promise<transfer.ExportResult>;
+
+export function ImportLocalDataFromDisk(arg1:string):Promise<transfer.ImportResult>;
 
 export function GetAnalyticsData(arg1:string):Promise<contracts.AnalyticsData>;
 
@@ -54,6 +57,8 @@ export function ListSessionsForDate(arg1:string):Promise<Array<contracts.Session
 export function ListSessionsForRange(arg1:string,arg2:string):Promise<Array<contracts.Session>>;
 
 export function Ping():Promise<string>;
+
+export function PreviewImportLocalDataFromDisk():Promise<transfer.ImportPreview>;
 
 export function RebuildAllSessions():Promise<contracts.SessionRebuildResult>;
 

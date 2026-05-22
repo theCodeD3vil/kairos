@@ -1118,6 +1118,143 @@ export namespace storage {
 
 }
 
+export namespace transfer {
+	
+	export class ExportResult {
+	    filePath?: string;
+	    cancelled: boolean;
+	    machineCount: number;
+	    eventCount: number;
+	    sessionCount: number;
+	    startDate?: string;
+	    endDate?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filePath = source["filePath"];
+	        this.cancelled = source["cancelled"];
+	        this.machineCount = source["machineCount"];
+	        this.eventCount = source["eventCount"];
+	        this.sessionCount = source["sessionCount"];
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	    }
+	}
+	export class ImportPreview {
+	    filePath?: string;
+	    cancelled: boolean;
+	    formatVersion: number;
+	    legacyFormat: boolean;
+	    exportedAt?: string;
+	    appVersion?: string;
+	    sourceDesktopInstanceId?: string;
+	    machineCount: number;
+	    eventCount: number;
+	    validEventCount: number;
+	    newEventCount: number;
+	    duplicateEventCount: number;
+	    conflictingEventCount: number;
+	    invalidEventCount: number;
+	    sessionCount: number;
+	    newSessionCount: number;
+	    duplicateSessionCount: number;
+	    conflictingSessionCount: number;
+	    invalidSessionCount: number;
+	    startDate?: string;
+	    endDate?: string;
+	    affectedStartDate?: string;
+	    affectedEndDate?: string;
+	    canImport: boolean;
+	    willRebuildSessions: boolean;
+	    willUseSessionFallback: boolean;
+	    warnings?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filePath = source["filePath"];
+	        this.cancelled = source["cancelled"];
+	        this.formatVersion = source["formatVersion"];
+	        this.legacyFormat = source["legacyFormat"];
+	        this.exportedAt = source["exportedAt"];
+	        this.appVersion = source["appVersion"];
+	        this.sourceDesktopInstanceId = source["sourceDesktopInstanceId"];
+	        this.machineCount = source["machineCount"];
+	        this.eventCount = source["eventCount"];
+	        this.validEventCount = source["validEventCount"];
+	        this.newEventCount = source["newEventCount"];
+	        this.duplicateEventCount = source["duplicateEventCount"];
+	        this.conflictingEventCount = source["conflictingEventCount"];
+	        this.invalidEventCount = source["invalidEventCount"];
+	        this.sessionCount = source["sessionCount"];
+	        this.newSessionCount = source["newSessionCount"];
+	        this.duplicateSessionCount = source["duplicateSessionCount"];
+	        this.conflictingSessionCount = source["conflictingSessionCount"];
+	        this.invalidSessionCount = source["invalidSessionCount"];
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	        this.affectedStartDate = source["affectedStartDate"];
+	        this.affectedEndDate = source["affectedEndDate"];
+	        this.canImport = source["canImport"];
+	        this.willRebuildSessions = source["willRebuildSessions"];
+	        this.willUseSessionFallback = source["willUseSessionFallback"];
+	        this.warnings = source["warnings"];
+	    }
+	}
+	export class ImportResult {
+	    filePath?: string;
+	    cancelled: boolean;
+	    formatVersion: number;
+	    legacyFormat: boolean;
+	    upsertedMachineCount: number;
+	    insertedEventCount: number;
+	    duplicateEventCount: number;
+	    conflictingEventCount: number;
+	    invalidEventCount: number;
+	    insertedSessionCount: number;
+	    duplicateSessionCount: number;
+	    conflictingSessionCount: number;
+	    invalidSessionCount: number;
+	    rebuiltSessionCount: number;
+	    affectedStartDate?: string;
+	    affectedEndDate?: string;
+	    warnings?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filePath = source["filePath"];
+	        this.cancelled = source["cancelled"];
+	        this.formatVersion = source["formatVersion"];
+	        this.legacyFormat = source["legacyFormat"];
+	        this.upsertedMachineCount = source["upsertedMachineCount"];
+	        this.insertedEventCount = source["insertedEventCount"];
+	        this.duplicateEventCount = source["duplicateEventCount"];
+	        this.conflictingEventCount = source["conflictingEventCount"];
+	        this.invalidEventCount = source["invalidEventCount"];
+	        this.insertedSessionCount = source["insertedSessionCount"];
+	        this.duplicateSessionCount = source["duplicateSessionCount"];
+	        this.conflictingSessionCount = source["conflictingSessionCount"];
+	        this.invalidSessionCount = source["invalidSessionCount"];
+	        this.rebuiltSessionCount = source["rebuiltSessionCount"];
+	        this.affectedStartDate = source["affectedStartDate"];
+	        this.affectedEndDate = source["affectedEndDate"];
+	        this.warnings = source["warnings"];
+	    }
+	}
+
+}
+
 export namespace updates {
 	
 	export class CheckResult {
@@ -1150,4 +1287,3 @@ export namespace updates {
 	}
 
 }
-
