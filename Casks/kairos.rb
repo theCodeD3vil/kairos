@@ -1,6 +1,6 @@
 cask "kairos" do
-  version "1.1.10"
-  sha256 "bc27aba5a752471b9daa3bc285ddf0c3f81a346ed1519dbcf2809f2ca0554173"
+  version "1.1.11"
+  sha256 "d1fdb0c9f48c5e777b6aff95d8bce251f7327d88b4edd644934fadde9c24d58c"
 
   url "https://github.com/theCodeD3vil/kairos/releases/download/v#{version}/Kairos-macos-v#{version}.dmg",
       verified: "github.com/theCodeD3vil/kairos/"
