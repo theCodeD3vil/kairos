@@ -26,6 +26,20 @@ export namespace contracts {
 	        this.repositoryUrl = source["repositoryUrl"];
 	    }
 	}
+	export class AcceptedEventTrendPoint {
+	    date: string;
+	    acceptedCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AcceptedEventTrendPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.date = source["date"];
+	        this.acceptedCount = source["acceptedCount"];
+	    }
+	}
 	export class ActivityEvent {
 	    id: string;
 	    timestamp: string;
@@ -53,6 +67,720 @@ export namespace contracts {
 	        this.filePath = source["filePath"];
 	        this.gitBranch = source["gitBranch"];
 	    }
+	}
+	export class ProjectInvestmentScore {
+	    projectName: string;
+	    score: number;
+	    totalMinutes: number;
+	    activeDays: number;
+	    momentumPercent: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProjectInvestmentScore(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectName = source["projectName"];
+	        this.score = source["score"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.activeDays = source["activeDays"];
+	        this.momentumPercent = source["momentumPercent"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class InsightScoreInput {
+	    label: string;
+	    value: number;
+	    score: number;
+	    weight: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightScoreInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.value = source["value"];
+	        this.score = source["score"];
+	        this.weight = source["weight"];
+	    }
+	}
+	export class InsightScore {
+	    score: number;
+	    direction: string;
+	    inputs: InsightScoreInput[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightScore(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.score = source["score"];
+	        this.direction = source["direction"];
+	        this.inputs = this.convertValues(source["inputs"], InsightScoreInput);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class InsightScoreSummary {
+	    momentumScore: InsightScore;
+	    focusScore: InsightScore;
+	    consistencyScore: InsightScore;
+	    fragmentationScore: InsightScore;
+	    recoveryScore: InsightScore;
+	    trackingHealthScore: InsightScore;
+	    projectInvestmentScore: InsightScore;
+	    projectInvestmentBreakdown: ProjectInvestmentScore[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightScoreSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.momentumScore = this.convertValues(source["momentumScore"], InsightScore);
+	        this.focusScore = this.convertValues(source["focusScore"], InsightScore);
+	        this.consistencyScore = this.convertValues(source["consistencyScore"], InsightScore);
+	        this.fragmentationScore = this.convertValues(source["fragmentationScore"], InsightScore);
+	        this.recoveryScore = this.convertValues(source["recoveryScore"], InsightScore);
+	        this.trackingHealthScore = this.convertValues(source["trackingHealthScore"], InsightScore);
+	        this.projectInvestmentScore = this.convertValues(source["projectInvestmentScore"], InsightScore);
+	        this.projectInvestmentBreakdown = this.convertValues(source["projectInvestmentBreakdown"], ProjectInvestmentScore);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ProjectAreaBreakdown {
+	    projectName: string;
+	    area: string;
+	    totalMinutes: number;
+	    eventCount: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProjectAreaBreakdown(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectName = source["projectName"];
+	        this.area = source["area"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.eventCount = source["eventCount"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class FileFocusBlock {
+	    filePath: string;
+	    fileName: string;
+	    startTime: string;
+	    endTime: string;
+	    durationMinutes: number;
+	    eventCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileFocusBlock(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filePath = source["filePath"];
+	        this.fileName = source["fileName"];
+	        this.startTime = source["startTime"];
+	        this.endTime = source["endTime"];
+	        this.durationMinutes = source["durationMinutes"];
+	        this.eventCount = source["eventCount"];
+	    }
+	}
+	export class FileTestVsSource {
+	    testMinutes: number;
+	    sourceMinutes: number;
+	    testShareOfCode: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileTestVsSource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.testMinutes = source["testMinutes"];
+	        this.sourceMinutes = source["sourceMinutes"];
+	        this.testShareOfCode = source["testShareOfCode"];
+	    }
+	}
+	export class FileCategoryBreakdown {
+	    category: string;
+	    totalMinutes: number;
+	    eventCount: number;
+	    fileCount: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileCategoryBreakdown(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.category = source["category"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.eventCount = source["eventCount"];
+	        this.fileCount = source["fileCount"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class FileHotspot {
+	    filePath: string;
+	    fileName: string;
+	    category: string;
+	    totalMinutes: number;
+	    eventCount: number;
+	    editCount: number;
+	    saveCount: number;
+	    shareOfTotal: number;
+	    lastActiveAt?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileHotspot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filePath = source["filePath"];
+	        this.fileName = source["fileName"];
+	        this.category = source["category"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.eventCount = source["eventCount"];
+	        this.editCount = source["editCount"];
+	        this.saveCount = source["saveCount"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	        this.lastActiveAt = source["lastActiveAt"];
+	    }
+	}
+	export class FileKpiSummary {
+	    optInEnabled: boolean;
+	    filePathsAvailable: boolean;
+	    pathsMasked: boolean;
+	    uniqueFileCount: number;
+	    averageUniqueFilesPerSession: number;
+	    totalAttributedMinutes: number;
+	    topFiles: FileHotspot[];
+	    mostRevisitedFiles: FileHotspot[];
+	    categoryBreakdown: FileCategoryBreakdown[];
+	    testVsSource: FileTestVsSource;
+	    documentationMinutes: number;
+	    configMinutes: number;
+	    infrastructureMinutes: number;
+	    fileChurnLeaders: FileHotspot[];
+	    longRunningFocusBlocks: FileFocusBlock[];
+	    projectAreaBreakdown: ProjectAreaBreakdown[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FileKpiSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.optInEnabled = source["optInEnabled"];
+	        this.filePathsAvailable = source["filePathsAvailable"];
+	        this.pathsMasked = source["pathsMasked"];
+	        this.uniqueFileCount = source["uniqueFileCount"];
+	        this.averageUniqueFilesPerSession = source["averageUniqueFilesPerSession"];
+	        this.totalAttributedMinutes = source["totalAttributedMinutes"];
+	        this.topFiles = this.convertValues(source["topFiles"], FileHotspot);
+	        this.mostRevisitedFiles = this.convertValues(source["mostRevisitedFiles"], FileHotspot);
+	        this.categoryBreakdown = this.convertValues(source["categoryBreakdown"], FileCategoryBreakdown);
+	        this.testVsSource = this.convertValues(source["testVsSource"], FileTestVsSource);
+	        this.documentationMinutes = source["documentationMinutes"];
+	        this.configMinutes = source["configMinutes"];
+	        this.infrastructureMinutes = source["infrastructureMinutes"];
+	        this.fileChurnLeaders = this.convertValues(source["fileChurnLeaders"], FileHotspot);
+	        this.longRunningFocusBlocks = this.convertValues(source["longRunningFocusBlocks"], FileFocusBlock);
+	        this.projectAreaBreakdown = this.convertValues(source["projectAreaBreakdown"], ProjectAreaBreakdown);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class EventTypeMixBucket {
+	    name: string;
+	    totalEvents: number;
+	    editCount: number;
+	    saveCount: number;
+	    openCount: number;
+	    heartbeatCount: number;
+	    focusCount: number;
+	    blurCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new EventTypeMixBucket(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.totalEvents = source["totalEvents"];
+	        this.editCount = source["editCount"];
+	        this.saveCount = source["saveCount"];
+	        this.openCount = source["openCount"];
+	        this.heartbeatCount = source["heartbeatCount"];
+	        this.focusCount = source["focusCount"];
+	        this.blurCount = source["blurCount"];
+	    }
+	}
+	export class EventActivityKpiSummary {
+	    totalEvents: number;
+	    eventsInSessions: number;
+	    editCount: number;
+	    saveCount: number;
+	    openCount: number;
+	    heartbeatCount: number;
+	    focusCount: number;
+	    blurCount: number;
+	    activeEventCount: number;
+	    passiveEventCount: number;
+	    neutralEventCount: number;
+	    activeShare: number;
+	    passiveShare: number;
+	    neutralShare: number;
+	    eventDensityPerMinute: number;
+	    editSaveRatio: number;
+	    medianFirstOpenToFirstEditSeconds: number;
+	    medianEditToSaveSeconds: number;
+	    medianSessionWarmupSeconds: number;
+	    warmupQualifyingSessionCount: number;
+	    medianReturnAfterIdleMinutes: number;
+	    activityBurstCount: number;
+	    heartbeatOnlySessionCount: number;
+	    heartbeatOnlySessionShare: number;
+	    trackEditEvents: boolean;
+	    trackSaveEvents: boolean;
+	    trackFileOpenEvents: boolean;
+	    eventTypeMixByProject: EventTypeMixBucket[];
+	    eventTypeMixByLanguage: EventTypeMixBucket[];
+	    eventTypeMixByMachine: EventTypeMixBucket[];
+	
+	    static createFrom(source: any = {}) {
+	        return new EventActivityKpiSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalEvents = source["totalEvents"];
+	        this.eventsInSessions = source["eventsInSessions"];
+	        this.editCount = source["editCount"];
+	        this.saveCount = source["saveCount"];
+	        this.openCount = source["openCount"];
+	        this.heartbeatCount = source["heartbeatCount"];
+	        this.focusCount = source["focusCount"];
+	        this.blurCount = source["blurCount"];
+	        this.activeEventCount = source["activeEventCount"];
+	        this.passiveEventCount = source["passiveEventCount"];
+	        this.neutralEventCount = source["neutralEventCount"];
+	        this.activeShare = source["activeShare"];
+	        this.passiveShare = source["passiveShare"];
+	        this.neutralShare = source["neutralShare"];
+	        this.eventDensityPerMinute = source["eventDensityPerMinute"];
+	        this.editSaveRatio = source["editSaveRatio"];
+	        this.medianFirstOpenToFirstEditSeconds = source["medianFirstOpenToFirstEditSeconds"];
+	        this.medianEditToSaveSeconds = source["medianEditToSaveSeconds"];
+	        this.medianSessionWarmupSeconds = source["medianSessionWarmupSeconds"];
+	        this.warmupQualifyingSessionCount = source["warmupQualifyingSessionCount"];
+	        this.medianReturnAfterIdleMinutes = source["medianReturnAfterIdleMinutes"];
+	        this.activityBurstCount = source["activityBurstCount"];
+	        this.heartbeatOnlySessionCount = source["heartbeatOnlySessionCount"];
+	        this.heartbeatOnlySessionShare = source["heartbeatOnlySessionShare"];
+	        this.trackEditEvents = source["trackEditEvents"];
+	        this.trackSaveEvents = source["trackSaveEvents"];
+	        this.trackFileOpenEvents = source["trackFileOpenEvents"];
+	        this.eventTypeMixByProject = this.convertValues(source["eventTypeMixByProject"], EventTypeMixBucket);
+	        this.eventTypeMixByLanguage = this.convertValues(source["eventTypeMixByLanguage"], EventTypeMixBucket);
+	        this.eventTypeMixByMachine = this.convertValues(source["eventTypeMixByMachine"], EventTypeMixBucket);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ProjectBranchTimePoint {
+	    projectName: string;
+	    branchName: string;
+	    totalMinutes: number;
+	    eventCount: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProjectBranchTimePoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectName = source["projectName"];
+	        this.branchName = source["branchName"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.eventCount = source["eventCount"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class BranchTimePoint {
+	    branchName: string;
+	    totalMinutes: number;
+	    eventCount: number;
+	    shareOfTotal: number;
+	    lastActiveAt?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new BranchTimePoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.branchName = source["branchName"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.eventCount = source["eventCount"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	        this.lastActiveAt = source["lastActiveAt"];
+	    }
+	}
+	export class WorkspaceContinuityPoint {
+	    workspaceId: string;
+	    projectCount: number;
+	    machineCount: number;
+	    eventCount: number;
+	    lastActiveAt?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceContinuityPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.workspaceId = source["workspaceId"];
+	        this.projectCount = source["projectCount"];
+	        this.machineCount = source["machineCount"];
+	        this.eventCount = source["eventCount"];
+	        this.lastActiveAt = source["lastActiveAt"];
+	    }
+	}
+	export class MachineTimeSplitPoint {
+	    machineId: string;
+	    machineName: string;
+	    totalMinutes: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MachineTimeSplitPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.machineId = source["machineId"];
+	        this.machineName = source["machineName"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class ContextMomentumPoint {
+	    name: string;
+	    currentMinutes: number;
+	    previousMinutes: number;
+	    deltaPercent: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContextMomentumPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.currentMinutes = source["currentMinutes"];
+	        this.previousMinutes = source["previousMinutes"];
+	        this.deltaPercent = source["deltaPercent"];
+	    }
+	}
+	export class ContextLeaderKpi {
+	    name: string;
+	    totalMinutes: number;
+	    sessionCount: number;
+	    activeDays: number;
+	    shareOfTotal: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContextLeaderKpi(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.totalMinutes = source["totalMinutes"];
+	        this.sessionCount = source["sessionCount"];
+	        this.activeDays = source["activeDays"];
+	        this.shareOfTotal = source["shareOfTotal"];
+	    }
+	}
+	export class ContextKpiSummary {
+	    projectSwitchCount: number;
+	    projectSwitchRatePerDay: number;
+	    languageSwitchCount: number;
+	    languageSwitchRatePerDay: number;
+	    branchSwitchCount: number;
+	    branchSwitchRatePerDay: number;
+	    projectFocusScore: number;
+	    languageFocusScore: number;
+	    topProjectByTime: ContextLeaderKpi;
+	    topProjectBySessions: ContextLeaderKpi;
+	    topProjectByActiveDays: ContextLeaderKpi;
+	    topLanguageByTime: ContextLeaderKpi;
+	    topLanguageBySessions: ContextLeaderKpi;
+	    topLanguageByActiveDays: ContextLeaderKpi;
+	    projectMomentum: ContextMomentumPoint[];
+	    languageMomentum: ContextMomentumPoint[];
+	    machineTimeSplit: MachineTimeSplitPoint[];
+	    crossMachineResumeCount: number;
+	    crossMachineResumeRate: number;
+	    workspaceContinuity: WorkspaceContinuityPoint[];
+	    branchTime: BranchTimePoint[];
+	    projectBranchBreakdown: ProjectBranchTimePoint[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ContextKpiSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectSwitchCount = source["projectSwitchCount"];
+	        this.projectSwitchRatePerDay = source["projectSwitchRatePerDay"];
+	        this.languageSwitchCount = source["languageSwitchCount"];
+	        this.languageSwitchRatePerDay = source["languageSwitchRatePerDay"];
+	        this.branchSwitchCount = source["branchSwitchCount"];
+	        this.branchSwitchRatePerDay = source["branchSwitchRatePerDay"];
+	        this.projectFocusScore = source["projectFocusScore"];
+	        this.languageFocusScore = source["languageFocusScore"];
+	        this.topProjectByTime = this.convertValues(source["topProjectByTime"], ContextLeaderKpi);
+	        this.topProjectBySessions = this.convertValues(source["topProjectBySessions"], ContextLeaderKpi);
+	        this.topProjectByActiveDays = this.convertValues(source["topProjectByActiveDays"], ContextLeaderKpi);
+	        this.topLanguageByTime = this.convertValues(source["topLanguageByTime"], ContextLeaderKpi);
+	        this.topLanguageBySessions = this.convertValues(source["topLanguageBySessions"], ContextLeaderKpi);
+	        this.topLanguageByActiveDays = this.convertValues(source["topLanguageByActiveDays"], ContextLeaderKpi);
+	        this.projectMomentum = this.convertValues(source["projectMomentum"], ContextMomentumPoint);
+	        this.languageMomentum = this.convertValues(source["languageMomentum"], ContextMomentumPoint);
+	        this.machineTimeSplit = this.convertValues(source["machineTimeSplit"], MachineTimeSplitPoint);
+	        this.crossMachineResumeCount = source["crossMachineResumeCount"];
+	        this.crossMachineResumeRate = source["crossMachineResumeRate"];
+	        this.workspaceContinuity = this.convertValues(source["workspaceContinuity"], WorkspaceContinuityPoint);
+	        this.branchTime = this.convertValues(source["branchTime"], BranchTimePoint);
+	        this.projectBranchBreakdown = this.convertValues(source["projectBranchBreakdown"], ProjectBranchTimePoint);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class HeatmapKpiPoint {
+	    index: number;
+	    label: string;
+	    totalMinutes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new HeatmapKpiPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.label = source["label"];
+	        this.totalMinutes = source["totalMinutes"];
+	    }
+	}
+	export class SessionDurationKpis {
+	    averageMinutes: number;
+	    medianMinutes: number;
+	    p90Minutes: number;
+	    longestMinutes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionDurationKpis(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.averageMinutes = source["averageMinutes"];
+	        this.medianMinutes = source["medianMinutes"];
+	        this.p90Minutes = source["p90Minutes"];
+	        this.longestMinutes = source["longestMinutes"];
+	    }
+	}
+	export class TimeKpiPoint {
+	    label: string;
+	    date: string;
+	    totalMinutes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimeKpiPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.date = source["date"];
+	        this.totalMinutes = source["totalMinutes"];
+	    }
+	}
+	export class SessionKpiSummary {
+	    activeDays: number;
+	    currentStreakDays: number;
+	    longestStreakDays: number;
+	    rolling7DayAverageMinutes: number;
+	    rolling30DayAverageMinutes: number;
+	    previousPeriodDeltaPercent: number;
+	    bestDay: TimeKpiPoint;
+	    bestWeek: TimeKpiPoint;
+	    bestMonth: TimeKpiPoint;
+	    duration: SessionDurationKpis;
+	    deepWorkThresholdMinutes: number;
+	    deepWorkMinutes: number;
+	    deepWorkBlockCount: number;
+	    shortSessionThresholdMinutes: number;
+	    shortSessionCount: number;
+	    fragmentationScore: number;
+	    longestBreakMinutes: number;
+	    medianBreakMinutes: number;
+	    firstActiveAt?: string;
+	    lastActiveAt?: string;
+	    focusWindowStart?: string;
+	    focusWindowEnd?: string;
+	    weekdayHeatmap: HeatmapKpiPoint[];
+	    hourlyHeatmap: HeatmapKpiPoint[];
+	    consistencyScore: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionKpiSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.activeDays = source["activeDays"];
+	        this.currentStreakDays = source["currentStreakDays"];
+	        this.longestStreakDays = source["longestStreakDays"];
+	        this.rolling7DayAverageMinutes = source["rolling7DayAverageMinutes"];
+	        this.rolling30DayAverageMinutes = source["rolling30DayAverageMinutes"];
+	        this.previousPeriodDeltaPercent = source["previousPeriodDeltaPercent"];
+	        this.bestDay = this.convertValues(source["bestDay"], TimeKpiPoint);
+	        this.bestWeek = this.convertValues(source["bestWeek"], TimeKpiPoint);
+	        this.bestMonth = this.convertValues(source["bestMonth"], TimeKpiPoint);
+	        this.duration = this.convertValues(source["duration"], SessionDurationKpis);
+	        this.deepWorkThresholdMinutes = source["deepWorkThresholdMinutes"];
+	        this.deepWorkMinutes = source["deepWorkMinutes"];
+	        this.deepWorkBlockCount = source["deepWorkBlockCount"];
+	        this.shortSessionThresholdMinutes = source["shortSessionThresholdMinutes"];
+	        this.shortSessionCount = source["shortSessionCount"];
+	        this.fragmentationScore = source["fragmentationScore"];
+	        this.longestBreakMinutes = source["longestBreakMinutes"];
+	        this.medianBreakMinutes = source["medianBreakMinutes"];
+	        this.firstActiveAt = source["firstActiveAt"];
+	        this.lastActiveAt = source["lastActiveAt"];
+	        this.focusWindowStart = source["focusWindowStart"];
+	        this.focusWindowEnd = source["focusWindowEnd"];
+	        this.weekdayHeatmap = this.convertValues(source["weekdayHeatmap"], HeatmapKpiPoint);
+	        this.hourlyHeatmap = this.convertValues(source["hourlyHeatmap"], HeatmapKpiPoint);
+	        this.consistencyScore = source["consistencyScore"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class Session {
 	    id: string;
@@ -179,6 +907,11 @@ export namespace contracts {
 	    languageSummaries: LanguageSummary[];
 	    machineSummaries: MachineSummary[];
 	    recentSessions: Session[];
+	    sessionKpis: SessionKpiSummary;
+	    contextKpis: ContextKpiSummary;
+	    eventKpis: EventActivityKpiSummary;
+	    fileKpis: FileKpiSummary;
+	    insightScores: InsightScoreSummary;
 	
 	    static createFrom(source: any = {}) {
 	        return new AnalyticsData(source);
@@ -198,6 +931,11 @@ export namespace contracts {
 	        this.languageSummaries = this.convertValues(source["languageSummaries"], LanguageSummary);
 	        this.machineSummaries = this.convertValues(source["machineSummaries"], MachineSummary);
 	        this.recentSessions = this.convertValues(source["recentSessions"], Session);
+	        this.sessionKpis = this.convertValues(source["sessionKpis"], SessionKpiSummary);
+	        this.contextKpis = this.convertValues(source["contextKpis"], ContextKpiSummary);
+	        this.eventKpis = this.convertValues(source["eventKpis"], EventActivityKpiSummary);
+	        this.fileKpis = this.convertValues(source["fileKpis"], FileKpiSummary);
+	        this.insightScores = this.convertValues(source["insightScores"], InsightScoreSummary);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -250,6 +988,7 @@ export namespace contracts {
 	        this.restoreLastDateRange = source["restoreLastDateRange"];
 	    }
 	}
+	
 	export class CalendarDayData {
 	    date: string;
 	    totalMinutes: number;
@@ -361,6 +1100,9 @@ export namespace contracts {
 		}
 	}
 	
+	
+	
+	
 	export class DataStorageInfo {
 	    localDataPath: string;
 	    databaseStatus: string;
@@ -379,6 +1121,8 @@ export namespace contracts {
 	        this.pendingEventCount = source["pendingEventCount"];
 	    }
 	}
+	
+	
 	export class ExclusionsSettings {
 	    folders: string[];
 	    projectNames: string[];
@@ -598,6 +1342,11 @@ export namespace contracts {
 	    }
 	}
 	
+	
+	
+	
+	
+	
 	export class GeneralSettings {
 	    machineDisplayName: string;
 	    defaultDateRange: string;
@@ -620,6 +1369,7 @@ export namespace contracts {
 	        this.preferredLandingPage = source["preferredLandingPage"];
 	    }
 	}
+	
 	export class IngestEventResult {
 	    eventId: string;
 	    status: string;
@@ -757,6 +1507,24 @@ export namespace contracts {
 	
 	
 	
+	
+	export class MachineFreshnessBucket {
+	    bucket: string;
+	    machineCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MachineFreshnessBucket(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.bucket = source["bucket"];
+	        this.machineCount = source["machineCount"];
+	    }
+	}
+	
+	
+	
 	export class WeeklyTrendPoint {
 	    date: string;
 	    totalMinutes: number;
@@ -837,6 +1605,7 @@ export namespace contracts {
 	    obfuscateProjectNames: boolean;
 	    sensitiveProjectNames: string[];
 	    minimizeExtensionMetadata: boolean;
+	    fileMetricsEnabled: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new PrivacySettings(source);
@@ -851,8 +1620,12 @@ export namespace contracts {
 	        this.obfuscateProjectNames = source["obfuscateProjectNames"];
 	        this.sensitiveProjectNames = source["sensitiveProjectNames"];
 	        this.minimizeExtensionMetadata = source["minimizeExtensionMetadata"];
+	        this.fileMetricsEnabled = source["fileMetricsEnabled"];
 	    }
 	}
+	
+	
+	
 	
 	export class ProjectsPageData {
 	    rangeLabel: string;
@@ -886,6 +1659,108 @@ export namespace contracts {
 		    return a;
 		}
 	}
+	export class TrackingCoverageGap {
+	    startDate: string;
+	    endDate: string;
+	    durationDays: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TrackingCoverageGap(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	        this.durationDays = source["durationDays"];
+	    }
+	}
+	export class SyncLatencyStats {
+	    sampleSize: number;
+	    medianSeconds: number;
+	    p90Seconds: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncLatencyStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sampleSize = source["sampleSize"];
+	        this.medianSeconds = source["medianSeconds"];
+	        this.p90Seconds = source["p90Seconds"];
+	    }
+	}
+	export class ReliabilityKpiSummary {
+	    status: string;
+	    pendingEventCount: number;
+	    bufferedTimeWindowMinutes: number;
+	    oldestPendingEventAt?: string;
+	    quarantinedEventCount: number;
+	    runtimeRejectedEventCount: number;
+	    duplicateEventCount: number;
+	    duplicateCountAvailable: boolean;
+	    duplicateEventRate: number;
+	    rejectedEventRate: number;
+	    totalAcceptedEvents: number;
+	    syncLatency: SyncLatencyStats;
+	    acceptedEventTrend: AcceptedEventTrendPoint[];
+	    trackingCoverageGaps: TrackingCoverageGap[];
+	    lastIngestedAt?: string;
+	    lastSuccessfulSyncAt?: string;
+	    lastHandshakeAt?: string;
+	    lastEventAt?: string;
+	    lastSessionRebuildAt?: string;
+	    machineFreshness: MachineFreshnessBucket[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ReliabilityKpiSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.pendingEventCount = source["pendingEventCount"];
+	        this.bufferedTimeWindowMinutes = source["bufferedTimeWindowMinutes"];
+	        this.oldestPendingEventAt = source["oldestPendingEventAt"];
+	        this.quarantinedEventCount = source["quarantinedEventCount"];
+	        this.runtimeRejectedEventCount = source["runtimeRejectedEventCount"];
+	        this.duplicateEventCount = source["duplicateEventCount"];
+	        this.duplicateCountAvailable = source["duplicateCountAvailable"];
+	        this.duplicateEventRate = source["duplicateEventRate"];
+	        this.rejectedEventRate = source["rejectedEventRate"];
+	        this.totalAcceptedEvents = source["totalAcceptedEvents"];
+	        this.syncLatency = this.convertValues(source["syncLatency"], SyncLatencyStats);
+	        this.acceptedEventTrend = this.convertValues(source["acceptedEventTrend"], AcceptedEventTrendPoint);
+	        this.trackingCoverageGaps = this.convertValues(source["trackingCoverageGaps"], TrackingCoverageGap);
+	        this.lastIngestedAt = source["lastIngestedAt"];
+	        this.lastSuccessfulSyncAt = source["lastSuccessfulSyncAt"];
+	        this.lastHandshakeAt = source["lastHandshakeAt"];
+	        this.lastEventAt = source["lastEventAt"];
+	        this.lastSessionRebuildAt = source["lastSessionRebuildAt"];
+	        this.machineFreshness = this.convertValues(source["machineFreshness"], MachineFreshnessBucket);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
 	
 	export class SessionRebuildResult {
 	    processedEventCount: number;
@@ -1002,6 +1877,7 @@ export namespace contracts {
 	    trackSessionBoundaries: boolean;
 	    idleTimeoutMinutes: number;
 	    sessionMergeThresholdMinutes: number;
+	    deepWorkThresholdMinutes: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new TrackingSettings(source);
@@ -1017,6 +1893,7 @@ export namespace contracts {
 	        this.trackSessionBoundaries = source["trackSessionBoundaries"];
 	        this.idleTimeoutMinutes = source["idleTimeoutMinutes"];
 	        this.sessionMergeThresholdMinutes = source["sessionMergeThresholdMinutes"];
+	        this.deepWorkThresholdMinutes = source["deepWorkThresholdMinutes"];
 	    }
 	}
 	export class SettingsData {
@@ -1030,6 +1907,7 @@ export namespace contracts {
 	    appBehavior: AppBehaviorSettings;
 	    dataStorage: DataStorageInfo;
 	    about: AboutInfo;
+	    reliability: ReliabilityKpiSummary;
 	
 	    static createFrom(source: any = {}) {
 	        return new SettingsData(source);
@@ -1047,6 +1925,7 @@ export namespace contracts {
 	        this.appBehavior = this.convertValues(source["appBehavior"], AppBehaviorSettings);
 	        this.dataStorage = this.convertValues(source["dataStorage"], DataStorageInfo);
 	        this.about = this.convertValues(source["about"], AboutInfo);
+	        this.reliability = this.convertValues(source["reliability"], ReliabilityKpiSummary);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1067,6 +1946,10 @@ export namespace contracts {
 		    return a;
 		}
 	}
+	
+	
+	
+	
 	
 	
 

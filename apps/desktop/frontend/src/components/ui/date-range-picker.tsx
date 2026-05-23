@@ -70,7 +70,7 @@ export function DateRangePicker({
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 rounded-xl border border-[hsl(var(--border)/0.7)] bg-[var(--surface)]/92 p-3 shadow-[var(--shadow-elevated)] backdrop-blur">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 rounded-xl border border-[hsl(var(--border)/0.65)] [background:var(--glass-light-strong)] p-3 shadow-[var(--shadow-layered)] backdrop-blur-[20px] supports-[backdrop-filter]:bg-[hsl(var(--popover)/0.68)]">
           <RangeCalendar
             value={value}
             sound={false}

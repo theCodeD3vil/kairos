@@ -1,4 +1,5 @@
 import {
+  GetAnalyticsData,
   GetCalendarDayData,
   GetCalendarMonthData,
   GetOverviewData,
@@ -10,7 +11,11 @@ import {
 } from '../../../wailsjs/go/main/App';
 import type { contracts } from '../../../wailsjs/go/models';
 import { overviewChartPalette, syncUptimeColors } from '@/components/overview/chart-colors';
-import type { OverviewRange, OverviewSnapshot, TodayTrendInterval } from '@/components/overview/types';
+import type {
+  OverviewRange,
+  OverviewSnapshot,
+  TodayTrendInterval,
+} from '@/components/overview/types';
 import type {
   AnalyticsFilters,
   AnalyticsSnapshot,
@@ -74,6 +79,8 @@ const syncColorByStatus = {
 const syncHistoryWindowMinutes = 90;
 const syncHistoryBucketMinutes = 10;
 const extensionPingIntervalMs = 60_000;
+const defaultDeepWorkThresholdMinutes = 60;
+const shortSessionThresholdMinutes = 15;
 
 export type SessionsScreenData = {
   range: OverviewRange;
@@ -220,7 +227,7 @@ function formatDateKey(date: Date) {
 function startOfWeekUTC(date: Date, weekStartsOn: DisplayPreferences['weekStartsOn'] = 'monday') {
   const current = startOfDayUTC(date);
   const weekday = current.getUTCDay();
-  const offset = weekStartsOn === 'sunday' ? weekday : (weekday === 0 ? 6 : weekday - 1);
+  const offset = weekStartsOn === 'sunday' ? weekday : weekday === 0 ? 6 : weekday - 1;
   return addDays(current, -offset);
 }
 
@@ -345,12 +352,14 @@ function buildDayTrendForInterval(
       const currentMs = current.getTime();
       const bucketIndex = Math.floor((currentMs - dayStartMs) / intervalMs);
       const bucketBoundaryMs = dayStartMs + (bucketIndex + 1) * intervalMs;
-      const minutesUntilBoundary = Math.max(
-        1,
-        Math.ceil((bucketBoundaryMs - currentMs) / 60_000),
-      );
+      const minutesUntilBoundary = Math.max(1, Math.ceil((bucketBoundaryMs - currentMs) / 60_000));
       const allocated = Math.min(remaining, minutesUntilBoundary);
-      if (currentMs >= dayStartMs && currentMs < dayEndMs && bucketIndex >= 0 && bucketIndex < totals.length) {
+      if (
+        currentMs >= dayStartMs &&
+        currentMs < dayEndMs &&
+        bucketIndex >= 0 &&
+        bucketIndex < totals.length
+      ) {
         totals[bucketIndex] += allocated;
       }
 
@@ -364,15 +373,17 @@ function buildDayTrendForInterval(
 
   return Array.from({ length: totalBuckets }, (_, index) => {
     const minuteOffset = index * intervalMinutes;
-    const labelDate = new Date(Date.UTC(
-      dayStart.getUTCFullYear(),
-      dayStart.getUTCMonth(),
-      dayStart.getUTCDate(),
-      Math.floor(minuteOffset / 60),
-      minuteOffset % 60,
-      0,
-      0,
-    ));
+    const labelDate = new Date(
+      Date.UTC(
+        dayStart.getUTCFullYear(),
+        dayStart.getUTCMonth(),
+        dayStart.getUTCDate(),
+        Math.floor(minuteOffset / 60),
+        minuteOffset % 60,
+        0,
+        0,
+      ),
+    );
     const label = labelDate.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
@@ -439,27 +450,32 @@ function buildSyncHealth(
     status: nowStatus,
     bridgeReachable,
     lastSyncAt: formatDateTime(status.lastHandshakeAt ?? lastUpdatedAt, preferences.hour12),
-    blocks: Array.from({ length: syncHistoryWindowMinutes / syncHistoryBucketMinutes }, (_, index) => {
-      const windowStart = new Date(now.getTime() - syncHistoryWindowMinutes * 60_000);
-      const bucketStart = new Date(windowStart.getTime() + index * syncHistoryBucketMinutes * 60_000);
-      const bucketEnd = new Date(bucketStart.getTime() + syncHistoryBucketMinutes * 60_000);
-      const slotStatus = resolveStatusAt(bucketEnd);
-      const startLabel = bucketStart.toLocaleTimeString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: preferences.hour12,
-      });
-      const endLabel = bucketEnd.toLocaleTimeString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: preferences.hour12,
-      });
-      return {
-        key: `sync-${bucketStart.toISOString()}`,
-        color: syncColorByStatus[slotStatus],
-        tooltip: `${startLabel} - ${endLabel} · ${slotStatus}`,
-      };
-    }),
+    blocks: Array.from(
+      { length: syncHistoryWindowMinutes / syncHistoryBucketMinutes },
+      (_, index) => {
+        const windowStart = new Date(now.getTime() - syncHistoryWindowMinutes * 60_000);
+        const bucketStart = new Date(
+          windowStart.getTime() + index * syncHistoryBucketMinutes * 60_000,
+        );
+        const bucketEnd = new Date(bucketStart.getTime() + syncHistoryBucketMinutes * 60_000);
+        const slotStatus = resolveStatusAt(bucketEnd);
+        const startLabel = bucketStart.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: preferences.hour12,
+        });
+        const endLabel = bucketEnd.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: preferences.hour12,
+        });
+        return {
+          key: `sync-${bucketStart.toISOString()}`,
+          color: syncColorByStatus[slotStatus],
+          tooltip: `${startLabel} - ${endLabel} · ${slotStatus}`,
+        };
+      },
+    ),
   };
 }
 
@@ -478,7 +494,9 @@ function adaptMachine(
     architecture: system.arch ?? '',
     editorName: system.editor === 'vscode' ? 'VS Code' : system.editor,
     editorVersion: preferences.minimizeExtensionMetadata ? '' : (system.editorVersion ?? ''),
-    extensionVersion: preferences.minimizeExtensionMetadata ? '' : (extensionStatus.extensionVersion ?? system.extensionVersion ?? ''),
+    extensionVersion: preferences.minimizeExtensionMetadata
+      ? ''
+      : (extensionStatus.extensionVersion ?? system.extensionVersion ?? ''),
     lastSeenAt: formatDateTime(system.lastSeenAt, preferences.hour12),
   };
 }
@@ -488,7 +506,11 @@ function adaptKnownMachine(
   extensionStatus: contracts.SettingsData['extensionStatus'],
   preferences: DisplayPreferences,
 ): MachineInfo {
-  const machineName = resolveDisplayMachineName(machine.machineName, machine.machineId, preferences);
+  const machineName = resolveDisplayMachineName(
+    machine.machineName,
+    machine.machineId,
+    preferences,
+  );
   return {
     machineName,
     machineId: machine.machineId,
@@ -498,7 +520,9 @@ function adaptKnownMachine(
     architecture: machine.arch ?? '',
     editorName: 'VS Code',
     editorVersion: '',
-    extensionVersion: preferences.minimizeExtensionMetadata ? '' : (extensionStatus.extensionVersion ?? ''),
+    extensionVersion: preferences.minimizeExtensionMetadata
+      ? ''
+      : (extensionStatus.extensionVersion ?? ''),
     lastSeenAt: 'Recently seen',
   };
 }
@@ -521,9 +545,10 @@ function resolveDisplayMachineName(
   machineId: string,
   preferences: DisplayPreferences,
 ) {
-  const canShowMachineNames = preferences.showMachineNames
-    && preferences.trackMachineAttribution
-    && preferences.sendMachineAttribution;
+  const canShowMachineNames =
+    preferences.showMachineNames &&
+    preferences.trackMachineAttribution &&
+    preferences.sendMachineAttribution;
   if (!canShowMachineNames) {
     return REDACTED_MACHINE_LABEL;
   }
@@ -577,7 +602,11 @@ function mapSessionRecord(
   mapProjectLabel: (value: string) => string,
 ): SessionRecordInternal {
   const machine = machines.get(session.machineId);
-  const machineName = resolveDisplayMachineName(session.machineName ?? machine?.machineName, session.machineId, preferences);
+  const machineName = resolveDisplayMachineName(
+    session.machineName ?? machine?.machineName,
+    session.machineId,
+    preferences,
+  );
 
   return {
     id: session.id,
@@ -650,7 +679,10 @@ function computeBreakdown(
   hour12: boolean,
 ): BreakdownItem[] {
   const totalMinutes = records.reduce((sum, record) => sum + record.durationMinutes, 0);
-  const aggregates = new Map<string, { minutes: number; activeDays: Set<string>; lastActiveAt: string }>();
+  const aggregates = new Map<
+    string,
+    { minutes: number; activeDays: Set<string>; lastActiveAt: string }
+  >();
 
   for (const record of records) {
     const key = record[field];
@@ -683,7 +715,10 @@ function computeBreakdown(
     });
 }
 
-function computeMachineBreakdown(records: SessionRecordInternal[], hour12: boolean): MachineBreakdown[] {
+function computeMachineBreakdown(
+  records: SessionRecordInternal[],
+  hour12: boolean,
+): MachineBreakdown[] {
   return computeBreakdown(records, 'machine', hour12).map((item) => ({
     name: item.name,
     minutes: item.minutes,
@@ -707,12 +742,555 @@ function computeHourBuckets(records: SessionRecordInternal[]) {
     .sort((left, right) => left.hourLabel.localeCompare(right.hourLabel));
 }
 
+function formatClockMinutes(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function roundOneDecimal(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function percentOfTotal(value: number, total: number) {
+  if (total <= 0) {
+    return 0;
+  }
+  return roundOneDecimal((value / total) * 100);
+}
+
+function dateKeysBetween(start: Date, end: Date) {
+  const dates: string[] = [];
+  for (
+    let current = startOfDayUTC(start);
+    current.getTime() <= startOfDayUTC(end).getTime();
+    current = addDays(current, 1)
+  ) {
+    dates.push(formatDateKey(current));
+  }
+  return dates;
+}
+
+function currentStreakDays(activeDates: Set<string>, dateWindow: DateWindow) {
+  let streak = 0;
+  for (
+    let current = startOfDayUTC(dateWindow.end);
+    current.getTime() >= startOfDayUTC(dateWindow.start).getTime();
+    current = addDays(current, -1)
+  ) {
+    if (!activeDates.has(formatDateKey(current))) {
+      return streak;
+    }
+    streak += 1;
+  }
+  return streak;
+}
+
+function longestStreakDays(activeDates: Set<string>, dateWindow: DateWindow) {
+  let longest = 0;
+  let currentStreak = 0;
+  for (const dateKey of dateKeysBetween(dateWindow.start, dateWindow.end)) {
+    if (activeDates.has(dateKey)) {
+      currentStreak += 1;
+      longest = Math.max(longest, currentStreak);
+      continue;
+    }
+    currentStreak = 0;
+  }
+  return longest;
+}
+
+function rollingAverageMinutes(
+  dailyTotals: Map<string, number>,
+  dateWindow: DateWindow,
+  days: number,
+) {
+  const end = startOfDayUTC(dateWindow.end);
+  const requestedStart = addDays(end, -(days - 1));
+  const start =
+    requestedStart.getTime() < startOfDayUTC(dateWindow.start).getTime()
+      ? startOfDayUTC(dateWindow.start)
+      : requestedStart;
+  const keys = dateKeysBetween(start, end);
+  if (keys.length === 0) {
+    return 0;
+  }
+  const total = keys.reduce((sum, key) => sum + (dailyTotals.get(key) ?? 0), 0);
+  return Math.round(total / keys.length);
+}
+
+function emptyTimeKpiPoint() {
+  return { label: '', date: '', totalMinutes: 0 };
+}
+
+function bestTimeKpiPoint(totals: Map<string, number>) {
+  let best = emptyTimeKpiPoint();
+  for (const [date, totalMinutes] of totals.entries()) {
+    if (totalMinutes <= 0) {
+      continue;
+    }
+    if (
+      totalMinutes > best.totalMinutes ||
+      (totalMinutes === best.totalMinutes && (!best.date || date < best.date))
+    ) {
+      best = {
+        label: date.length === 10 ? formatDate(date) : date,
+        date,
+        totalMinutes,
+      };
+    }
+  }
+  return best;
+}
+
+function computeDurationKpis(records: SessionRecordInternal[]) {
+  const durations = records
+    .map((record) => record.durationMinutes)
+    .filter((duration) => duration > 0)
+    .sort((left, right) => left - right);
+  if (durations.length === 0) {
+    return {
+      averageMinutes: 0,
+      medianMinutes: 0,
+      p90Minutes: 0,
+      longestMinutes: 0,
+    };
+  }
+
+  const midpoint = Math.floor(durations.length / 2);
+  const medianMinutes =
+    durations.length % 2 === 1
+      ? durations[midpoint]
+      : Math.round((durations[midpoint - 1] + durations[midpoint]) / 2);
+  const p90Index = Math.min(
+    durations.length - 1,
+    Math.max(0, Math.ceil(durations.length * 0.9) - 1),
+  );
+
+  return {
+    averageMinutes: Math.round(
+      durations.reduce((sum, duration) => sum + duration, 0) / durations.length,
+    ),
+    medianMinutes,
+    p90Minutes: durations[p90Index],
+    longestMinutes: durations[durations.length - 1],
+  };
+}
+
+function computeBreakKpis(records: SessionRecordInternal[]) {
+  const ordered = [...records].sort((left, right) => {
+    if (left.start !== right.start) {
+      return left.start.localeCompare(right.start);
+    }
+    return left.id.localeCompare(right.id);
+  });
+  const gaps: number[] = [];
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (previous.dateKey !== current.dateKey) {
+      continue;
+    }
+    const previousEnd = new Date(previous.endTime);
+    const currentStart = new Date(current.start);
+    if (Number.isNaN(previousEnd.getTime()) || Number.isNaN(currentStart.getTime())) {
+      continue;
+    }
+    const gapMinutes = Math.ceil((currentStart.getTime() - previousEnd.getTime()) / 60_000);
+    if (gapMinutes > 0) {
+      gaps.push(gapMinutes);
+    }
+  }
+  if (gaps.length === 0) {
+    return { longestBreakMinutes: 0, medianBreakMinutes: 0 };
+  }
+  gaps.sort((left, right) => left - right);
+  const midpoint = Math.floor(gaps.length / 2);
+  const medianBreakMinutes =
+    gaps.length % 2 === 1 ? gaps[midpoint] : Math.round((gaps[midpoint - 1] + gaps[midpoint]) / 2);
+  return {
+    longestBreakMinutes: gaps[gaps.length - 1],
+    medianBreakMinutes,
+  };
+}
+
+function computeActivityBounds(records: SessionRecordInternal[]) {
+  let firstActiveAt = '';
+  let lastActiveAt = '';
+  let earliestMinute = 0;
+  let latestMinute = 0;
+  let hasClock = false;
+
+  for (const record of records) {
+    const start = new Date(record.start);
+    const end = new Date(record.endTime);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      continue;
+    }
+    if (!firstActiveAt || record.start < firstActiveAt) {
+      firstActiveAt = record.start;
+    }
+    if (!lastActiveAt || record.endTime > lastActiveAt) {
+      lastActiveAt = record.endTime;
+    }
+    const startMinute = start.getUTCHours() * 60 + start.getUTCMinutes();
+    const endMinute = end.getUTCHours() * 60 + end.getUTCMinutes();
+    if (!hasClock || startMinute < earliestMinute) {
+      earliestMinute = startMinute;
+    }
+    if (!hasClock || endMinute > latestMinute) {
+      latestMinute = endMinute;
+    }
+    hasClock = true;
+  }
+
+  return {
+    firstActiveAt: firstActiveAt || undefined,
+    lastActiveAt: lastActiveAt || undefined,
+    focusWindowStart: hasClock ? formatClockMinutes(earliestMinute) : undefined,
+    focusWindowEnd: hasClock ? formatClockMinutes(latestMinute) : undefined,
+  };
+}
+
+function computeWeekdayHeatmap(records: SessionRecordInternal[]) {
+  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const totals = Array.from({ length: labels.length }, () => 0);
+  for (const record of records) {
+    const parsed = new Date(`${record.dateKey}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) {
+      continue;
+    }
+    const index = (parsed.getUTCDay() + 6) % 7;
+    totals[index] += record.durationMinutes;
+  }
+  return labels.map((label, index) => ({
+    index,
+    label,
+    totalMinutes: totals[index],
+  }));
+}
+
+function computeHourlyHeatmap(records: SessionRecordInternal[]) {
+  const totals = Array.from({ length: 24 }, () => 0);
+  for (const record of records) {
+    const start = new Date(record.start);
+    if (Number.isNaN(start.getTime())) {
+      continue;
+    }
+    let current = new Date(start);
+    let remaining = record.durationMinutes;
+    while (remaining > 0) {
+      const nextHour = new Date(
+        Date.UTC(
+          current.getUTCFullYear(),
+          current.getUTCMonth(),
+          current.getUTCDate(),
+          current.getUTCHours() + 1,
+          0,
+          0,
+          0,
+        ),
+      );
+      const minutesUntilHour = Math.max(
+        1,
+        Math.ceil((nextHour.getTime() - current.getTime()) / 60_000),
+      );
+      const allocated = Math.min(remaining, minutesUntilHour);
+      totals[current.getUTCHours()] += allocated;
+      remaining -= allocated;
+      current = new Date(current.getTime() + allocated * 60_000);
+    }
+  }
+  return totals.map((totalMinutes, index) => ({
+    index,
+    label: `${String(index).padStart(2, '0')}:00`,
+    totalMinutes,
+  }));
+}
+
+function computeSessionKpis(
+  records: SessionRecordInternal[],
+  dateWindow: DateWindow,
+  previousMinutes: number,
+  deepWorkThresholdMinutes: number = defaultDeepWorkThresholdMinutes,
+): AnalyticsSnapshot['sessionKpis'] {
+  const resolvedDeepWorkThresholdMinutes =
+    deepWorkThresholdMinutes > 0 ? deepWorkThresholdMinutes : defaultDeepWorkThresholdMinutes;
+  const daily = computeDailyTotals(records);
+  const dailyTotals = new Map(daily.map((day) => [day.date, day.minutes]));
+  const activeDates = new Set(daily.map((day) => day.date));
+  const totalMinutes = records.reduce((sum, record) => sum + record.durationMinutes, 0);
+  const weekTotals = new Map<string, number>();
+  const monthTotals = new Map<string, number>();
+  let deepWorkMinutes = 0;
+  let deepWorkBlockCount = 0;
+  let shortSessionCount = 0;
+
+  for (const record of records) {
+    const weekStart = formatDateKey(
+      startOfWeekUTC(new Date(`${record.dateKey}T00:00:00Z`), 'monday'),
+    );
+    weekTotals.set(weekStart, (weekTotals.get(weekStart) ?? 0) + record.durationMinutes);
+    const month = record.dateKey.slice(0, 7);
+    monthTotals.set(month, (monthTotals.get(month) ?? 0) + record.durationMinutes);
+    if (record.durationMinutes >= resolvedDeepWorkThresholdMinutes) {
+      deepWorkMinutes += record.durationMinutes;
+      deepWorkBlockCount += 1;
+    }
+    if (record.durationMinutes > 0 && record.durationMinutes < shortSessionThresholdMinutes) {
+      shortSessionCount += 1;
+    }
+  }
+
+  const breakKpis = computeBreakKpis(records);
+  const activityBounds = computeActivityBounds(records);
+  const calendarDayCount = dateKeysBetween(dateWindow.start, dateWindow.end).length;
+
+  return {
+    activeDays: activeDates.size,
+    currentStreakDays: currentStreakDays(activeDates, dateWindow),
+    longestStreakDays: longestStreakDays(activeDates, dateWindow),
+    rolling7DayAverageMinutes: rollingAverageMinutes(dailyTotals, dateWindow, 7),
+    rolling30DayAverageMinutes: rollingAverageMinutes(dailyTotals, dateWindow, 30),
+    previousPeriodDeltaPercent: computeDelta(totalMinutes, previousMinutes),
+    bestDay: bestTimeKpiPoint(dailyTotals),
+    bestWeek: bestTimeKpiPoint(weekTotals),
+    bestMonth: bestTimeKpiPoint(monthTotals),
+    duration: computeDurationKpis(records),
+    deepWorkThresholdMinutes: resolvedDeepWorkThresholdMinutes,
+    deepWorkMinutes,
+    deepWorkBlockCount,
+    shortSessionThresholdMinutes,
+    shortSessionCount,
+    fragmentationScore: percentOfTotal(shortSessionCount, records.length),
+    longestBreakMinutes: breakKpis.longestBreakMinutes,
+    medianBreakMinutes: breakKpis.medianBreakMinutes,
+    firstActiveAt: activityBounds.firstActiveAt,
+    lastActiveAt: activityBounds.lastActiveAt,
+    focusWindowStart: activityBounds.focusWindowStart,
+    focusWindowEnd: activityBounds.focusWindowEnd,
+    weekdayHeatmap: computeWeekdayHeatmap(records),
+    hourlyHeatmap: computeHourlyHeatmap(records),
+    consistencyScore: percentOfTotal(activeDates.size, calendarDayCount),
+  };
+}
+
+function contextSwitchCount(records: SessionRecordInternal[], field: 'project' | 'language') {
+  const ordered = [...records].sort((left, right) => {
+    if (left.start !== right.start) {
+      return left.start.localeCompare(right.start);
+    }
+    return left.id.localeCompare(right.id);
+  });
+  let switches = 0;
+  let previous = '';
+  for (const record of ordered) {
+    const current = record[field].trim();
+    if (!current) {
+      continue;
+    }
+    if (previous && previous !== current) {
+      switches += 1;
+    }
+    previous = current;
+  }
+  return switches;
+}
+
+function ratePerDay(count: number, dayCount: number) {
+  if (count <= 0 || dayCount <= 0) {
+    return 0;
+  }
+  return roundOneDecimal(count / dayCount);
+}
+
+function breakdownLeader(
+  item: BreakdownItem | undefined,
+  records: SessionRecordInternal[],
+  field: 'project' | 'language',
+) {
+  if (!item) {
+    return emptyContextLeader();
+  }
+  const sessionCount = records.filter((record) => record[field] === item.name).length;
+  return {
+    name: item.name,
+    totalMinutes: item.minutes,
+    sessionCount,
+    activeDays: item.activeDays,
+    shareOfTotal: item.share,
+  };
+}
+
+function topByActiveDays(items: BreakdownItem[]) {
+  return [...items].sort((left, right) => {
+    if (right.activeDays !== left.activeDays) {
+      return right.activeDays - left.activeDays;
+    }
+    if (right.minutes !== left.minutes) {
+      return right.minutes - left.minutes;
+    }
+    return left.name.localeCompare(right.name);
+  })[0];
+}
+
+function computeContextMomentum(
+  records: SessionRecordInternal[],
+  dateWindow: DateWindow,
+  field: 'project' | 'language',
+) {
+  const currentStart = addDays(startOfDayUTC(dateWindow.end), -6);
+  const previousEnd = addDays(currentStart, -1);
+  const previousStart = addDays(previousEnd, -6);
+  const currentTotals = new Map<string, number>();
+  const previousTotals = new Map<string, number>();
+
+  for (const record of records) {
+    const name = record[field].trim();
+    if (!name) {
+      continue;
+    }
+    const day = startOfDayUTC(new Date(`${record.dateKey}T00:00:00Z`));
+    if (
+      day.getTime() >= currentStart.getTime() &&
+      day.getTime() <= startOfDayUTC(dateWindow.end).getTime()
+    ) {
+      currentTotals.set(name, (currentTotals.get(name) ?? 0) + record.durationMinutes);
+      continue;
+    }
+    if (day.getTime() >= previousStart.getTime() && day.getTime() <= previousEnd.getTime()) {
+      previousTotals.set(name, (previousTotals.get(name) ?? 0) + record.durationMinutes);
+    }
+  }
+
+  return unique([...currentTotals.keys(), ...previousTotals.keys()])
+    .map((name) => {
+      const currentMinutes = currentTotals.get(name) ?? 0;
+      const previousMinutes = previousTotals.get(name) ?? 0;
+      return {
+        name,
+        currentMinutes,
+        previousMinutes,
+        deltaPercent: computeDelta(currentMinutes, previousMinutes),
+      };
+    })
+    .sort((left, right) => {
+      if (right.currentMinutes !== left.currentMinutes) {
+        return right.currentMinutes - left.currentMinutes;
+      }
+      if (right.previousMinutes !== left.previousMinutes) {
+        return right.previousMinutes - left.previousMinutes;
+      }
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, 5);
+}
+
+function crossMachineResumeCount(records: SessionRecordInternal[]) {
+  const ordered = [...records].sort((left, right) => {
+    if (left.start !== right.start) {
+      return left.start.localeCompare(right.start);
+    }
+    return left.id.localeCompare(right.id);
+  });
+  let count = 0;
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (previous.project !== current.project || previous.machineId === current.machineId) {
+      continue;
+    }
+    const previousEnd = new Date(previous.endTime);
+    const currentStart = new Date(current.start);
+    if (Number.isNaN(previousEnd.getTime()) || Number.isNaN(currentStart.getTime())) {
+      continue;
+    }
+    const gap = currentStart.getTime() - previousEnd.getTime();
+    if (gap >= 0 && gap <= 24 * 60 * 60 * 1000) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function computeContextKpis(
+  records: SessionRecordInternal[],
+  dateWindow: DateWindow,
+  projectBreakdown: BreakdownItem[],
+  languageBreakdown: BreakdownItem[],
+  machineBreakdown: MachineBreakdown[],
+): AnalyticsSnapshot['contextKpis'] {
+  const activeDays = computeDailyTotals(records).length;
+  const projectSwitchCount = contextSwitchCount(records, 'project');
+  const languageSwitchCount = contextSwitchCount(records, 'language');
+  const machineResumeCount = crossMachineResumeCount(records);
+
+  return {
+    projectSwitchCount,
+    projectSwitchRatePerDay: ratePerDay(projectSwitchCount, activeDays),
+    languageSwitchCount,
+    languageSwitchRatePerDay: ratePerDay(languageSwitchCount, activeDays),
+    branchSwitchCount: 0,
+    branchSwitchRatePerDay: 0,
+    projectFocusScore: projectBreakdown[0]?.share ?? 0,
+    languageFocusScore: languageBreakdown[0]?.share ?? 0,
+    topProjectByTime: breakdownLeader(projectBreakdown[0], records, 'project'),
+    topProjectBySessions: breakdownLeader(
+      [...projectBreakdown].sort((left, right) => {
+        const leftCount = records.filter((record) => record.project === left.name).length;
+        const rightCount = records.filter((record) => record.project === right.name).length;
+        if (rightCount !== leftCount) {
+          return rightCount - leftCount;
+        }
+        return right.minutes - left.minutes;
+      })[0],
+      records,
+      'project',
+    ),
+    topProjectByActiveDays: breakdownLeader(topByActiveDays(projectBreakdown), records, 'project'),
+    topLanguageByTime: breakdownLeader(languageBreakdown[0], records, 'language'),
+    topLanguageBySessions: breakdownLeader(
+      [...languageBreakdown].sort((left, right) => {
+        const leftCount = records.filter((record) => record.language === left.name).length;
+        const rightCount = records.filter((record) => record.language === right.name).length;
+        if (rightCount !== leftCount) {
+          return rightCount - leftCount;
+        }
+        return right.minutes - left.minutes;
+      })[0],
+      records,
+      'language',
+    ),
+    topLanguageByActiveDays: breakdownLeader(
+      topByActiveDays(languageBreakdown),
+      records,
+      'language',
+    ),
+    projectMomentum: computeContextMomentum(records, dateWindow, 'project'),
+    languageMomentum: computeContextMomentum(records, dateWindow, 'language'),
+    machineTimeSplit: machineBreakdown.map((item) => ({
+      machineId: item.name,
+      machineName: item.name,
+      totalMinutes: item.minutes,
+      shareOfTotal: item.share,
+    })),
+    crossMachineResumeCount: machineResumeCount,
+    crossMachineResumeRate:
+      records.length < 2 ? 0 : percentOfTotal(machineResumeCount, records.length - 1),
+    workspaceContinuity: [],
+    branchTime: [],
+    projectBranchBreakdown: [],
+  };
+}
+
 function computeStreak(daily: DailyStat[]) {
   if (daily.length === 0) {
     return 0;
   }
 
-  const dates = daily.map((day) => startOfDayUTC(new Date(day.date)).getTime()).sort((left, right) => right - left);
+  const dates = daily
+    .map((day) => startOfDayUTC(new Date(day.date)).getTime())
+    .sort((left, right) => right - left);
   let streak = 1;
   for (let index = 1; index < dates.length; index += 1) {
     const difference = (dates[index - 1] - dates[index]) / (24 * 60 * 60 * 1000);
@@ -729,7 +1307,7 @@ function computeDelta(current: number, previous: number) {
   if (previous === 0) {
     return current === 0 ? 0 : 100;
   }
-  return Math.round((((current - previous) / previous) * 100) * 10) / 10;
+  return Math.round(((current - previous) / previous) * 100 * 10) / 10;
 }
 
 type SessionGroupAccumulator = {
@@ -791,7 +1369,9 @@ function summarizeLanguages(languages: Set<string>) {
   return `Mixed (${values.length})`;
 }
 
-function groupSessionRecordsByProjectAndDay(records: SessionRecordInternal[]): GroupedSessionRecord[] {
+function groupSessionRecordsByProjectAndDay(
+  records: SessionRecordInternal[],
+): GroupedSessionRecord[] {
   const grouped = new Map<string, SessionGroupAccumulator>();
 
   for (const record of records) {
@@ -815,15 +1395,17 @@ function groupSessionRecordsByProjectAndDay(records: SessionRecordInternal[]): G
         languages: new Set([language]),
         machineIds: new Set([record.machineId]),
         osLabels: new Set([record.osLabel]),
-        subSessions: [{
-          id: record.id,
-          language: record.language,
-          durationMinutes: record.durationMinutes,
-          start: record.start,
-          end: record.endTime,
-          machine: record.machine,
-          osLabel: record.osLabel,
-        }],
+        subSessions: [
+          {
+            id: record.id,
+            language: record.language,
+            durationMinutes: record.durationMinutes,
+            start: record.start,
+            end: record.endTime,
+            machine: record.machine,
+            osLabel: record.osLabel,
+          },
+        ],
       });
       continue;
     }
@@ -881,7 +1463,9 @@ function groupSessionRecordsByProjectAndDay(records: SessionRecordInternal[]): G
         durationMinutes: group.durationMinutes,
         sessionCount: group.sessionCount,
         machineCount,
-        subSessions: [...group.subSessions].sort((left, right) => right.start.localeCompare(left.start)),
+        subSessions: [...group.subSessions].sort((left, right) =>
+          right.start.localeCompare(left.start),
+        ),
       };
     });
 }
@@ -907,6 +1491,145 @@ function buildEmptyAppStatus(): AppStatus {
     trackingEnabled: true,
     localOnlyMode: true,
     lastUpdatedAt: '—',
+  };
+}
+
+function emptySessionKpis(): AnalyticsSnapshot['sessionKpis'] {
+  return {
+    activeDays: 0,
+    currentStreakDays: 0,
+    longestStreakDays: 0,
+    rolling7DayAverageMinutes: 0,
+    rolling30DayAverageMinutes: 0,
+    previousPeriodDeltaPercent: 0,
+    bestDay: emptyTimeKpiPoint(),
+    bestWeek: emptyTimeKpiPoint(),
+    bestMonth: emptyTimeKpiPoint(),
+    duration: {
+      averageMinutes: 0,
+      medianMinutes: 0,
+      p90Minutes: 0,
+      longestMinutes: 0,
+    },
+    deepWorkThresholdMinutes: defaultDeepWorkThresholdMinutes,
+    deepWorkMinutes: 0,
+    deepWorkBlockCount: 0,
+    shortSessionThresholdMinutes,
+    shortSessionCount: 0,
+    fragmentationScore: 0,
+    longestBreakMinutes: 0,
+    medianBreakMinutes: 0,
+    weekdayHeatmap: computeWeekdayHeatmap([]),
+    hourlyHeatmap: computeHourlyHeatmap([]),
+    consistencyScore: 0,
+  };
+}
+
+function emptyContextLeader() {
+  return { name: '', totalMinutes: 0, sessionCount: 0, activeDays: 0, shareOfTotal: 0 };
+}
+
+function emptyFileKpis(): AnalyticsSnapshot['fileKpis'] {
+  return {
+    optInEnabled: false,
+    filePathsAvailable: false,
+    pathsMasked: false,
+    uniqueFileCount: 0,
+    averageUniqueFilesPerSession: 0,
+    totalAttributedMinutes: 0,
+    topFiles: [],
+    mostRevisitedFiles: [],
+    categoryBreakdown: [],
+    testVsSource: { testMinutes: 0, sourceMinutes: 0, testShareOfCode: 0 },
+    documentationMinutes: 0,
+    configMinutes: 0,
+    infrastructureMinutes: 0,
+    fileChurnLeaders: [],
+    longRunningFocusBlocks: [],
+    projectAreaBreakdown: [],
+  };
+}
+
+function emptyInsightScore(direction: AnalyticsSnapshot['insightScores']['momentumScore']['direction'] = 'higher-is-better'): AnalyticsSnapshot['insightScores']['momentumScore'] {
+  return {
+    score: 0,
+    direction,
+    inputs: [],
+  };
+}
+
+function emptyInsightScores(): AnalyticsSnapshot['insightScores'] {
+  return {
+    momentumScore: emptyInsightScore(),
+    focusScore: emptyInsightScore(),
+    consistencyScore: emptyInsightScore(),
+    fragmentationScore: emptyInsightScore('lower-is-better'),
+    recoveryScore: emptyInsightScore(),
+    trackingHealthScore: emptyInsightScore(),
+    projectInvestmentScore: emptyInsightScore(),
+    projectInvestmentBreakdown: [],
+  };
+}
+
+function emptyEventActivityKpis(): AnalyticsSnapshot['eventKpis'] {
+  return {
+    totalEvents: 0,
+    eventsInSessions: 0,
+    editCount: 0,
+    saveCount: 0,
+    openCount: 0,
+    heartbeatCount: 0,
+    focusCount: 0,
+    blurCount: 0,
+    activeEventCount: 0,
+    passiveEventCount: 0,
+    neutralEventCount: 0,
+    activeShare: 0,
+    passiveShare: 0,
+    neutralShare: 0,
+    eventDensityPerMinute: 0,
+    editSaveRatio: 0,
+    medianFirstOpenToFirstEditSeconds: 0,
+    medianEditToSaveSeconds: 0,
+    medianSessionWarmupSeconds: 0,
+    warmupQualifyingSessionCount: 0,
+    medianReturnAfterIdleMinutes: 0,
+    activityBurstCount: 0,
+    heartbeatOnlySessionCount: 0,
+    heartbeatOnlySessionShare: 0,
+    trackEditEvents: false,
+    trackSaveEvents: false,
+    trackFileOpenEvents: false,
+    eventTypeMixByProject: [],
+    eventTypeMixByLanguage: [],
+    eventTypeMixByMachine: [],
+  };
+}
+
+function emptyContextKpis(): AnalyticsSnapshot['contextKpis'] {
+  return {
+    projectSwitchCount: 0,
+    projectSwitchRatePerDay: 0,
+    languageSwitchCount: 0,
+    languageSwitchRatePerDay: 0,
+    branchSwitchCount: 0,
+    branchSwitchRatePerDay: 0,
+    projectFocusScore: 0,
+    languageFocusScore: 0,
+    topProjectByTime: emptyContextLeader(),
+    topProjectBySessions: emptyContextLeader(),
+    topProjectByActiveDays: emptyContextLeader(),
+    topLanguageByTime: emptyContextLeader(),
+    topLanguageBySessions: emptyContextLeader(),
+    topLanguageByActiveDays: emptyContextLeader(),
+    projectMomentum: [],
+    languageMomentum: [],
+    machineTimeSplit: [],
+    crossMachineResumeCount: 0,
+    crossMachineResumeRate: 0,
+    workspaceContinuity: [],
+    branchTime: [],
+    projectBranchBreakdown: [],
   };
 }
 
@@ -954,6 +1677,11 @@ export function emptyAnalyticsSnapshot(filters: AnalyticsFilters): AnalyticsSnap
         previousActiveDays: 0,
       },
     },
+    sessionKpis: emptySessionKpis(),
+    contextKpis: emptyContextKpis(),
+    eventKpis: emptyEventActivityKpis(),
+    fileKpis: emptyFileKpis(),
+    insightScores: emptyInsightScores(),
     time: {
       daily: [],
       weekly: [],
@@ -1033,13 +1761,176 @@ function analyticsSourceCacheKey(
   ].join('\u0001');
 }
 
+type BackendAnalyticsExtras = {
+  eventKpis: AnalyticsSnapshot['eventKpis'];
+  fileKpis: AnalyticsSnapshot['fileKpis'];
+  insightScores: AnalyticsSnapshot['insightScores'];
+};
+
+async function fetchBackendAnalyticsExtras(rangeLabel: string): Promise<BackendAnalyticsExtras> {
+  try {
+    const data = await GetAnalyticsData(rangeLabel);
+    return {
+      eventKpis: mapEventKpis(data?.eventKpis),
+      fileKpis: mapFileKpis(data?.fileKpis),
+      insightScores: mapInsightScores(data?.insightScores),
+    };
+  } catch (error) {
+    console.warn('failed to load backend analytics extras', error);
+    return {
+      eventKpis: emptyEventActivityKpis(),
+      fileKpis: emptyFileKpis(),
+      insightScores: emptyInsightScores(),
+    };
+  }
+}
+
+function mapInsightScore(raw: contracts.InsightScore | undefined | null, direction: AnalyticsSnapshot['insightScores']['momentumScore']['direction'] = 'higher-is-better'): AnalyticsSnapshot['insightScores']['momentumScore'] {
+  if (!raw) {
+    return emptyInsightScore(direction);
+  }
+  return {
+    score: raw.score ?? 0,
+    direction: (raw.direction as AnalyticsSnapshot['insightScores']['momentumScore']['direction']) ?? direction,
+    inputs: (raw.inputs ?? []).map((input) => ({
+      label: input.label,
+      value: input.value ?? 0,
+      score: input.score ?? 0,
+      weight: input.weight ?? 0,
+    })),
+  };
+}
+
+function mapInsightScores(raw: contracts.InsightScoreSummary | undefined | null): AnalyticsSnapshot['insightScores'] {
+  if (!raw) {
+    return emptyInsightScores();
+  }
+  return {
+    momentumScore: mapInsightScore(raw.momentumScore),
+    focusScore: mapInsightScore(raw.focusScore),
+    consistencyScore: mapInsightScore(raw.consistencyScore),
+    fragmentationScore: mapInsightScore(raw.fragmentationScore, 'lower-is-better'),
+    recoveryScore: mapInsightScore(raw.recoveryScore),
+    trackingHealthScore: mapInsightScore(raw.trackingHealthScore),
+    projectInvestmentScore: mapInsightScore(raw.projectInvestmentScore),
+    projectInvestmentBreakdown: (raw.projectInvestmentBreakdown ?? []).map((project) => ({
+      projectName: project.projectName,
+      score: project.score ?? 0,
+      totalMinutes: project.totalMinutes ?? 0,
+      activeDays: project.activeDays ?? 0,
+      momentumPercent: project.momentumPercent ?? 0,
+      shareOfTotal: project.shareOfTotal ?? 0,
+    })),
+  };
+}
+
+function mapEventKpis(raw: contracts.EventActivityKpiSummary | undefined | null): AnalyticsSnapshot['eventKpis'] {
+  if (!raw) {
+    return emptyEventActivityKpis();
+  }
+  return {
+    totalEvents: raw.totalEvents ?? 0,
+    eventsInSessions: raw.eventsInSessions ?? 0,
+    editCount: raw.editCount ?? 0,
+    saveCount: raw.saveCount ?? 0,
+    openCount: raw.openCount ?? 0,
+    heartbeatCount: raw.heartbeatCount ?? 0,
+    focusCount: raw.focusCount ?? 0,
+    blurCount: raw.blurCount ?? 0,
+    activeEventCount: raw.activeEventCount ?? 0,
+    passiveEventCount: raw.passiveEventCount ?? 0,
+    neutralEventCount: raw.neutralEventCount ?? 0,
+    activeShare: raw.activeShare ?? 0,
+    passiveShare: raw.passiveShare ?? 0,
+    neutralShare: raw.neutralShare ?? 0,
+    eventDensityPerMinute: raw.eventDensityPerMinute ?? 0,
+    editSaveRatio: raw.editSaveRatio ?? 0,
+    medianFirstOpenToFirstEditSeconds: raw.medianFirstOpenToFirstEditSeconds ?? 0,
+    medianEditToSaveSeconds: raw.medianEditToSaveSeconds ?? 0,
+    medianSessionWarmupSeconds: raw.medianSessionWarmupSeconds ?? 0,
+    warmupQualifyingSessionCount: raw.warmupQualifyingSessionCount ?? 0,
+    medianReturnAfterIdleMinutes: raw.medianReturnAfterIdleMinutes ?? 0,
+    activityBurstCount: raw.activityBurstCount ?? 0,
+    heartbeatOnlySessionCount: raw.heartbeatOnlySessionCount ?? 0,
+    heartbeatOnlySessionShare: raw.heartbeatOnlySessionShare ?? 0,
+    trackEditEvents: Boolean(raw.trackEditEvents),
+    trackSaveEvents: Boolean(raw.trackSaveEvents),
+    trackFileOpenEvents: Boolean(raw.trackFileOpenEvents),
+    eventTypeMixByProject: (raw.eventTypeMixByProject ?? []).map((bucket) => ({ ...bucket })),
+    eventTypeMixByLanguage: (raw.eventTypeMixByLanguage ?? []).map((bucket) => ({ ...bucket })),
+    eventTypeMixByMachine: (raw.eventTypeMixByMachine ?? []).map((bucket) => ({ ...bucket })),
+  };
+}
+
+function mapFileKpis(raw: contracts.FileKpiSummary | undefined | null): AnalyticsSnapshot['fileKpis'] {
+  if (!raw) {
+    return emptyFileKpis();
+  }
+  const cloneHotspot = (hotspot: contracts.FileHotspot) => ({
+    filePath: hotspot.filePath,
+    fileName: hotspot.fileName,
+    category: hotspot.category as AnalyticsSnapshot['fileKpis']['topFiles'][number]['category'],
+    totalMinutes: hotspot.totalMinutes ?? 0,
+    eventCount: hotspot.eventCount ?? 0,
+    editCount: hotspot.editCount ?? 0,
+    saveCount: hotspot.saveCount ?? 0,
+    shareOfTotal: hotspot.shareOfTotal ?? 0,
+    lastActiveAt: hotspot.lastActiveAt,
+  });
+  return {
+    optInEnabled: Boolean(raw.optInEnabled),
+    filePathsAvailable: Boolean(raw.filePathsAvailable),
+    pathsMasked: Boolean(raw.pathsMasked),
+    uniqueFileCount: raw.uniqueFileCount ?? 0,
+    averageUniqueFilesPerSession: raw.averageUniqueFilesPerSession ?? 0,
+    totalAttributedMinutes: raw.totalAttributedMinutes ?? 0,
+    topFiles: (raw.topFiles ?? []).map(cloneHotspot),
+    mostRevisitedFiles: (raw.mostRevisitedFiles ?? []).map(cloneHotspot),
+    categoryBreakdown: (raw.categoryBreakdown ?? []).map((entry) => ({
+      category: entry.category as AnalyticsSnapshot['fileKpis']['categoryBreakdown'][number]['category'],
+      totalMinutes: entry.totalMinutes ?? 0,
+      eventCount: entry.eventCount ?? 0,
+      fileCount: entry.fileCount ?? 0,
+      shareOfTotal: entry.shareOfTotal ?? 0,
+    })),
+    testVsSource: {
+      testMinutes: raw.testVsSource?.testMinutes ?? 0,
+      sourceMinutes: raw.testVsSource?.sourceMinutes ?? 0,
+      testShareOfCode: raw.testVsSource?.testShareOfCode ?? 0,
+    },
+    documentationMinutes: raw.documentationMinutes ?? 0,
+    configMinutes: raw.configMinutes ?? 0,
+    infrastructureMinutes: raw.infrastructureMinutes ?? 0,
+    fileChurnLeaders: (raw.fileChurnLeaders ?? []).map(cloneHotspot),
+    longRunningFocusBlocks: (raw.longRunningFocusBlocks ?? []).map((block) => ({
+      filePath: block.filePath,
+      fileName: block.fileName,
+      startTime: block.startTime,
+      endTime: block.endTime,
+      durationMinutes: block.durationMinutes ?? 0,
+      eventCount: block.eventCount ?? 0,
+    })),
+    projectAreaBreakdown: (raw.projectAreaBreakdown ?? []).map((entry) => ({
+      projectName: entry.projectName,
+      area: entry.area,
+      totalMinutes: entry.totalMinutes ?? 0,
+      eventCount: entry.eventCount ?? 0,
+      shareOfTotal: entry.shareOfTotal ?? 0,
+    })),
+  };
+}
+
 function loadAnalyticsSource(
   filters: AnalyticsFilters,
   settings: contracts.SettingsData,
   preferences: DisplayPreferences,
   mapProjectLabel: (projectName: string) => string,
 ): Promise<AnalyticsSourceData> {
-  const window = resolveDateWindow(filters.range, filters.customRange ?? null, preferences.weekStartsOn);
+  const window = resolveDateWindow(
+    filters.range,
+    filters.customRange ?? null,
+    preferences.weekStartsOn,
+  );
   const shouldCompare = filters.range !== 'all-time';
   const cacheKey = analyticsSourceCacheKey(window, shouldCompare, settings, preferences);
   const shouldUseCache = Boolean(settings.dataStorage);
@@ -1054,13 +1945,19 @@ function loadAnalyticsSource(
     const previous = shouldCompare ? previousWindow(window) : null;
     const [currentSessions, previousSessions, machines] = await Promise.all([
       ListSessionsForRange(window.startDate, window.endDate),
-      previous ? ListSessionsForRange(previous.startDate, previous.endDate) : Promise.resolve([] as contracts.Session[]),
+      previous
+        ? ListSessionsForRange(previous.startDate, previous.endDate)
+        : Promise.resolve([] as contracts.Session[]),
       ListKnownMachines(),
     ]);
 
     const machinesById = machineIndex(machines);
-    const allCurrentRecords = currentSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
-    const allPreviousRecords = previousSessions.map((session) => mapSessionRecord(session, machinesById, preferences, mapProjectLabel));
+    const allCurrentRecords = currentSessions.map((session) =>
+      mapSessionRecord(session, machinesById, preferences, mapProjectLabel),
+    );
+    const allPreviousRecords = previousSessions.map((session) =>
+      mapSessionRecord(session, machinesById, preferences, mapProjectLabel),
+    );
 
     return {
       shouldCompare,
@@ -1089,26 +1986,45 @@ async function fetchAnalyticsSnapshot(
   filters: AnalyticsFilters,
   settingsInput?: contracts.SettingsData,
 ): Promise<AnalyticsSnapshot> {
-  const settings = settingsInput ?? await GetSettingsData();
+  const settings = settingsInput ?? (await GetSettingsData());
   const preferences = getDisplayPreferences(settings);
   const mapProjectLabel = createProjectLabelMapper(
     preferences.obfuscateProjectNames,
     settings.privacy.sensitiveProjectNames ?? [],
   );
-  const analyticsSource = await loadAnalyticsSource(filters, settings, preferences, mapProjectLabel);
+  const analyticsSource = await loadAnalyticsSource(
+    filters,
+    settings,
+    preferences,
+    mapProjectLabel,
+  );
   const { allCurrentRecords, allPreviousRecords, shouldCompare } = analyticsSource;
   const filteredCurrentRecords = filterSessionRecords(allCurrentRecords, filters);
   const filteredPreviousRecords = filterSessionRecords(allPreviousRecords, filters);
 
-  const totalMinutes = filteredCurrentRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
-  const previousMinutes = filteredPreviousRecords.reduce((sum, record) => sum + record.durationMinutes, 0);
+  const totalMinutes = filteredCurrentRecords.reduce(
+    (sum, record) => sum + record.durationMinutes,
+    0,
+  );
+  const previousMinutes = filteredPreviousRecords.reduce(
+    (sum, record) => sum + record.durationMinutes,
+    0,
+  );
   const daily = computeDailyTotals(filteredCurrentRecords);
   const weekly = computeWeeklyTotals(daily, preferences.weekStartsOn);
   const breakdownProjects = computeBreakdown(filteredCurrentRecords, 'project', preferences.hour12);
-  const breakdownLanguages = computeBreakdown(filteredCurrentRecords, 'language', preferences.hour12);
+  const breakdownLanguages = computeBreakdown(
+    filteredCurrentRecords,
+    'language',
+    preferences.hour12,
+  );
   const breakdownMachines = computeMachineBreakdown(filteredCurrentRecords, preferences.hour12);
   const previousProjects = computeBreakdown(filteredPreviousRecords, 'project', preferences.hour12);
-  const previousLanguages = computeBreakdown(filteredPreviousRecords, 'language', preferences.hour12);
+  const previousLanguages = computeBreakdown(
+    filteredPreviousRecords,
+    'language',
+    preferences.hour12,
+  );
   const hourBuckets = computeHourBuckets(filteredCurrentRecords);
   const recentSessions = groupSessionRecordsByProjectAndDay(filteredCurrentRecords).slice(0, 8);
 
@@ -1123,10 +2039,31 @@ async function fetchAnalyticsSnapshot(
     (maximum, session) => Math.max(maximum, session.durationMinutes),
     0,
   );
-  const averageSessionMinutes = filteredCurrentRecords.length === 0
-    ? 0
-    : Math.round(totalMinutes / filteredCurrentRecords.length);
+  const averageSessionMinutes =
+    filteredCurrentRecords.length === 0
+      ? 0
+      : Math.round(totalMinutes / filteredCurrentRecords.length);
   const previousDaily = computeDailyTotals(filteredPreviousRecords);
+  const dateWindow = resolveDateWindow(
+    filters.range,
+    filters.customRange ?? null,
+    preferences.weekStartsOn,
+  );
+  const sessionKpis = computeSessionKpis(
+    filteredCurrentRecords,
+    dateWindow,
+    shouldCompare ? previousMinutes : 0,
+    settings.tracking.deepWorkThresholdMinutes ?? defaultDeepWorkThresholdMinutes,
+  );
+  const contextKpis = computeContextKpis(
+    filteredCurrentRecords,
+    dateWindow,
+    breakdownProjects,
+    breakdownLanguages,
+    breakdownMachines,
+  );
+
+  const { eventKpis, fileKpis, insightScores } = await fetchBackendAnalyticsExtras(dateWindow.rangeLabel);
 
   return {
     summary: {
@@ -1140,6 +2077,11 @@ async function fetchAnalyticsSnapshot(
         previousActiveDays: shouldCompare ? previousDaily.length : 0,
       },
     },
+    sessionKpis,
+    contextKpis,
+    eventKpis,
+    fileKpis,
+    insightScores,
     time: {
       daily,
       weekly,
@@ -1166,26 +2108,29 @@ async function fetchAnalyticsSnapshot(
     },
     patterns: {
       mostActiveDay: longestDay?.label ?? null,
-      mostActiveHour: hourBuckets.reduce<{ hourLabel: string; minutes: number } | null>((accumulator, bucket) => {
-        if (!accumulator || bucket.minutes > accumulator.minutes) {
-          return bucket;
-        }
-        return accumulator;
-      }, null)?.hourLabel ?? null,
-      streakDays: computeStreak(daily),
+      mostActiveHour:
+        hourBuckets.reduce<{ hourLabel: string; minutes: number } | null>((accumulator, bucket) => {
+          if (!accumulator || bucket.minutes > accumulator.minutes) {
+            return bucket;
+          }
+          return accumulator;
+        }, null)?.hourLabel ?? null,
+      streakDays: sessionKpis.currentStreakDays,
       hourBuckets,
     },
     comparison: {
       minutesDeltaPct: shouldCompare ? computeDelta(totalMinutes, previousMinutes) : 0,
-      sessionsDeltaPct: shouldCompare ? computeDelta(filteredCurrentRecords.length, filteredPreviousRecords.length) : 0,
+      sessionsDeltaPct: shouldCompare
+        ? computeDelta(filteredCurrentRecords.length, filteredPreviousRecords.length)
+        : 0,
       activeDaysDeltaPct: shouldCompare ? computeDelta(daily.length, previousDaily.length) : 0,
       topProjectChange: {
         current: breakdownProjects[0]?.name ?? null,
-        previous: shouldCompare ? previousProjects[0]?.name ?? null : null,
+        previous: shouldCompare ? (previousProjects[0]?.name ?? null) : null,
       },
       topLanguageChange: {
         current: breakdownLanguages[0]?.name ?? null,
-        previous: shouldCompare ? previousLanguages[0]?.name ?? null : null,
+        previous: shouldCompare ? (previousLanguages[0]?.name ?? null) : null,
       },
     },
     filters: analyticsSource.filters,
@@ -1221,13 +2166,16 @@ export async function loadOverviewSnapshot(
       settings.privacy.sensitiveProjectNames ?? [],
     );
     const rangeWindow = resolveDateWindow(range, customRange, preferences.weekStartsOn);
-    const analytics = await fetchAnalyticsSnapshot({
-      range,
-      customRange,
-      project: 'all',
-      language: 'all',
-      machine: 'all',
-    }, settings);
+    const analytics = await fetchAnalyticsSnapshot(
+      {
+        range,
+        customRange,
+        project: 'all',
+        language: 'all',
+        machine: 'all',
+      },
+      settings,
+    );
 
     const [overview, machines, bridgeReachable, dailySessions] = await Promise.all([
       GetOverviewData(),
@@ -1239,16 +2187,19 @@ export async function loadOverviewSnapshot(
     ]);
 
     const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
-    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus, preferences));
+    const knownMachines = machines.map((machine) =>
+      adaptKnownMachine(machine, settings.extensionStatus, preferences),
+    );
     const machineDistribution = analytics.machines.items.map((machine, index) => ({
       machineName: machine.name,
       minutes: machine.minutes,
       share: Math.round(machine.share),
       color: overviewChartPalette[index % overviewChartPalette.length],
     }));
-    const todayTrendByInterval = range === 'today'
-      ? buildTodayTrendByInterval(dailySessions, rangeWindow.start, preferences.hour12)
-      : undefined;
+    const todayTrendByInterval =
+      range === 'today'
+        ? buildTodayTrendByInterval(dailySessions, rangeWindow.start, preferences.hour12)
+        : undefined;
     let trend: Array<{ label: string; value: number }>;
     if (range === 'today') {
       trend = todayTrendByInterval!['1h'];
@@ -1265,7 +2216,9 @@ export async function loadOverviewSnapshot(
       sessionCount: analytics.summary.sessions,
       averageSessionMinutes: analytics.summary.averageSessionMinutes,
       codingDaysThisWeek: analytics.summary.activeDays,
-      lastActiveAt: overview.lastActiveAt ? formatDateTime(overview.lastActiveAt, preferences.hour12) : '—',
+      lastActiveAt: overview.lastActiveAt
+        ? formatDateTime(overview.lastActiveAt, preferences.hour12)
+        : '—',
       trackingEnabled: overview.trackingEnabled,
       localOnlyMode: overview.localOnlyMode,
       lastUpdatedAt: formatDateTime(overview.lastUpdatedAt, preferences.hour12),
@@ -1344,7 +2297,9 @@ export async function loadSessionsScreenData(
     ]);
 
     const currentMachine = adaptMachine(settings.system, settings.extensionStatus, preferences);
-    const knownMachines = machines.map((machine) => adaptKnownMachine(machine, settings.extensionStatus, preferences));
+    const knownMachines = machines.map((machine) =>
+      adaptKnownMachine(machine, settings.extensionStatus, preferences),
+    );
     const machinesById = machineIndex(machines);
     const mapProjectLabel = createProjectLabelMapper(
       preferences.obfuscateProjectNames,
@@ -1386,10 +2341,10 @@ export async function loadSessionsScreenData(
     })[0];
     const latestSessionMachine = latestSession
       ? resolveDisplayMachineName(
-        latestSession.machineName ?? machinesById.get(latestSession.machineId)?.machineName,
-        latestSession.machineId,
-        preferences,
-      )
+          latestSession.machineName ?? machinesById.get(latestSession.machineId)?.machineName,
+          latestSession.machineId,
+          preferences,
+        )
       : currentMachine.machineName;
 
     return {
@@ -1397,7 +2352,10 @@ export async function loadSessionsScreenData(
       totalSessions: data.totalSessions,
       averageSessionMinutes: data.averageSessionMinutes,
       longestSessionMinutes: data.longestSessionMinutes,
-      lastActiveAt: formatDateTime(latestSession?.endTime ?? latestSession?.startTime, preferences.hour12),
+      lastActiveAt: formatDateTime(
+        latestSession?.endTime ?? latestSession?.startTime,
+        preferences.hour12,
+      ),
       lastActiveMachine: latestSessionMachine,
       currentMachine,
       knownMachines,

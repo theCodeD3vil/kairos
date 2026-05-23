@@ -15,6 +15,7 @@ export type PrivacySettings = {
   showHostname: boolean;
   obfuscateProjectNames: boolean;
   minimizeExtensionMetadata: boolean;
+  fileMetricsEnabled: boolean;
 };
 
 export type TrackingSettings = {
@@ -26,6 +27,7 @@ export type TrackingSettings = {
   trackSessionBoundaries: boolean;
   idleTimeoutMinutes: number;
   sessionMergeThresholdMinutes: number;
+  deepWorkThresholdMinutes: number;
 };
 
 export type ExclusionsSettings = {
@@ -149,6 +151,51 @@ export type DataStorageInfo = {
   pendingEventCount?: number;
 };
 
+export type SyncLatencyStats = {
+  sampleSize: number;
+  medianSeconds: number;
+  p90Seconds: number;
+};
+
+export type AcceptedEventTrendPoint = {
+  date: string;
+  acceptedCount: number;
+};
+
+export type MachineFreshnessBucket = {
+  bucket: 'fresh' | 'stale' | 'dormant' | 'no-activity' | string;
+  machineCount: number;
+};
+
+export type TrackingCoverageGap = {
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+};
+
+export type ReliabilityKpiSummary = {
+  status: 'no-data' | 'healthy' | 'buffered' | 'degraded' | 'stale' | string;
+  pendingEventCount: number;
+  bufferedTimeWindowMinutes: number;
+  oldestPendingEventAt?: string;
+  quarantinedEventCount: number;
+  runtimeRejectedEventCount: number;
+  duplicateEventCount: number;
+  duplicateCountAvailable: boolean;
+  duplicateEventRate: number;
+  rejectedEventRate: number;
+  totalAcceptedEvents: number;
+  syncLatency: SyncLatencyStats;
+  acceptedEventTrend: AcceptedEventTrendPoint[];
+  trackingCoverageGaps: TrackingCoverageGap[];
+  lastIngestedAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastHandshakeAt?: string;
+  lastEventAt?: string;
+  lastSessionRebuildAt?: string;
+  machineFreshness: MachineFreshnessBucket[];
+};
+
 export type AboutInfo = {
   appName: string;
   appVersion: string;
@@ -171,4 +218,5 @@ export type SettingsData = {
   appBehavior: AppBehaviorSettings;
   dataStorage: DataStorageInfo;
   about: AboutInfo;
+  reliability: ReliabilityKpiSummary;
 };

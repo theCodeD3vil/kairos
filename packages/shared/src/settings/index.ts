@@ -1,5 +1,6 @@
 export type {
   AboutInfo,
+  AcceptedEventTrendPoint,
   AppBehaviorSettings,
   DataStorageInfo,
   ExtensionCapabilities,
@@ -11,8 +12,12 @@ export type {
   ExtensionSettings,
   ExtensionStatus,
   GeneralSettings,
+  MachineFreshnessBucket,
   PrivacySettings,
+  ReliabilityKpiSummary,
   SettingsData,
+  SyncLatencyStats,
   SystemInfo,
+  TrackingCoverageGap,
   TrackingSettings,
 } from './types';

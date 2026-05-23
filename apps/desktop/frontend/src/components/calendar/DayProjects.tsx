@@ -6,7 +6,7 @@ export function DayProjects({ detail }: { detail: CalendarDayDetail }) {
   return (
     <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
       <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Top projects</h3>
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 grid gap-2 lg:grid-cols-3">
         {detail.projectBreakdown.length === 0 ? (
           <p className="text-sm text-[var(--ink-tertiary)]">No projects recorded for this date.</p>
         ) : (

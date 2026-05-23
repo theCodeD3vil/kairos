@@ -17,6 +17,7 @@ type PrivacySettings struct {
 	ObfuscateProjectNames     bool     `json:"obfuscateProjectNames"`
 	SensitiveProjectNames     []string `json:"sensitiveProjectNames"`
 	MinimizeExtensionMetadata bool     `json:"minimizeExtensionMetadata"`
+	FileMetricsEnabled        bool     `json:"fileMetricsEnabled"`
 }
 
 type TrackingSettings struct {
@@ -28,6 +29,7 @@ type TrackingSettings struct {
 	TrackSessionBoundaries       bool `json:"trackSessionBoundaries"`
 	IdleTimeoutMinutes           int  `json:"idleTimeoutMinutes"`
 	SessionMergeThresholdMinutes int  `json:"sessionMergeThresholdMinutes"`
+	DeepWorkThresholdMinutes     int  `json:"deepWorkThresholdMinutes"`
 }
 
 type ExclusionsSettings struct {
@@ -154,6 +156,51 @@ type DataStorageInfo struct {
 	PendingEventCount *int   `json:"pendingEventCount,omitempty"`
 }
 
+type SyncLatencyStats struct {
+	SampleSize    int `json:"sampleSize"`
+	MedianSeconds int `json:"medianSeconds"`
+	P90Seconds    int `json:"p90Seconds"`
+}
+
+type AcceptedEventTrendPoint struct {
+	Date          string `json:"date"`
+	AcceptedCount int    `json:"acceptedCount"`
+}
+
+type MachineFreshnessBucket struct {
+	Bucket       string `json:"bucket"`
+	MachineCount int    `json:"machineCount"`
+}
+
+type TrackingCoverageGap struct {
+	StartDate    string `json:"startDate"`
+	EndDate      string `json:"endDate"`
+	DurationDays int    `json:"durationDays"`
+}
+
+type ReliabilityKpiSummary struct {
+	Status                    string                    `json:"status"`
+	PendingEventCount         int                       `json:"pendingEventCount"`
+	BufferedTimeWindowMinutes int                       `json:"bufferedTimeWindowMinutes"`
+	OldestPendingEventAt      string                    `json:"oldestPendingEventAt,omitempty"`
+	QuarantinedEventCount     int                       `json:"quarantinedEventCount"`
+	RuntimeRejectedEventCount int                       `json:"runtimeRejectedEventCount"`
+	DuplicateEventCount       int                       `json:"duplicateEventCount"`
+	DuplicateCountAvailable   bool                      `json:"duplicateCountAvailable"`
+	DuplicateEventRate        float64                   `json:"duplicateEventRate"`
+	RejectedEventRate         float64                   `json:"rejectedEventRate"`
+	TotalAcceptedEvents       int                       `json:"totalAcceptedEvents"`
+	SyncLatency               SyncLatencyStats          `json:"syncLatency"`
+	AcceptedEventTrend        []AcceptedEventTrendPoint `json:"acceptedEventTrend"`
+	TrackingCoverageGaps      []TrackingCoverageGap     `json:"trackingCoverageGaps"`
+	LastIngestedAt            string                    `json:"lastIngestedAt,omitempty"`
+	LastSuccessfulSyncAt      string                    `json:"lastSuccessfulSyncAt,omitempty"`
+	LastHandshakeAt           string                    `json:"lastHandshakeAt,omitempty"`
+	LastEventAt               string                    `json:"lastEventAt,omitempty"`
+	LastSessionRebuildAt      string                    `json:"lastSessionRebuildAt,omitempty"`
+	MachineFreshness          []MachineFreshnessBucket  `json:"machineFreshness"`
+}
+
 type AboutInfo struct {
 	AppName          string `json:"appName"`
 	AppVersion       string `json:"appVersion"`
@@ -166,14 +213,15 @@ type AboutInfo struct {
 }
 
 type SettingsData struct {
-	General         GeneralSettings     `json:"general"`
-	Privacy         PrivacySettings     `json:"privacy"`
-	Tracking        TrackingSettings    `json:"tracking"`
-	Exclusions      ExclusionsSettings  `json:"exclusions"`
-	Extension       ExtensionSettings   `json:"extension"`
-	ExtensionStatus ExtensionStatus     `json:"extensionStatus"`
-	System          SystemInfo          `json:"system"`
-	AppBehavior     AppBehaviorSettings `json:"appBehavior"`
-	DataStorage     DataStorageInfo     `json:"dataStorage"`
-	About           AboutInfo           `json:"about"`
+	General         GeneralSettings       `json:"general"`
+	Privacy         PrivacySettings       `json:"privacy"`
+	Tracking        TrackingSettings      `json:"tracking"`
+	Exclusions      ExclusionsSettings    `json:"exclusions"`
+	Extension       ExtensionSettings     `json:"extension"`
+	ExtensionStatus ExtensionStatus       `json:"extensionStatus"`
+	System          SystemInfo            `json:"system"`
+	AppBehavior     AppBehaviorSettings   `json:"appBehavior"`
+	DataStorage     DataStorageInfo       `json:"dataStorage"`
+	About           AboutInfo             `json:"about"`
+	Reliability     ReliabilityKpiSummary `json:"reliability"`
 }

@@ -13,6 +13,7 @@ var (
 	benchmarkProjectSummariesSink  []contracts.ProjectSummary
 	benchmarkLanguageSummariesSink []contracts.LanguageSummary
 	benchmarkMachineSummariesSink  []contracts.MachineSummary
+	benchmarkEventKpisSink         contracts.EventActivityKpiSummary
 )
 
 func BenchmarkAggregateDailyTotals50k(b *testing.B) {
@@ -53,6 +54,43 @@ func BenchmarkBuildMachineSummaries50k(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		benchmarkMachineSummariesSink = buildMachineSummaries(sessions, machineIndex)
 	}
+}
+
+func BenchmarkBuildEventActivityKpis50k(b *testing.B) {
+	sessions, _ := benchmarkSessions(5_000)
+	events := benchmarkEvents(50_000, sessions)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		benchmarkEventKpisSink = buildEventActivityKpis(sessions, events, contracts.TrackingSettings{IdleTimeoutMinutes: 5}, contracts.ExtensionSettings{})
+	}
+}
+
+func benchmarkEvents(total int, sessions []contracts.Session) []contracts.ActivityEvent {
+	eventTypes := []string{"edit", "save", "open", "heartbeat", "focus", "blur"}
+	events := make([]contracts.ActivityEvent, total)
+	if len(sessions) == 0 {
+		return events
+	}
+	for i := 0; i < total; i++ {
+		session := sessions[i%len(sessions)]
+		start, err := time.Parse(time.RFC3339, session.StartTime)
+		if err != nil {
+			continue
+		}
+		offset := time.Duration(i%60) * time.Second
+		events[i] = contracts.ActivityEvent{
+			ID:          "event-" + strconv.Itoa(i),
+			Timestamp:   start.Add(offset).Format(time.RFC3339),
+			EventType:   eventTypes[i%len(eventTypes)],
+			MachineID:   session.MachineID,
+			WorkspaceID: "workspace-1",
+			ProjectName: session.ProjectName,
+			Language:    session.Language,
+		}
+	}
+	return events
 }
 
 func benchmarkSessions(total int) ([]contracts.Session, map[string]contracts.MachineInfo) {

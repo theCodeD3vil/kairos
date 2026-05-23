@@ -131,6 +131,68 @@ func (s *Store) GetLastIngestedAt(ctx context.Context) (string, error) {
 	return nullableStringQuery(ctx, s.db, `SELECT MAX(ingested_at) FROM events`)
 }
 
+func (s *Store) GetRecentSyncLatencySamples(ctx context.Context, limit int) ([]int, error) {
+	if limit <= 0 {
+		limit = 500
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT CAST(strftime('%s', ingested_at) AS INTEGER) - CAST(strftime('%s', timestamp) AS INTEGER) AS latency_seconds
+		FROM events
+		WHERE ingested_at IS NOT NULL AND timestamp IS NOT NULL
+		ORDER BY ingested_at DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query sync latency samples: %w", err)
+	}
+	defer rows.Close()
+
+	samples := make([]int, 0)
+	for rows.Next() {
+		var seconds int
+		if err := rows.Scan(&seconds); err != nil {
+			return nil, fmt.Errorf("scan sync latency sample: %w", err)
+		}
+		if seconds < 0 {
+			seconds = 0
+		}
+		samples = append(samples, seconds)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sync latency samples: %w", err)
+	}
+	return samples, nil
+}
+
+func (s *Store) GetAcceptedEventDailyTrend(ctx context.Context, startDate string, endDate string) (map[string]int, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT substr(ingested_at, 1, 10) AS ingestion_date, COUNT(*) AS accepted_count
+		FROM events
+		WHERE ingested_at IS NOT NULL
+			AND substr(ingested_at, 1, 10) >= ?
+			AND substr(ingested_at, 1, 10) <= ?
+		GROUP BY ingestion_date
+	`, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("query accepted event trend: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[string]int)
+	for rows.Next() {
+		var date string
+		var count int
+		if err := rows.Scan(&date, &count); err != nil {
+			return nil, fmt.Errorf("scan accepted event trend: %w", err)
+		}
+		out[date] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate accepted event trend: %w", err)
+	}
+	return out, nil
+}
+
 func (s *Store) ListEventsForDateRange(ctx context.Context, startDate string, endDate string) ([]contracts.ActivityEvent, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, timestamp, event_type, machine_id, workspace_id, project_name, language, file_path, git_branch

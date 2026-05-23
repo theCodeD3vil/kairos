@@ -10,10 +10,17 @@ import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { desktopResourceKeys, getCachedDesktopResource } from '@/app/DesktopDataContext';
 import { loadCalendarDay, loadCalendarMonth } from '@/lib/backend/page-data';
-import { emptySettingsScreenData, loadSettingsScreenData, type SettingsScreenData } from '@/lib/backend/settings';
+import {
+  emptySettingsScreenData,
+  loadSettingsScreenData,
+  type SettingsScreenData,
+} from '@/lib/backend/settings';
 import { SHOW_MULTI_MACHINE_UI } from '@/lib/features';
 import { useDesktopResource } from '@/lib/hooks/useDesktopResource';
-import { readCalendarMonthPreference, saveCalendarMonthPreference } from '@/lib/settings/preferences';
+import {
+  readCalendarMonthPreference,
+  saveCalendarMonthPreference,
+} from '@/lib/settings/preferences';
 
 function addMonths(base: Date, delta: number) {
   const next = new Date(base);
@@ -70,7 +77,9 @@ export function CalendarPage() {
     initialStateRef.current = resolveInitialCalendarState();
   }
   const [monthRef, setMonthRef] = useState(() => initialStateRef.current!.monthRef);
-  const [selectedDate, setSelectedDate] = useState<string>(() => initialStateRef.current!.selectedDate);
+  const [selectedDate, setSelectedDate] = useState<string>(
+    () => initialStateRef.current!.selectedDate,
+  );
   const { data: settingsData, hasResolvedOnce: hasResolvedSettings } = useDesktopResource({
     cacheKey: desktopResourceKeys.settings(),
     emptyValue: emptySettingsScreenData(),
@@ -159,13 +168,23 @@ export function CalendarPage() {
         <h1 className="text-2xl font-semibold text-[var(--ink-strong)]">Calendar</h1>
         <div className="flex items-center gap-2">
           <LiveRefreshIndicator pulseKey={refreshPulseKey} />
-          <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" onClick={handlePrevMonth}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full! border-[hsl(var(--border)/0.7)]"
+            onClick={handlePrevMonth}
+          >
             Prev
           </Button>
           <Button variant="secondary" size="sm" className="rounded-full!" onClick={handleToday}>
             This Month
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full! border-[hsl(var(--border)/0.7)]" onClick={handleNextMonth}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full! border-[hsl(var(--border)/0.7)]"
+            onClick={handleNextMonth}
+          >
             Next
           </Button>
         </div>
@@ -196,7 +215,12 @@ export function CalendarPage() {
 
       <section className="rounded-[16px] bg-[var(--surface)] p-3 space-y-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">
-          {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+          {new Date(selectedDate).toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          })}
         </h2>
         {isDayLoading && !loadError ? (
           <>
@@ -216,7 +240,9 @@ export function CalendarPage() {
           <>
             <DaySummary detail={dayDetail} />
             <div className="grid gap-3 lg:grid-cols-2">
-              <DayProjects detail={dayDetail} />
+              <div className="lg:col-span-2">
+                <DayProjects detail={dayDetail} />
+              </div>
               {SHOW_MULTI_MACHINE_UI ? <DayMachines detail={dayDetail} /> : null}
             </div>
             <DaySessions detail={dayDetail} />

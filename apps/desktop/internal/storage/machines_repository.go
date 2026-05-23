@@ -147,3 +147,30 @@ func (s *Store) GetLastSeenMachineID(ctx context.Context) (string, error) {
 		LIMIT 1
 	`)
 }
+
+func (s *Store) ListMachineLastSeen(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT last_seen_at FROM machines
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list machine last_seen: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]string, 0)
+	for rows.Next() {
+		var lastSeen sql.NullString
+		if err := rows.Scan(&lastSeen); err != nil {
+			return nil, fmt.Errorf("scan machine last_seen: %w", err)
+		}
+		if lastSeen.Valid {
+			out = append(out, lastSeen.String)
+		} else {
+			out = append(out, "")
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate machine last_seen: %w", err)
+	}
+	return out, nil
+}

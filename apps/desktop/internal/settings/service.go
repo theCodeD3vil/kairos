@@ -28,9 +28,10 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	store          *storage.Store
-	now            func() time.Time
-	databaseStatus string
+	store                 *storage.Store
+	now                   func() time.Time
+	databaseStatus        string
+	rejectedEventsCounter int
 }
 
 func NewService(store *storage.Store) *ServiceImpl {
@@ -91,6 +92,11 @@ func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsDa
 	about := defaultAboutInfo()
 	about.ExtensionVersion = extensionStatus.ExtensionVersion
 
+	reliability, err := buildReliabilitySummary(ctx, s.store, extensionStatus, tracking, s.runtimeRejectedEvents(), s.now())
+	if err != nil {
+		return contracts.SettingsData{}, err
+	}
+
 	return contracts.SettingsData{
 		General:         general,
 		Privacy:         privacy,
@@ -102,7 +108,18 @@ func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsDa
 		AppBehavior:     appBehavior,
 		DataStorage:     dataStorage,
 		About:           about,
+		Reliability:     reliability,
 	}, nil
+}
+
+func (s *ServiceImpl) runtimeRejectedEvents() int {
+	// Settings service does not own the ingestion runtime counter; surface zero
+	// here and rely on the optional setter to track totals when wired in.
+	return s.rejectedEventsCounter
+}
+
+func (s *ServiceImpl) SetRuntimeRejectedEventsCounter(value int) {
+	s.rejectedEventsCounter = value
 }
 
 func (s *ServiceImpl) UpdateSettingsData(ctx context.Context, data contracts.SettingsData) (contracts.SettingsData, error) {

@@ -18,6 +18,7 @@ export type PrivacySettings = {
   obfuscateSensitiveProjects: boolean;
   sensitiveProjectNames: string[];
   minimizeExtensionMetadata: boolean;
+  fileMetricsEnabled: boolean;
 };
 
 export type TrackingSettings = {
@@ -29,6 +30,7 @@ export type TrackingSettings = {
   trackSessionBoundaries: boolean;
   idleTimeoutMinutes: string;
   sessionMergeThresholdMinutes: string;
+  deepWorkThresholdMinutes: string;
   detectActiveCodingWindow: boolean;
   backgroundActivityCapture: boolean;
 };
@@ -88,6 +90,53 @@ export type DataStorageInfo = {
   pendingEventCount: number;
 };
 
+export type ReliabilityStatus = 'no-data' | 'healthy' | 'buffered' | 'degraded' | 'stale' | string;
+
+export type SyncLatencyStats = {
+  sampleSize: number;
+  medianSeconds: number;
+  p90Seconds: number;
+};
+
+export type AcceptedEventTrendPoint = {
+  date: string;
+  acceptedCount: number;
+};
+
+export type MachineFreshnessBucket = {
+  bucket: 'fresh' | 'stale' | 'dormant' | 'no-activity' | string;
+  machineCount: number;
+};
+
+export type TrackingCoverageGap = {
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+};
+
+export type ReliabilityKpiSummary = {
+  status: ReliabilityStatus;
+  pendingEventCount: number;
+  bufferedTimeWindowMinutes: number;
+  oldestPendingEventAt?: string;
+  quarantinedEventCount: number;
+  runtimeRejectedEventCount: number;
+  duplicateEventCount: number;
+  duplicateCountAvailable: boolean;
+  duplicateEventRate: number;
+  rejectedEventRate: number;
+  totalAcceptedEvents: number;
+  syncLatency: SyncLatencyStats;
+  acceptedEventTrend: AcceptedEventTrendPoint[];
+  trackingCoverageGaps: TrackingCoverageGap[];
+  lastIngestedAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastHandshakeAt?: string;
+  lastEventAt?: string;
+  lastSessionRebuildAt?: string;
+  machineFreshness: MachineFreshnessBucket[];
+};
+
 export type AboutInfo = {
   appName: string;
   version: string;
@@ -108,6 +157,7 @@ export type SettingsDefaults = {
   vscodeExtension: VscodeExtensionSettings;
   appBehavior: AppBehaviorSettings;
   dataStorage: DataStorageInfo;
+  reliability: ReliabilityKpiSummary;
   about: AboutInfo;
 };
 
@@ -123,6 +173,34 @@ export const settingsTabOrder = [
   { label: 'Data & Storage', value: 'storage' },
   { label: 'About', value: 'about' },
 ] as const;
+
+export function createEmptyReliabilityKpis(): ReliabilityKpiSummary {
+  return {
+    status: 'no-data',
+    pendingEventCount: 0,
+    bufferedTimeWindowMinutes: 0,
+    quarantinedEventCount: 0,
+    runtimeRejectedEventCount: 0,
+    duplicateEventCount: 0,
+    duplicateCountAvailable: false,
+    duplicateEventRate: 0,
+    rejectedEventRate: 0,
+    totalAcceptedEvents: 0,
+    syncLatency: {
+      sampleSize: 0,
+      medianSeconds: 0,
+      p90Seconds: 0,
+    },
+    acceptedEventTrend: [],
+    trackingCoverageGaps: [],
+    machineFreshness: [
+      { bucket: 'fresh', machineCount: 0 },
+      { bucket: 'stale', machineCount: 0 },
+      { bucket: 'dormant', machineCount: 0 },
+      { bucket: 'no-activity', machineCount: 0 },
+    ],
+  };
+}
 
 export const settingsDefaults: SettingsDefaults = {
   general: {
@@ -142,6 +220,7 @@ export const settingsDefaults: SettingsDefaults = {
     obfuscateSensitiveProjects: false,
     sensitiveProjectNames: [],
     minimizeExtensionMetadata: true,
+    fileMetricsEnabled: false,
   },
   tracking: {
     trackingEnabled: true,
@@ -152,6 +231,7 @@ export const settingsDefaults: SettingsDefaults = {
     trackSessionBoundaries: true,
     idleTimeoutMinutes: '5',
     sessionMergeThresholdMinutes: '10',
+    deepWorkThresholdMinutes: '60',
     detectActiveCodingWindow: true,
     backgroundActivityCapture: false,
   },
@@ -205,6 +285,34 @@ export const settingsDefaults: SettingsDefaults = {
     analyticsCacheStatus: 'Warm',
     extensionQueueStatus: 'Buffered',
     pendingEventCount: 12,
+  },
+  reliability: {
+    ...createEmptyReliabilityKpis(),
+    status: 'buffered',
+    pendingEventCount: 12,
+    bufferedTimeWindowMinutes: 24,
+    oldestPendingEventAt: '2026-04-07T14:04:00Z',
+    totalAcceptedEvents: 842,
+    syncLatency: {
+      sampleSize: 120,
+      medianSeconds: 3,
+      p90Seconds: 12,
+    },
+    acceptedEventTrend: [
+      { date: '2026-04-01', acceptedCount: 42 },
+      { date: '2026-04-02', acceptedCount: 55 },
+      { date: '2026-04-03', acceptedCount: 37 },
+      { date: '2026-04-04', acceptedCount: 61 },
+      { date: '2026-04-05', acceptedCount: 48 },
+      { date: '2026-04-06', acceptedCount: 67 },
+      { date: '2026-04-07', acceptedCount: 54 },
+    ],
+    machineFreshness: [
+      { bucket: 'fresh', machineCount: 1 },
+      { bucket: 'stale', machineCount: 0 },
+      { bucket: 'dormant', machineCount: 0 },
+      { bucket: 'no-activity', machineCount: 0 },
+    ],
   },
   about: {
     appName: 'Kairos',

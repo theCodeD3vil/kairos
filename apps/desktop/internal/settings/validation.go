@@ -64,11 +64,17 @@ func validatePrivacy(input contracts.PrivacySettings) (contracts.PrivacySettings
 }
 
 func validateTracking(input contracts.TrackingSettings) (contracts.TrackingSettings, error) {
+	if input.DeepWorkThresholdMinutes == 0 {
+		input.DeepWorkThresholdMinutes = defaultEditableSettings().Tracking.DeepWorkThresholdMinutes
+	}
 	if input.IdleTimeoutMinutes < 5 || input.IdleTimeoutMinutes > 180 {
 		return contracts.TrackingSettings{}, fmt.Errorf("idleTimeoutMinutes must be between 5 and 180")
 	}
 	if input.SessionMergeThresholdMinutes < 0 || input.SessionMergeThresholdMinutes > 180 {
 		return contracts.TrackingSettings{}, fmt.Errorf("sessionMergeThresholdMinutes must be between 0 and 180")
+	}
+	if input.DeepWorkThresholdMinutes < 15 || input.DeepWorkThresholdMinutes > 480 {
+		return contracts.TrackingSettings{}, fmt.Errorf("deepWorkThresholdMinutes must be between 15 and 480")
 	}
 	return input, nil
 }

@@ -17,6 +17,7 @@ import type {
   ExclusionsSettings,
   GeneralSettings,
   PrivacySettings,
+  ReliabilityKpiSummary,
   SettingsDefaults,
   TrackingSettings,
   VscodeExtensionSettings,
@@ -51,49 +52,67 @@ export type DesktopUpdateStatus = {
   error?: string;
 };
 
-function callAppBridgeMethod<T>(methodName: 'RefreshVSCodeExtensionStatus' | 'ReconnectVSCodeExtension'): Promise<T> {
-  const candidate = (window as unknown as {
-    go?: { main?: { App?: Record<string, unknown> } };
-  }).go?.main?.App?.[methodName];
+function callAppBridgeMethod<T>(
+  methodName: 'RefreshVSCodeExtensionStatus' | 'ReconnectVSCodeExtension',
+): Promise<T> {
+  const candidate = (
+    window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+    }
+  ).go?.main?.App?.[methodName];
 
   if (typeof candidate !== 'function') {
-    throw new Error(`Desktop bridge "${methodName}" is unavailable. Restart Kairos Desktop and try again.`);
+    throw new Error(
+      `Desktop bridge "${methodName}" is unavailable. Restart Kairos Desktop and try again.`,
+    );
   }
 
   return (candidate as () => Promise<T>)();
 }
 
 function callAutostartStatusMethod(): Promise<AutostartRegistrationStatus> {
-  const candidate = (window as unknown as {
-    go?: { main?: { App?: Record<string, unknown> } };
-  }).go?.main?.App?.GetAutostartRegistrationStatus;
+  const candidate = (
+    window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+    }
+  ).go?.main?.App?.GetAutostartRegistrationStatus;
 
   if (typeof candidate !== 'function') {
-    throw new Error('Desktop bridge "GetAutostartRegistrationStatus" is unavailable. Restart Kairos Desktop and try again.');
+    throw new Error(
+      'Desktop bridge "GetAutostartRegistrationStatus" is unavailable. Restart Kairos Desktop and try again.',
+    );
   }
 
   return (candidate as () => Promise<AutostartRegistrationStatus>)();
 }
 
 function callDesktopUpdateCheckMethod(): Promise<DesktopUpdateStatus> {
-  const candidate = (window as unknown as {
-    go?: { main?: { App?: Record<string, unknown> } };
-  }).go?.main?.App?.CheckForDesktopUpdate;
+  const candidate = (
+    window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+    }
+  ).go?.main?.App?.CheckForDesktopUpdate;
 
   if (typeof candidate !== 'function') {
-    throw new Error('Desktop bridge "CheckForDesktopUpdate" is unavailable. Restart Kairos Desktop and try again.');
+    throw new Error(
+      'Desktop bridge "CheckForDesktopUpdate" is unavailable. Restart Kairos Desktop and try again.',
+    );
   }
 
   return (candidate as () => Promise<DesktopUpdateStatus>)();
 }
 
 function callBridgeHealthMethod(): Promise<boolean> {
-  const candidate = (window as unknown as {
-    go?: { main?: { App?: Record<string, unknown> } };
-  }).go?.main?.App?.GetVSCodeBridgeHealth;
+  const candidate = (
+    window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+    }
+  ).go?.main?.App?.GetVSCodeBridgeHealth;
 
   if (typeof candidate !== 'function') {
-    throw new Error('Desktop bridge "GetVSCodeBridgeHealth" is unavailable. Restart Kairos Desktop and try again.');
+    throw new Error(
+      'Desktop bridge "GetVSCodeBridgeHealth" is unavailable. Restart Kairos Desktop and try again.',
+    );
   }
 
   return (candidate as () => Promise<boolean>)();
@@ -114,6 +133,34 @@ export type SettingsScreenData = {
   appStatus: AppStatus;
 };
 
+function createEmptyReliabilityKpis(): ReliabilityKpiSummary {
+  return {
+    status: 'no-data',
+    pendingEventCount: 0,
+    bufferedTimeWindowMinutes: 0,
+    quarantinedEventCount: 0,
+    runtimeRejectedEventCount: 0,
+    duplicateEventCount: 0,
+    duplicateCountAvailable: false,
+    duplicateEventRate: 0,
+    rejectedEventRate: 0,
+    totalAcceptedEvents: 0,
+    syncLatency: {
+      sampleSize: 0,
+      medianSeconds: 0,
+      p90Seconds: 0,
+    },
+    acceptedEventTrend: [],
+    trackingCoverageGaps: [],
+    machineFreshness: [
+      { bucket: 'fresh', machineCount: 0 },
+      { bucket: 'stale', machineCount: 0 },
+      { bucket: 'dormant', machineCount: 0 },
+      { bucket: 'no-activity', machineCount: 0 },
+    ],
+  };
+}
+
 function emptyViewModel(): SettingsDefaults {
   return {
     general: {
@@ -133,6 +180,7 @@ function emptyViewModel(): SettingsDefaults {
       obfuscateSensitiveProjects: false,
       sensitiveProjectNames: [],
       minimizeExtensionMetadata: false,
+      fileMetricsEnabled: false,
     },
     tracking: {
       trackingEnabled: true,
@@ -143,6 +191,7 @@ function emptyViewModel(): SettingsDefaults {
       trackSessionBoundaries: true,
       idleTimeoutMinutes: '5',
       sessionMergeThresholdMinutes: '10',
+      deepWorkThresholdMinutes: '60',
       detectActiveCodingWindow: false,
       backgroundActivityCapture: false,
     },
@@ -179,11 +228,11 @@ function emptyViewModel(): SettingsDefaults {
       launchOnStartup: false,
       startMinimized: false,
       minimizeToTray: true,
-    openOnSystemLogin: false,
-    enableMenubar: true,
-    menubarPreset: 'none',
-    showMenubarTimeline: true,
-    showMenubarSession: true,
+      openOnSystemLogin: false,
+      enableMenubar: true,
+      menubarPreset: 'none',
+      showMenubarTimeline: true,
+      showMenubarSession: true,
       loginLaunchMode: 'desktop',
       rememberLastSelectedPage: true,
       restoreLastSelectedDateRange: true,
@@ -197,6 +246,7 @@ function emptyViewModel(): SettingsDefaults {
       extensionQueueStatus: 'Unknown',
       pendingEventCount: 0,
     },
+    reliability: createEmptyReliabilityKpis(),
     about: {
       appName: 'Kairos',
       version: '0.0.0',
@@ -270,6 +320,7 @@ function toPrivacy(input: contracts.PrivacySettings): PrivacySettings {
     obfuscateSensitiveProjects: input.obfuscateProjectNames,
     sensitiveProjectNames: input.sensitiveProjectNames ?? [],
     minimizeExtensionMetadata: input.minimizeExtensionMetadata,
+    fileMetricsEnabled: Boolean(input.fileMetricsEnabled),
   };
 }
 
@@ -283,6 +334,7 @@ function toTracking(input: contracts.TrackingSettings): TrackingSettings {
     trackSessionBoundaries: input.trackSessionBoundaries,
     idleTimeoutMinutes: String(input.idleTimeoutMinutes),
     sessionMergeThresholdMinutes: String(input.sessionMergeThresholdMinutes),
+    deepWorkThresholdMinutes: String(input.deepWorkThresholdMinutes ?? 60),
     detectActiveCodingWindow: false,
     backgroundActivityCapture: false,
   };
@@ -298,11 +350,14 @@ function toExclusions(input: contracts.ExclusionsSettings): ExclusionsSettings {
   };
 }
 
-function toVscodeExtension(input: Pick<contracts.SettingsData, 'extension' | 'extensionStatus' | 'system'>): VscodeExtensionSettings {
+function toVscodeExtension(
+  input: Pick<contracts.SettingsData, 'extension' | 'extensionStatus' | 'system'>,
+): VscodeExtensionSettings {
   return {
     extensionInstalled: input.extensionStatus.installed,
     extensionConnected: input.extensionStatus.connected,
-    extensionVersion: input.extensionStatus.extensionVersion ?? input.system.extensionVersion ?? '—',
+    extensionVersion:
+      input.extensionStatus.extensionVersion ?? input.system.extensionVersion ?? '—',
     editorDetected: `VS Code ${input.system.editorVersion ?? ''}`.trim(),
     autoConnectToDesktop: input.extension.autoConnect,
     sendHeartbeatEvents: input.extension.sendHeartbeatEvents,
@@ -330,9 +385,12 @@ function toAppBehavior(input: contracts.AppBehaviorSettings): AppBehaviorSetting
     minimizeToTray: input.minimizeToTray,
     openOnSystemLogin: input.openOnSystemLogin,
     enableMenubar: input.enableMenubar,
-    menubarPreset: input.menubarPreset === 'full' || input.menubarPreset === 'minimal' || input.menubarPreset === 'off'
-      ? input.menubarPreset
-      : 'none',
+    menubarPreset:
+      input.menubarPreset === 'full' ||
+      input.menubarPreset === 'minimal' ||
+      input.menubarPreset === 'off'
+        ? input.menubarPreset
+        : 'none',
     showMenubarTimeline: input.showMenubarTimeline,
     showMenubarSession: input.showMenubarSession,
     loginLaunchMode: input.loginLaunchMode === 'menubar' ? 'menubar' : 'desktop',
@@ -354,7 +412,9 @@ function toDataStorage(input: contracts.SettingsData): DataStorageInfo {
 }
 
 function toAbout(input: contracts.SettingsData): AboutInfo {
-  const releaseNotes = input.about.repositoryUrl ? `${input.about.repositoryUrl.replace(/\/$/, '')}/releases` : 'Not configured';
+  const releaseNotes = input.about.repositoryUrl
+    ? `${input.about.repositoryUrl.replace(/\/$/, '')}/releases`
+    : 'Not configured';
 
   return {
     appName: input.about.appName,
@@ -369,6 +429,39 @@ function toAbout(input: contracts.SettingsData): AboutInfo {
   };
 }
 
+function toReliability(input?: contracts.ReliabilityKpiSummary): ReliabilityKpiSummary {
+  if (!input) {
+    return createEmptyReliabilityKpis();
+  }
+
+  return {
+    status: input.status ?? 'no-data',
+    pendingEventCount: input.pendingEventCount ?? 0,
+    bufferedTimeWindowMinutes: input.bufferedTimeWindowMinutes ?? 0,
+    oldestPendingEventAt: input.oldestPendingEventAt,
+    quarantinedEventCount: input.quarantinedEventCount ?? 0,
+    runtimeRejectedEventCount: input.runtimeRejectedEventCount ?? 0,
+    duplicateEventCount: input.duplicateEventCount ?? 0,
+    duplicateCountAvailable: Boolean(input.duplicateCountAvailable),
+    duplicateEventRate: input.duplicateEventRate ?? 0,
+    rejectedEventRate: input.rejectedEventRate ?? 0,
+    totalAcceptedEvents: input.totalAcceptedEvents ?? 0,
+    syncLatency: {
+      sampleSize: input.syncLatency?.sampleSize ?? 0,
+      medianSeconds: input.syncLatency?.medianSeconds ?? 0,
+      p90Seconds: input.syncLatency?.p90Seconds ?? 0,
+    },
+    acceptedEventTrend: input.acceptedEventTrend ?? [],
+    trackingCoverageGaps: input.trackingCoverageGaps ?? [],
+    lastIngestedAt: input.lastIngestedAt,
+    lastSuccessfulSyncAt: input.lastSuccessfulSyncAt,
+    lastHandshakeAt: input.lastHandshakeAt,
+    lastEventAt: input.lastEventAt,
+    lastSessionRebuildAt: input.lastSessionRebuildAt,
+    machineFreshness: input.machineFreshness ?? createEmptyReliabilityKpis().machineFreshness,
+  };
+}
+
 export function adaptSettingsData(input: contracts.SettingsData): SettingsDefaults {
   return {
     general: toGeneral(input.general),
@@ -378,6 +471,7 @@ export function adaptSettingsData(input: contracts.SettingsData): SettingsDefaul
     vscodeExtension: toVscodeExtension(input),
     appBehavior: toAppBehavior(input.appBehavior),
     dataStorage: toDataStorage(input),
+    reliability: toReliability(input.reliability),
     about: toAbout(input),
   };
 }
@@ -392,7 +486,8 @@ function toCurrentMachine(input: contracts.SettingsData): MachineInfo {
     architecture: input.system.arch ?? '—',
     editorName: input.system.editor === 'vscode' ? 'VS Code' : input.system.editor,
     editorVersion: input.system.editorVersion ?? '—',
-    extensionVersion: input.extensionStatus.extensionVersion ?? input.system.extensionVersion ?? '—',
+    extensionVersion:
+      input.extensionStatus.extensionVersion ?? input.system.extensionVersion ?? '—',
     lastSeenAt: formatDateTime(input.system.lastSeenAt),
   };
 }
@@ -438,7 +533,9 @@ export function emptySettingsScreenData(): SettingsScreenData {
   };
 }
 
-export async function loadSettingsScreenData(options: LoadSettingsOptions = {}): Promise<SettingsScreenData> {
+export async function loadSettingsScreenData(
+  options: LoadSettingsOptions = {},
+): Promise<SettingsScreenData> {
   const operation = async () => {
     const data = await GetSettingsData();
     return adaptSettingsScreenData(data);
@@ -487,6 +584,7 @@ export async function savePrivacySettings(input: PrivacySettings): Promise<Priva
         obfuscateProjectNames: input.obfuscateSensitiveProjects,
         sensitiveProjectNames: input.sensitiveProjectNames,
         minimizeExtensionMetadata: input.minimizeExtensionMetadata,
+        fileMetricsEnabled: input.fileMetricsEnabled,
       });
       return toPrivacy(updated);
     },
@@ -510,6 +608,7 @@ export async function saveTrackingSettings(input: TrackingSettings): Promise<Tra
         trackSessionBoundaries: input.trackSessionBoundaries,
         idleTimeoutMinutes: Number.parseInt(input.idleTimeoutMinutes, 10) || 0,
         sessionMergeThresholdMinutes: Number.parseInt(input.sessionMergeThresholdMinutes, 10) || 0,
+        deepWorkThresholdMinutes: Number.parseInt(input.deepWorkThresholdMinutes, 10) || 0,
       });
       return toTracking(updated);
     },
@@ -521,7 +620,9 @@ export async function saveTrackingSettings(input: TrackingSettings): Promise<Tra
   );
 }
 
-export async function saveExclusionsSettings(input: ExclusionsSettings): Promise<ExclusionsSettings> {
+export async function saveExclusionsSettings(
+  input: ExclusionsSettings,
+): Promise<ExclusionsSettings> {
   return trackSyncOperation(
     async () => {
       const updated = await UpdateExclusionsSettings({
@@ -541,7 +642,9 @@ export async function saveExclusionsSettings(input: ExclusionsSettings): Promise
   );
 }
 
-export async function saveExtensionSettings(input: VscodeExtensionSettings): Promise<VscodeExtensionSettings> {
+export async function saveExtensionSettings(
+  input: VscodeExtensionSettings,
+): Promise<VscodeExtensionSettings> {
   return trackSyncOperation(
     async () => {
       const updated = await UpdateExtensionSettings({
@@ -574,7 +677,9 @@ export async function saveExtensionSettings(input: VscodeExtensionSettings): Pro
   );
 }
 
-export async function saveAppBehaviorSettings(input: AppBehaviorSettings): Promise<AppBehaviorSettings> {
+export async function saveAppBehaviorSettings(
+  input: AppBehaviorSettings,
+): Promise<AppBehaviorSettings> {
   return trackSyncOperation(
     async () => {
       const updated = await UpdateAppBehaviorSettings({

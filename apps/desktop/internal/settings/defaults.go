@@ -38,6 +38,7 @@ func defaultEditableSettings() editableDefaults {
 			ObfuscateProjectNames:     false,
 			SensitiveProjectNames:     []string{},
 			MinimizeExtensionMetadata: true,
+			FileMetricsEnabled:        false,
 		},
 		Tracking: contracts.TrackingSettings{
 			TrackingEnabled:              true,
@@ -48,6 +49,7 @@ func defaultEditableSettings() editableDefaults {
 			TrackSessionBoundaries:       true,
 			IdleTimeoutMinutes:           5,
 			SessionMergeThresholdMinutes: 10,
+			DeepWorkThresholdMinutes:     60,
 		},
 		Exclusions: contracts.ExclusionsSettings{
 			Folders:           []string{},

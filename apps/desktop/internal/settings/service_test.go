@@ -28,6 +28,9 @@ func TestDefaultsLoadCorrectlyOnEmptyDB(t *testing.T) {
 	if data.Extension.HeartbeatIntervalSeconds != 30 {
 		t.Fatalf("expected default heartbeat interval 30, got %d", data.Extension.HeartbeatIntervalSeconds)
 	}
+	if data.Tracking.DeepWorkThresholdMinutes != 60 {
+		t.Fatalf("expected default deep work threshold 60, got %d", data.Tracking.DeepWorkThresholdMinutes)
+	}
 	if data.DataStorage.LocalDataPath != store.Path() {
 		t.Fatalf("expected local data path %q, got %q", store.Path(), data.DataStorage.LocalDataPath)
 	}
@@ -73,6 +76,23 @@ func TestPersistedSettingsOverrideDefaultsAndMissingSectionsFallback(t *testing.
 	}
 	if data.Extension.HeartbeatIntervalSeconds != 30 {
 		t.Fatalf("expected missing extension section to fall back to default, got %+v", data.Extension)
+	}
+}
+
+func TestPersistedLegacyTrackingBackfillsDeepWorkThreshold(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.SetSettingsSection(context.Background(), SectionTracking, `{"trackingEnabled":true,"idleDetectionEnabled":true,"trackProjectActivity":true,"trackLanguageActivity":true,"trackMachineAttribution":true,"trackSessionBoundaries":true,"idleTimeoutMinutes":5,"sessionMergeThresholdMinutes":10}`, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("seed legacy tracking section failed: %v", err)
+	}
+
+	data, err := service.GetSettingsData(context.Background())
+	if err != nil {
+		t.Fatalf("GetSettingsData failed: %v", err)
+	}
+
+	if data.Tracking.DeepWorkThresholdMinutes != 60 {
+		t.Fatalf("expected deep work threshold backfill, got %+v", data.Tracking)
 	}
 }
 
@@ -342,6 +362,7 @@ func TestGetExtensionEffectiveSettingsReturnsCanonicalPayload(t *testing.T) {
 		TrackSessionBoundaries:       true,
 		IdleTimeoutMinutes:           9,
 		SessionMergeThresholdMinutes: 14,
+		DeepWorkThresholdMinutes:     75,
 	}); err != nil {
 		t.Fatalf("UpdateTrackingSettings failed: %v", err)
 	}

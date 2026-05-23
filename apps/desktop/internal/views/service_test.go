@@ -147,6 +147,139 @@ func TestGetAnalyticsDataSummarizesCurrentAndPreviousPeriod(t *testing.T) {
 	if len(data.MachineSummaries) != 2 {
 		t.Fatalf("expected 2 machine summaries, got %d", len(data.MachineSummaries))
 	}
+	if data.SessionKpis.CurrentStreakDays != 3 || data.SessionKpis.LongestStreakDays != 3 {
+		t.Fatalf("unexpected streak kpis: %+v", data.SessionKpis)
+	}
+	if data.SessionKpis.Rolling7DayAverageMinutes != 24 || data.SessionKpis.Rolling30DayAverageMinutes != 24 {
+		t.Fatalf("unexpected rolling averages: %+v", data.SessionKpis)
+	}
+	if data.SessionKpis.PreviousPeriodDeltaPercent != 100 {
+		t.Fatalf("expected previous period delta 100, got %f", data.SessionKpis.PreviousPeriodDeltaPercent)
+	}
+	if data.SessionKpis.BestDay.Date != "2026-04-07" || data.SessionKpis.BestDay.TotalMinutes != 90 {
+		t.Fatalf("unexpected best day: %+v", data.SessionKpis.BestDay)
+	}
+	if data.SessionKpis.BestWeek.Date != "2026-04-06" || data.SessionKpis.BestWeek.TotalMinutes != 165 {
+		t.Fatalf("unexpected best week: %+v", data.SessionKpis.BestWeek)
+	}
+	if data.SessionKpis.BestMonth.Date != "2026-04" || data.SessionKpis.BestMonth.TotalMinutes != 165 {
+		t.Fatalf("unexpected best month: %+v", data.SessionKpis.BestMonth)
+	}
+	if data.SessionKpis.Duration.MedianMinutes != 38 || data.SessionKpis.Duration.P90Minutes != 60 {
+		t.Fatalf("unexpected session duration distribution: %+v", data.SessionKpis.Duration)
+	}
+	if data.SessionKpis.DeepWorkMinutes != 60 || data.SessionKpis.DeepWorkBlockCount != 1 {
+		t.Fatalf("unexpected deep work kpis: %+v", data.SessionKpis)
+	}
+	if data.SessionKpis.DeepWorkThresholdMinutes != 60 {
+		t.Fatalf("expected deep work threshold 60, got %d", data.SessionKpis.DeepWorkThresholdMinutes)
+	}
+	if data.SessionKpis.LongestBreakMinutes != 30 || data.SessionKpis.MedianBreakMinutes != 30 {
+		t.Fatalf("unexpected break metrics: %+v", data.SessionKpis)
+	}
+	if data.SessionKpis.FocusWindowStart != "08:30" || data.SessionKpis.FocusWindowEnd != "12:00" {
+		t.Fatalf("unexpected focus window: %+v", data.SessionKpis)
+	}
+	if len(data.SessionKpis.WeekdayHeatmap) != 7 || data.SessionKpis.WeekdayHeatmap[0].TotalMinutes != 45 || data.SessionKpis.WeekdayHeatmap[1].TotalMinutes != 90 {
+		t.Fatalf("unexpected weekday heatmap: %+v", data.SessionKpis.WeekdayHeatmap)
+	}
+	if len(data.SessionKpis.HourlyHeatmap) != 24 || data.SessionKpis.HourlyHeatmap[8].TotalMinutes != 30 || data.SessionKpis.HourlyHeatmap[11].TotalMinutes != 60 {
+		t.Fatalf("unexpected hourly heatmap: %+v", data.SessionKpis.HourlyHeatmap)
+	}
+	if data.SessionKpis.ConsistencyScore != 42.9 {
+		t.Fatalf("expected consistency score 42.9, got %f", data.SessionKpis.ConsistencyScore)
+	}
+	if data.ContextKpis.ProjectSwitchCount != 2 || data.ContextKpis.ProjectSwitchRatePerDay != 0.7 {
+		t.Fatalf("unexpected project switch metrics: %+v", data.ContextKpis)
+	}
+	if data.ContextKpis.LanguageSwitchCount != 2 || data.ContextKpis.LanguageSwitchRatePerDay != 0.7 {
+		t.Fatalf("unexpected language switch metrics: %+v", data.ContextKpis)
+	}
+	if data.ContextKpis.ProjectFocusScore != 63.6 || data.ContextKpis.TopProjectByTime.Name != "kairos-desktop" {
+		t.Fatalf("unexpected project focus metrics: %+v", data.ContextKpis)
+	}
+	if len(data.ContextKpis.ProjectMomentum) == 0 || data.ContextKpis.ProjectMomentum[0].Name != "kairos-desktop" {
+		t.Fatalf("unexpected project momentum: %+v", data.ContextKpis.ProjectMomentum)
+	}
+	if len(data.ContextKpis.MachineTimeSplit) != 2 || data.ContextKpis.MachineTimeSplit[0].MachineName != "Kairos Mac" {
+		t.Fatalf("unexpected machine split: %+v", data.ContextKpis.MachineTimeSplit)
+	}
+	if data.ContextKpis.BranchSwitchCount != 3 || data.ContextKpis.BranchSwitchRatePerDay != 1 {
+		t.Fatalf("unexpected branch switching metrics: %+v", data.ContextKpis)
+	}
+	if len(data.ContextKpis.BranchTime) == 0 || data.ContextKpis.BranchTime[0].BranchName != "main" || data.ContextKpis.BranchTime[0].TotalMinutes != 105 {
+		t.Fatalf("unexpected branch time: %+v", data.ContextKpis.BranchTime)
+	}
+	if len(data.ContextKpis.WorkspaceContinuity) != 2 || data.ContextKpis.WorkspaceContinuity[0].WorkspaceID != "workspace-1" {
+		t.Fatalf("unexpected workspace continuity: %+v", data.ContextKpis.WorkspaceContinuity)
+	}
+}
+
+func TestGetAnalyticsDataUsesConfiguredDeepWorkThreshold(t *testing.T) {
+	service, _ := newTestViewService(t)
+
+	if _, err := service.settingsService.UpdateTrackingSettings(context.Background(), contracts.TrackingSettings{
+		TrackingEnabled:              true,
+		IdleDetectionEnabled:         true,
+		TrackProjectActivity:         true,
+		TrackLanguageActivity:        true,
+		TrackMachineAttribution:      true,
+		TrackSessionBoundaries:       true,
+		IdleTimeoutMinutes:           5,
+		SessionMergeThresholdMinutes: 10,
+		DeepWorkThresholdMinutes:     45,
+	}); err != nil {
+		t.Fatalf("UpdateTrackingSettings failed: %v", err)
+	}
+
+	data, err := service.GetAnalyticsData(context.Background(), "last-7-days")
+	if err != nil {
+		t.Fatalf("GetAnalyticsData failed: %v", err)
+	}
+
+	if data.SessionKpis.DeepWorkThresholdMinutes != 45 {
+		t.Fatalf("expected configured threshold 45, got %d", data.SessionKpis.DeepWorkThresholdMinutes)
+	}
+	if data.SessionKpis.DeepWorkMinutes != 105 || data.SessionKpis.DeepWorkBlockCount != 2 {
+		t.Fatalf("unexpected configured deep work kpis: %+v", data.SessionKpis)
+	}
+}
+
+func TestContextKpisHandleMissingEventMetadata(t *testing.T) {
+	sessions := []contracts.Session{
+		{
+			ID:              "s1",
+			Date:            "2026-04-06",
+			StartTime:       "2026-04-06T09:00:00Z",
+			EndTime:         "2026-04-06T09:30:00Z",
+			DurationMinutes: 30,
+			ProjectName:     "kairos",
+			Language:        "typescript",
+			MachineID:       "m1",
+		},
+	}
+	events := []contracts.ActivityEvent{
+		{
+			ID:          "e1",
+			Timestamp:   "2026-04-06T09:00:00Z",
+			EventType:   "edit",
+			MachineID:   "m1",
+			ProjectName: "kairos",
+			Language:    "typescript",
+		},
+	}
+
+	kpis := buildContextKpis(sessions, events, buildResolvedRange("test", time.Date(2026, time.April, 6, 0, 0, 0, 0, time.UTC), time.Date(2026, time.April, 6, 0, 0, 0, 0, time.UTC)), nil)
+
+	if kpis.BranchSwitchCount != 0 || len(kpis.BranchTime) != 0 || len(kpis.ProjectBranchBreakdown) != 0 {
+		t.Fatalf("expected missing branch data to degrade cleanly, got %+v", kpis)
+	}
+	if len(kpis.WorkspaceContinuity) != 0 {
+		t.Fatalf("expected missing workspace data to be omitted, got %+v", kpis.WorkspaceContinuity)
+	}
+	if kpis.ProjectFocusScore != 100 || kpis.LanguageFocusScore != 100 {
+		t.Fatalf("expected available session context to remain usable, got %+v", kpis)
+	}
 }
 
 func TestGetAnalyticsDataMonthRangeReturnsDailyBucketsForFullMonth(t *testing.T) {
@@ -295,6 +428,9 @@ func TestViewMethodsReturnCoherentEmptyStates(t *testing.T) {
 	if analytics.TotalMinutes != 0 || analytics.SessionCount != 0 {
 		t.Fatalf("expected empty analytics payload, got %+v", analytics)
 	}
+	if analytics.SessionKpis.ActiveDays != 0 || analytics.SessionKpis.Duration.LongestMinutes != 0 {
+		t.Fatalf("expected empty analytics kpis, got %+v", analytics.SessionKpis)
+	}
 	if len(analytics.DailyTotals) != 7 {
 		t.Fatalf("expected zero-filled daily totals, got %+v", analytics.DailyTotals)
 	}
@@ -418,12 +554,12 @@ func seedViewTestStore(t *testing.T, store *storage.Store) {
 	}
 
 	events := []contracts.ActivityEvent{
-		event("e1", "2026-04-06T09:00:00Z", "m1", "kairos-desktop", "typescript"),
-		event("e2", "2026-04-06T09:45:00Z", "m1", "kairos-desktop", "typescript"),
-		event("e3", "2026-04-07T10:00:00Z", "m1", "kairos-desktop", "typescript"),
-		event("e4", "2026-04-07T11:00:00Z", "m2", "api", "go"),
-		event("e5", "2026-04-07T11:55:00Z", "m2", "api", "go"),
-		event("e6", "2026-04-08T09:00:00Z", "m1", "kairos-desktop", "typescript"),
+		eventWithContext("e1", "2026-04-06T09:00:00Z", "m1", "workspace-1", "kairos-desktop", "typescript", "main"),
+		eventWithContext("e2", "2026-04-06T09:45:00Z", "m1", "workspace-1", "kairos-desktop", "typescript", "main"),
+		eventWithContext("e3", "2026-04-07T10:00:00Z", "m1", "workspace-1", "kairos-desktop", "typescript", "feature/analytics"),
+		eventWithContext("e4", "2026-04-07T11:00:00Z", "m2", "workspace-2", "api", "go", "main"),
+		eventWithContext("e5", "2026-04-07T11:55:00Z", "m2", "workspace-2", "api", "go", "main"),
+		eventWithContext("e6", "2026-04-08T09:00:00Z", "m1", "workspace-1", "kairos-desktop", "typescript", "feature/analytics"),
 	}
 	if _, warnings, err := store.InsertEvents(ctx, events, recordedAt); err != nil {
 		t.Fatalf("insert events failed: %v", err)
@@ -483,13 +619,18 @@ func seedViewTestStore(t *testing.T, store *storage.Store) {
 }
 
 func event(id string, timestamp string, machineID string, project string, language string) contracts.ActivityEvent {
+	return eventWithContext(id, timestamp, machineID, "workspace-1", project, language, "")
+}
+
+func eventWithContext(id string, timestamp string, machineID string, workspaceID string, project string, language string, branch string) contracts.ActivityEvent {
 	return contracts.ActivityEvent{
 		ID:          id,
 		Timestamp:   timestamp,
 		EventType:   "edit",
 		MachineID:   machineID,
-		WorkspaceID: "workspace-1",
+		WorkspaceID: workspaceID,
 		ProjectName: project,
 		Language:    language,
+		GitBranch:   branch,
 	}
 }

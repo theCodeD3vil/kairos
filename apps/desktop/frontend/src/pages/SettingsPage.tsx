@@ -3,12 +3,14 @@ import { RotateCcw } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { desktopResourceKeys } from '@/app/DesktopDataContext';
+import { KairosAreaChart, KairosBarChart } from '@/components/charts/kairos-charts';
 import { KairosFileIcon } from '@/components/file-icons/KairosFileIcon';
+import { overviewChartPalette } from '@/components/overview/chart-colors';
 import { useToast } from '@/components/toast/ToastProvider';
 import { VercelTabs } from '@/components/ui/vercel-tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +86,7 @@ import {
 
 const MIN_IDLE_TIMEOUT_MINUTES = 5;
 const MIN_SESSION_MERGE_THRESHOLD_MINUTES = 0;
+const MIN_DEEP_WORK_THRESHOLD_MINUTES = 15;
 const MIN_HEARTBEAT_INTERVAL_SECONDS = 1;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 500;
 const OBFUSCATED_STORAGE_PATH_LABEL = '••••••••••';
@@ -95,6 +98,57 @@ function formatImportRange(start?: string, end?: string): string {
     return '—';
   }
   return start === end ? start : `${start} → ${end}`;
+}
+
+function formatReliabilityStatus(status: string): string {
+  if (!status) {
+    return 'No data';
+  }
+  return status
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function toReliabilityBadgeStatus(status: string): StatusBadgeStatus {
+  if (status === 'healthy') {
+    return 'healthy';
+  }
+  if (status === 'stale' || status === 'degraded') {
+    return 'degraded';
+  }
+  if (status === 'no-data') {
+    return 'offline';
+  }
+  return 'pending';
+}
+
+function formatReliabilityTime(value?: string): string {
+  if (!value) {
+    return '—';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatSeconds(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = seconds / 60;
+  return `${minutes % 1 === 0 ? minutes.toFixed(0) : minutes.toFixed(1)}m`;
+}
+
+function formatPercent(value: number): string {
+  return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}%`;
 }
 
 function toDateInputValue(date: Date): string {
@@ -117,6 +171,7 @@ export function SettingsPage() {
   const [vscodeExtension, setVscodeExtension] = useState(initialData.viewModel.vscodeExtension);
   const [appBehavior, setAppBehavior] = useState(initialData.viewModel.appBehavior);
   const [dataStorage, setDataStorage] = useState(initialData.viewModel.dataStorage);
+  const [reliability, setReliability] = useState(initialData.viewModel.reliability);
   const [about, setAbout] = useState(initialData.viewModel.about);
   const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
@@ -132,6 +187,8 @@ export function SettingsPage() {
   const [idleTimeoutWarning, setIdleTimeoutWarning] = useState<string | null>(null);
   const [sessionMergeDraft, setSessionMergeDraft] = useState(initialData.viewModel.tracking.sessionMergeThresholdMinutes);
   const [sessionMergeWarning, setSessionMergeWarning] = useState<string | null>(null);
+  const [deepWorkThresholdDraft, setDeepWorkThresholdDraft] = useState(initialData.viewModel.tracking.deepWorkThresholdMinutes);
+  const [deepWorkThresholdWarning, setDeepWorkThresholdWarning] = useState<string | null>(null);
   const [heartbeatIntervalDraft, setHeartbeatIntervalDraft] = useState(initialData.viewModel.vscodeExtension.heartbeatIntervalSeconds);
   const [heartbeatIntervalWarning, setHeartbeatIntervalWarning] = useState<string | null>(null);
   const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false);
@@ -149,6 +206,14 @@ export function SettingsPage() {
   const canConfigureStartupWindowBehaviorControls = canConfigureStartupWindowBehavior(currentMachine.os);
   const canConfigureMenubarBehaviorControls = canConfigureMenubarBehavior(currentMachine.os);
   const menubarPresetActive = isMenubarPresetActive(appBehavior.menubarPreset);
+  const reliabilityTrendData = reliability.acceptedEventTrend.map((point) => ({
+    date: point.date.slice(5),
+    accepted: point.acceptedCount,
+  }));
+  const machineFreshnessData = reliability.machineFreshness.map((bucket) => ({
+    bucket: formatReliabilityStatus(bucket.bucket),
+    machines: bucket.machineCount,
+  }));
 
   const applyScreenData = useCallback((next: Awaited<ReturnType<typeof loadSettingsScreenData>>) => {
     setGeneral(next.viewModel.general);
@@ -158,6 +223,7 @@ export function SettingsPage() {
     setVscodeExtension(next.viewModel.vscodeExtension);
     setAppBehavior(next.viewModel.appBehavior);
     setDataStorage(next.viewModel.dataStorage);
+    setReliability(next.viewModel.reliability);
     setAbout(next.viewModel.about);
     setCurrentMachine(next.currentMachine);
     setAppStatus(next.appStatus);
@@ -346,6 +412,10 @@ export function SettingsPage() {
   }, [tracking.sessionMergeThresholdMinutes]);
 
   useEffect(() => {
+    setDeepWorkThresholdDraft(tracking.deepWorkThresholdMinutes);
+  }, [tracking.deepWorkThresholdMinutes]);
+
+  useEffect(() => {
     setHeartbeatIntervalDraft(vscodeExtension.heartbeatIntervalSeconds);
   }, [vscodeExtension.heartbeatIntervalSeconds]);
 
@@ -412,6 +482,38 @@ export function SettingsPage() {
       window.clearTimeout(timeoutId);
     };
   }, [sessionMergeDraft, tracking, updateTrackingState]);
+
+  useEffect(() => {
+    const trimmed = deepWorkThresholdDraft.trim();
+    if (trimmed === '') {
+      setDeepWorkThresholdWarning(null);
+      return;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      setDeepWorkThresholdWarning('Enter a whole number.');
+      return;
+    }
+
+    if (parsed < MIN_DEEP_WORK_THRESHOLD_MINUTES) {
+      setDeepWorkThresholdWarning(`Minimum is ${MIN_DEEP_WORK_THRESHOLD_MINUTES} minutes.`);
+      return;
+    }
+
+    setDeepWorkThresholdWarning(null);
+
+    const timeoutId = window.setTimeout(() => {
+      const nextValue = String(parsed);
+      if (tracking.deepWorkThresholdMinutes !== nextValue) {
+        updateTrackingState({ ...tracking, deepWorkThresholdMinutes: nextValue });
+      }
+    }, THRESHOLD_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [deepWorkThresholdDraft, tracking, updateTrackingState]);
 
   useEffect(() => {
     const trimmed = heartbeatIntervalDraft.trim();
@@ -668,6 +770,9 @@ export function SettingsPage() {
           <SettingsRow label="Minimize extension metadata" helper="Reduces non-essential VS Code metadata included in extension traffic and status.">
             <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => updatePrivacyState({ ...privacy, minimizeExtensionMetadata: next })} />
           </SettingsRow>
+          <SettingsRow label="Enable file metrics" helper="Opt-in for path-derived analytics: hotspots, file categories, and focus blocks. Needs file path mode set to Masked or Full.">
+            <SettingsToggle checked={privacy.fileMetricsEnabled} onChange={(next) => updatePrivacyState({ ...privacy, fileMetricsEnabled: next })} />
+          </SettingsRow>
         </SettingsSection>
       ),
     },
@@ -753,6 +858,37 @@ export function SettingsPage() {
               />
               {sessionMergeWarning ? (
                 <p className="text-xs text-[var(--ink-warning)]">{sessionMergeWarning}</p>
+              ) : null}
+            </div>
+          </SettingsRow>
+          <SettingsRow label="Deep work threshold" helper="Minutes. Sessions at or above this duration count as deep work.">
+            <div className="w-full max-w-sm space-y-1">
+              <SettingsInput
+                value={deepWorkThresholdDraft}
+                inputMode="numeric"
+                onChange={(event) => {
+                  setDeepWorkThresholdDraft(event.target.value);
+                }}
+                onBlur={() => {
+                  const trimmed = deepWorkThresholdDraft.trim();
+                  const parsed = Number.parseInt(trimmed, 10);
+                  if (!Number.isFinite(parsed) || parsed < MIN_DEEP_WORK_THRESHOLD_MINUTES) {
+                    const minimum = String(MIN_DEEP_WORK_THRESHOLD_MINUTES);
+                    setDeepWorkThresholdDraft(minimum);
+                    if (tracking.deepWorkThresholdMinutes !== minimum) {
+                      updateTrackingState({ ...tracking, deepWorkThresholdMinutes: minimum });
+                    }
+                    return;
+                  }
+
+                  const normalized = String(parsed);
+                  if (normalized !== deepWorkThresholdDraft) {
+                    setDeepWorkThresholdDraft(normalized);
+                  }
+                }}
+              />
+              {deepWorkThresholdWarning ? (
+                <p className="text-xs text-[var(--ink-warning)]">{deepWorkThresholdWarning}</p>
               ) : null}
             </div>
           </SettingsRow>
@@ -1201,6 +1337,84 @@ export function SettingsPage() {
                 { label: 'Pending event count', value: `${dataStorage.pendingEventCount}`, mono: true },
               ]}
             />
+          </SettingsSection>
+          <SettingsSection title="Tracking Health">
+            <SettingsStatusPanel
+              title="Reliability Status"
+              status={toReliabilityBadgeStatus(reliability.status)}
+              rows={[
+                { label: 'State', value: formatReliabilityStatus(reliability.status) },
+                { label: 'Accepted events', value: reliability.totalAcceptedEvents.toLocaleString() },
+                { label: 'Last ingested', value: formatReliabilityTime(reliability.lastIngestedAt) },
+                { label: 'Last sync', value: formatReliabilityTime(reliability.lastSuccessfulSyncAt) },
+                { label: 'Last handshake', value: formatReliabilityTime(reliability.lastHandshakeAt) },
+                { label: 'Last event', value: formatReliabilityTime(reliability.lastEventAt) },
+                { label: 'Last session rebuild', value: formatReliabilityTime(reliability.lastSessionRebuildAt) },
+              ]}
+            />
+            <SettingsInfoGrid
+              items={[
+                { label: 'Pending events', value: reliability.pendingEventCount.toLocaleString(), mono: true },
+                { label: 'Buffered window', value: `${reliability.bufferedTimeWindowMinutes}m`, mono: true },
+                { label: 'Oldest pending event', value: formatReliabilityTime(reliability.oldestPendingEventAt), mono: true },
+                { label: 'Quarantined events', value: reliability.quarantinedEventCount.toLocaleString(), mono: true },
+                { label: 'Rejected events', value: reliability.runtimeRejectedEventCount.toLocaleString(), mono: true },
+                { label: 'Rejected rate', value: formatPercent(reliability.rejectedEventRate), mono: true },
+                { label: 'Duplicate events', value: reliability.duplicateCountAvailable ? reliability.duplicateEventCount.toLocaleString() : 'Unavailable', mono: true },
+                { label: 'Duplicate rate', value: reliability.duplicateCountAvailable ? formatPercent(reliability.duplicateEventRate) : 'Unavailable', mono: true },
+                { label: 'Sync median', value: formatSeconds(reliability.syncLatency.medianSeconds), mono: true },
+                { label: 'Sync p90', value: formatSeconds(reliability.syncLatency.p90Seconds), mono: true },
+              ]}
+            />
+            <div className="grid gap-3 xl:grid-cols-2">
+              <article className="rounded-xl bg-[var(--surface-subtle)] p-3 shadow-[var(--shadow-inset-soft)]">
+                <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Accepted Events</h3>
+                {reliabilityTrendData.length ? (
+                  <div className="mt-3">
+                    <KairosAreaChart
+                      data={reliabilityTrendData}
+                      index="date"
+                      categories={['accepted']}
+                      colors={[overviewChartPalette[0]]}
+                      height={180}
+                      showLegend={false}
+                      valueFormatter={(value) => value.toLocaleString()}
+                      yAxisWidth={40}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-[var(--ink-tertiary)]">No accepted events</p>
+                )}
+              </article>
+              <article className="rounded-xl bg-[var(--surface-subtle)] p-3 shadow-[var(--shadow-inset-soft)]">
+                <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Machine Freshness</h3>
+                {machineFreshnessData.length ? (
+                  <div className="mt-3">
+                    <KairosBarChart
+                      data={machineFreshnessData}
+                      index="bucket"
+                      categories={['machines']}
+                      colors={[overviewChartPalette[1]]}
+                      height={180}
+                      showLegend={false}
+                      valueFormatter={(value) => value.toLocaleString()}
+                      yAxisWidth={32}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-[var(--ink-tertiary)]">No machine data</p>
+                )}
+              </article>
+            </div>
+            {reliability.trackingCoverageGaps.length ? (
+              <SettingsInfoGrid
+                items={reliability.trackingCoverageGaps.map((gap) => ({
+                  label: `${gap.durationDays} day gap`,
+                  value: `${gap.startDate} → ${gap.endDate}`,
+                  mono: true,
+                }))}
+              />
+            ) : null}
           </SettingsSection>
           <SettingsSection title="Actions">
             <SettingsActionRow

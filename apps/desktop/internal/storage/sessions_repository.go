@@ -64,6 +64,10 @@ func (s *Store) ReplaceSessionsInDateRange(ctx context.Context, startDate string
 	return nil
 }
 
+func (s *Store) GetLastSessionUpdate(ctx context.Context) (string, error) {
+	return nullableStringQuery(ctx, s.db, `SELECT MAX(updated_at) FROM sessions`)
+}
+
 func insertSessionsTx(ctx context.Context, tx *sql.Tx, sessions []contracts.Session, recordedAt string) error {
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO sessions (
