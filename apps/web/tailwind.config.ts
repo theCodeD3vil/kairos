@@ -20,8 +20,8 @@ export default {
       },
       fontFamily: {
         display: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
-        sans: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace'],
+        sans: ['"Montserrat Variable"', 'system-ui', 'sans-serif'],
+        mono: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         brutal: '6px 6px 0 0 #0A0A0A',

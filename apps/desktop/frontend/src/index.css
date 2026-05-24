@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-title: 'Syne', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-title: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-numeric: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --background: 200 20% 95%;
     --foreground: 210 18% 14%;
