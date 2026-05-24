@@ -415,6 +415,10 @@ func (s *ServiceImpl) resolveRange(ctx context.Context, rangeLabel string, fallb
 		end := startOfDayUTC(now)
 		start := end.AddDate(0, 0, -29)
 		return buildResolvedRange("last-30-days", start, end), nil
+	case "last-90-days":
+		end := startOfDayUTC(now)
+		start := end.AddDate(0, 0, -89)
+		return buildResolvedRange("last-90-days", start, end), nil
 	case "all-time":
 		firstEventAt, err := s.store.GetFirstEventTimestamp(ctx)
 		if err != nil {

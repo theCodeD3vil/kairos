@@ -175,6 +175,7 @@ export function OverviewTimeTab({ snapshot }: OverviewTimeTabProps) {
     today: 'Today Trend',
     week: 'Weekly Trend',
     month: 'Monthly Trend',
+    'last-90-days': '90-Day Trend',
     'all-time': 'All-Time Trend',
     custom: 'Custom Trend',
   };

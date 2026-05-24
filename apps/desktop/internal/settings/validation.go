@@ -44,7 +44,7 @@ func validateGeneral(input contracts.GeneralSettings) (contracts.GeneralSettings
 		return contracts.GeneralSettings{}, fmt.Errorf("preferredLandingPage is invalid")
 	}
 	switch input.DefaultDateRange {
-	case "today", "week", "month", "last-7-days", "last-30-days", "all-time":
+	case "today", "week", "month", "last-7-days", "last-30-days", "last-90-days", "all-time":
 	default:
 		return contracts.GeneralSettings{}, fmt.Errorf("defaultDateRange is invalid")
 	}

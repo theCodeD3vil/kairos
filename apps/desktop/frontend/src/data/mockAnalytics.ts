@@ -1,6 +1,6 @@
 import type { DateRange } from '@/components/ruixen/range-calendar';
 
-export type AnalyticsRange = 'today' | 'week' | 'month' | 'all-time' | 'custom';
+export type AnalyticsRange = 'today' | 'week' | 'month' | 'last-90-days' | 'all-time' | 'custom';
 
 export type AnalyticsFilters = {
   range: AnalyticsRange;

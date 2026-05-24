@@ -1,8 +1,8 @@
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 
-export type OverviewRange = 'today' | 'week' | 'month' | 'all-time' | 'custom';
+export type OverviewRange = 'today' | 'week' | 'month' | 'last-90-days' | 'all-time' | 'custom';
 
-export const presetOverviewRanges: Array<Exclude<OverviewRange, 'custom'>> = ['today', 'week', 'month', 'all-time'];
+export const presetOverviewRanges: Array<Exclude<OverviewRange, 'custom'>> = ['today', 'week', 'month', 'last-90-days', 'all-time'];
 
 export function normalizeOverviewRange(value: string | null | undefined): Exclude<OverviewRange, 'custom'> {
   switch (value) {
@@ -13,6 +13,8 @@ export function normalizeOverviewRange(value: string | null | undefined): Exclud
     case 'month':
     case 'last-30-days':
       return 'month';
+    case 'last-90-days':
+      return 'last-90-days';
     case 'week':
     case 'last-7-days':
     default:

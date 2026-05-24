@@ -290,6 +290,20 @@ function resolveDateWindow(
     };
   }
 
+  if (range === 'last-90-days') {
+    const end = today;
+    const start = addDays(end, -89);
+    const startDate = formatDateKey(start);
+    const endDate = formatDateKey(end);
+    return {
+      rangeLabel: `${startDate}..${endDate}`,
+      startDate,
+      endDate,
+      start,
+      end,
+    };
+  }
+
   const start = startOfWeekUTC(today, weekStartsOn);
   const end = addDays(start, 6);
   const startDate = formatDateKey(start);

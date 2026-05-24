@@ -113,6 +113,7 @@ function isOverviewRange(value: unknown): value is OverviewRange {
   return value === 'today'
     || value === 'week'
     || value === 'month'
+    || value === 'last-90-days'
     || value === 'all-time'
     || value === 'custom';
 }

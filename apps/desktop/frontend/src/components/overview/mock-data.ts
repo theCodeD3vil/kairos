@@ -36,7 +36,7 @@ function buildSyncBlocks(
 }
 
 type PresetOverviewRange = Exclude<OverviewRange, 'custom'>;
-type SeededOverviewRange = Exclude<PresetOverviewRange, 'all-time'>;
+type SeededOverviewRange = Exclude<PresetOverviewRange, 'all-time' | 'last-90-days'>;
 
 const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> = {
   today: {
@@ -262,6 +262,7 @@ export const overviewRanges: Array<{ label: string; value: OverviewRange }> = [
   { label: '1D', value: 'today' },
   { label: '7D', value: 'week' },
   { label: '1M', value: 'month' },
+  { label: '90D', value: 'last-90-days' },
   { label: 'All', value: 'all-time' },
   { label: 'custom', value: 'custom' },
 ];
