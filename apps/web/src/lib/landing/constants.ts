@@ -4,16 +4,15 @@ export const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'Privacy', href: '#privacy' },
   { label: 'Download', href: '#download' },
-  { label: 'GitHub', href: 'https://github.com/theCod3v1l/kairos' },
+  { label: 'GitHub', href: 'https://github.com/theCodeD3vil/kairos' },
 ] as const;
 
 export const FOOTER_LINKS = [
-  { label: 'GitHub', href: 'https://github.com/theCod3v1l/kairos' },
-  { label: 'Docs', href: 'https://github.com/theCod3v1l/kairos#readme' },
-  { label: 'VS Code Marketplace', href: 'https://marketplace.visualstudio.com' },
-  { label: 'Releases', href: 'https://github.com/theCod3v1l/kairos/releases' },
-  { label: 'Issues', href: 'https://github.com/theCod3v1l/kairos/issues' },
+  { label: 'GitHub', href: 'https://github.com/theCodeD3vil/kairos' },
+  { label: 'Docs', href: 'https://github.com/theCodeD3vil/kairos#readme' },
+  { label: 'Releases', href: 'https://github.com/theCodeD3vil/kairos/releases' },
+  { label: 'Issues', href: 'https://github.com/theCodeD3vil/kairos/issues' },
 ] as const;
 
-export const REPO_URL = 'https://github.com/theCod3v1l/kairos';
-export const RELEASES_URL = 'https://github.com/theCod3v1l/kairos/releases/latest';
+export const REPO_URL = 'https://github.com/theCodeD3vil/kairos';
+export const RELEASES_URL = 'https://github.com/theCodeD3vil/kairos/releases/latest';

@@ -3,7 +3,6 @@ import { RELEASES_URL } from '@/lib/landing/constants';
 
 const PLATFORMS = [
   { os: 'macOS', ext: '.dmg', href: RELEASES_URL },
-  { os: 'Windows', ext: '.exe', href: RELEASES_URL },
   { os: 'Linux', ext: '.AppImage', href: RELEASES_URL },
 ];
 

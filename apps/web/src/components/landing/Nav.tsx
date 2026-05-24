@@ -28,7 +28,7 @@ export function Nav() {
     <nav className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 md:px-10 py-5 md:py-8">
       <a
         href="#top"
-        className="inline-flex items-center gap-2 font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight"
+        className="inline-flex items-center gap-2 font-display text-xl sm:text-2xl  font-medium tracking-tight"
       >
         <img
           src={kairosMarkUrl}
@@ -36,7 +36,7 @@ export function Nav() {
           data-testid="kairos-nav-logo"
           className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
         />
-        <span>KAIROS</span>
+        <span>Kairos</span>
       </a>
 
       <ul className="hidden md:flex items-center gap-8 font-display text-sm font-bold">
