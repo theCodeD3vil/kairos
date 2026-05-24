@@ -5,5 +5,5 @@
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm build",
   "frontend:dev:watcher": "pnpm dev",
-  "frontend:dev:serverUrl": "http://localhost:5173"
+  "frontend:dev:serverUrl": "http://127.0.0.1:5173"
 }

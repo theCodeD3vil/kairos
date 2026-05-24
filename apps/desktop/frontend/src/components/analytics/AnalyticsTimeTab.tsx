@@ -4,6 +4,9 @@ import {
   AnalyticsKpiCard,
   AnalyticsTimeBreakdown,
   formatMinutes,
+  mapCumulativeAverageSparklineData,
+  mapDailyMinutesSparklineData,
+  mapRollingAverageSparklineData,
 } from '@/components/analytics/AnalyticsCards';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
 import type { AnalyticsFilters, AnalyticsSnapshot } from '@/data/mockAnalytics';
@@ -19,6 +22,10 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
     date: day.date,
     count: day.minutes,
   }));
+  const dailySparklineData = mapDailyMinutesSparklineData(snapshot.time.daily);
+  const averagePerActiveDaySparklineData = mapCumulativeAverageSparklineData(snapshot.time.daily);
+  const rolling7DaySparklineData = mapRollingAverageSparklineData(snapshot.time.daily, 7);
+  const rolling30DaySparklineData = mapRollingAverageSparklineData(snapshot.time.daily, 30);
 
   const hourBuckets = snapshot.patterns.hourBuckets ?? [];
 
@@ -42,19 +49,43 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
                 ? snapshot.time.longestDay.label
                 : 'No active day'
             }
+            sparkline={{
+              data: dailySparklineData,
+              variant: 'area',
+              color: overviewChartPalette[1],
+              showBaseline: true,
+            }}
           />
           <AnalyticsKpiCard
             label="Avg per active day"
             value={formatMinutes(snapshot.time.averagePerActiveDay)}
             hint={`${snapshot.summary.activeDays} active days`}
+            sparkline={{
+              data: averagePerActiveDaySparklineData,
+              variant: 'line',
+              color: overviewChartPalette[0],
+              showBaseline: true,
+            }}
           />
           <AnalyticsKpiCard
             label="7-day average"
             value={formatMinutes(snapshot.sessionKpis.rolling7DayAverageMinutes)}
+            sparkline={{
+              data: rolling7DaySparklineData,
+              variant: 'line',
+              color: overviewChartPalette[2],
+              showBaseline: true,
+            }}
           />
           <AnalyticsKpiCard
             label="30-day average"
             value={formatMinutes(snapshot.sessionKpis.rolling30DayAverageMinutes)}
+            sparkline={{
+              data: rolling30DaySparklineData,
+              variant: 'line',
+              color: overviewChartPalette[4],
+              showBaseline: true,
+            }}
           />
         </div>
         <AnalyticsTimeBreakdown
@@ -111,6 +142,12 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
                 : '—'
             }
             hint={snapshot.sessionKpis.bestDay.label || 'No active day'}
+            sparkline={{
+              data: dailySparklineData,
+              variant: 'area',
+              color: overviewChartPalette[1],
+              showBaseline: true,
+            }}
           />
         </div>
 

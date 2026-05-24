@@ -265,6 +265,13 @@ test('loads and navigates core desktop routes with mocked bridge data', async ({
   await expect(page.getByRole('main').getByRole('button', { name: 'Comparison' })).toBeVisible();
   await page.getByRole('main').getByRole('button', { name: 'All', exact: true }).click();
   await expect(page.getByRole('main').getByRole('button', { name: 'Comparison' })).toHaveCount(0);
+  await page.getByRole('main').getByRole('button', { name: 'Projects', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Projects', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Top 5' })).toHaveCount(2);
+  await expect(page.getByRole('main').getByRole('button', { name: 'Show 10' })).toHaveCount(2);
+  await page.getByRole('main').getByRole('button', { name: 'Top 5' }).first().click();
+  await page.getByRole('button', { name: 'Top 10', exact: true }).click();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Top 10', exact: true })).toHaveCount(1);
   await expect(page).toHaveURL(/#\/analytics$/);
 
   await page.getByRole('navigation').getByRole('button', { name: 'Sessions' }).click();

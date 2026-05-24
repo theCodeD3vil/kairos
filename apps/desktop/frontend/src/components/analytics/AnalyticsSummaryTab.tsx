@@ -2,6 +2,7 @@ import { KairosAreaChart } from '@/components/charts/kairos-charts';
 import {
   AnalyticsKpiCard,
   formatMinutes,
+  mapCumulativeAverageSparklineData,
   resolveTrendPresentation,
 } from '@/components/analytics/AnalyticsCards';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
@@ -26,6 +27,12 @@ export function AnalyticsSummaryTab({
     snapshot.time.daily,
     snapshot.time.weekly
   );
+  const totalTimeSparklineData = trendData.map((point) => ({
+    day: String(point.label),
+    label: String(point.label),
+    value: point.minutes,
+  }));
+  const averagePerActiveDaySparklineData = mapCumulativeAverageSparklineData(snapshot.time.daily);
 
   return (
     <div className="space-y-6">
@@ -37,24 +44,38 @@ export function AnalyticsSummaryTab({
             No activity for this filter. Try a wider range or a different project.
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-6">
+            <div className="grid gap-3 md:grid-cols-3">
             <AnalyticsKpiCard
               label="Total time"
               value={formatMinutes(snapshot.summary.totalMinutes)}
+                sparkline={{
+                  data: totalTimeSparklineData,
+                  variant: 'area',
+                  color: overviewChartPalette[1],
+                  showBaseline: true,
+                }}
             />
             <AnalyticsKpiCard
               label="Avg per active day"
               value={formatMinutes(snapshot.time.averagePerActiveDay)}
               hint={`${snapshot.summary.activeDays} active days`}
+                sparkline={{
+                  data: averagePerActiveDaySparklineData,
+                  variant: 'line',
+                  color: overviewChartPalette[0],
+                  showBaseline: true,
+                }}
             />
-            <AnalyticsKpiCard
-              label="Top project"
-              value={snapshot.projects.topProject ?? '—'}
-            />
-            <AnalyticsKpiCard
-              label="Top language"
-              value={snapshot.languages.topLanguage ?? '—'}
-            />
+              <div className="grid gap-3">
+                <AnalyticsKpiCard
+                  label="Top project"
+                  value={snapshot.projects.topProject ?? '—'}
+                />
+                <AnalyticsKpiCard
+                  label="Top language"
+                  value={snapshot.languages.topLanguage ?? '—'}
+                />
+              </div>
             <AnalyticsKpiCard
               label="Sessions"
               value={`${snapshot.summary.sessions}`}
@@ -63,6 +84,10 @@ export function AnalyticsSummaryTab({
               label="Avg session"
               value={formatMinutes(snapshot.summary.averageSessionMinutes)}
             />
+              <AnalyticsKpiCard
+                label="Unique Files"
+                value={snapshot.fileKpis.uniqueFileCount.toString()}
+              />
           </div>
         )}
       </section>

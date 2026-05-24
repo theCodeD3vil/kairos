@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { KairosBarChart } from '@/components/charts/kairos-charts';
 import {
   AnalyticsBreakdownList,
@@ -6,14 +7,44 @@ import {
   formatMinutes,
 } from '@/components/analytics/AnalyticsCards';
 import { overviewChartPalette } from '@/components/overview/chart-colors';
-import type { AnalyticsSnapshot } from '@/data/mockAnalytics';
+import { ButtonDropdown } from '@/components/ruixen/button-dropdown';
+import type { AnalyticsSnapshot, BreakdownItem } from '@/data/mockAnalytics';
 import { formatDurationMinutes } from '@/lib/time-format';
 
 interface AnalyticsProjectsTabProps {
   snapshot: AnalyticsSnapshot;
 }
 
+const DEFAULT_TOP_ITEM_LIMIT = 10;
+const DEFAULT_SHARE_ITEM_LIMIT = 5;
+const TOP_ITEM_LIMIT_OPTIONS = [5, 10, 25, 50] as const;
+
+function buildShareItems(items: BreakdownItem[], limit: number) {
+  const visibleItems = items.slice(0, limit);
+  const hiddenItems = items.slice(limit);
+
+  if (hiddenItems.length === 0) {
+    return visibleItems;
+  }
+
+  return [
+    ...visibleItems,
+    {
+      name: 'Other',
+      minutes: hiddenItems.reduce((sum, item) => sum + item.minutes, 0),
+      share: hiddenItems.reduce((sum, item) => sum + item.share, 0),
+      activeDays: hiddenItems.reduce((max, item) => Math.max(max, item.activeDays), 0),
+      recent: '',
+    },
+  ];
+}
+
 export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
+  const [projectItemLimit, setProjectItemLimit] = useState(DEFAULT_TOP_ITEM_LIMIT);
+  const [languageItemLimit, setLanguageItemLimit] = useState(DEFAULT_TOP_ITEM_LIMIT);
+  const [projectShareItemLimit, setProjectShareItemLimit] = useState(DEFAULT_SHARE_ITEM_LIMIT);
+  const [languageShareItemLimit, setLanguageShareItemLimit] = useState(DEFAULT_SHARE_ITEM_LIMIT);
+
   return (
     <div className="space-y-6">
       {/* ── Projects ── */}
@@ -46,13 +77,34 @@ export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
             </div>
           </article>
 
-          <AnalyticsDonut title="Project share" items={snapshot.projects.items} />
+          <AnalyticsDonut
+            title="Project share"
+            items={buildShareItems(snapshot.projects.items, projectShareItemLimit)}
+            action={
+              <ButtonDropdown
+                label={`Top ${projectShareItemLimit}`}
+                items={TOP_ITEM_LIMIT_OPTIONS.map((limit) => ({
+                  label: `Top ${limit}`,
+                  onClick: () => setProjectShareItemLimit(limit),
+                }))}
+              />
+            }
+          />
         </div>
 
         <AnalyticsBreakdownList
           title="Top projects"
-          items={snapshot.projects.items}
+          items={snapshot.projects.items.slice(0, projectItemLimit)}
           emptyMessage="No project time yet."
+          action={
+            <ButtonDropdown
+              label={`Show ${projectItemLimit}`}
+              items={TOP_ITEM_LIMIT_OPTIONS.map((limit) => ({
+                label: `${limit} items`,
+                onClick: () => setProjectItemLimit(limit),
+              }))}
+            />
+          }
         />
       </section>
 
@@ -86,14 +138,35 @@ export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
             </div>
           </article>
 
-          <AnalyticsDonut title="Language share" items={snapshot.languages.items} />
+          <AnalyticsDonut
+            title="Language share"
+            items={buildShareItems(snapshot.languages.items, languageShareItemLimit)}
+            action={
+              <ButtonDropdown
+                label={`Top ${languageShareItemLimit}`}
+                items={TOP_ITEM_LIMIT_OPTIONS.map((limit) => ({
+                  label: `Top ${limit}`,
+                  onClick: () => setLanguageShareItemLimit(limit),
+                }))}
+              />
+            }
+          />
         </div>
 
         <AnalyticsBreakdownList
           title="Top languages"
-          items={snapshot.languages.items}
+          items={snapshot.languages.items.slice(0, languageItemLimit)}
           emptyMessage="No language time yet."
           showLanguageIcons
+          action={
+            <ButtonDropdown
+              label={`Show ${languageItemLimit}`}
+              items={TOP_ITEM_LIMIT_OPTIONS.map((limit) => ({
+                label: `${limit} items`,
+                onClick: () => setLanguageItemLimit(limit),
+              }))}
+            />
+          }
         />
       </section>
 

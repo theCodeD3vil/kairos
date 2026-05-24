@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { DailyStat } from '@/data/mockAnalytics';
-import { resolveTrendPresentation } from '@/components/analytics/AnalyticsCards';
+import {
+  buildAreaPath,
+  buildLinePath,
+  computeMetricSparklineStats,
+  mapCumulativeAverageSparklineData,
+  mapDailyMinutesSparklineData,
+  mapRollingAverageSparklineData,
+  resolveTrendPresentation,
+} from '@/components/analytics/AnalyticsCards';
 
 const sampleDaily: DailyStat[] = [
   { date: '2026-04-01', label: 'Apr 1', minutes: 30 },
@@ -48,5 +56,41 @@ describe('resolveTrendPresentation', () => {
 
     expect(result.trendTitle).toBe('Today trend');
     expect(result.trendData).toEqual(sampleDaily.map((day) => ({ label: day.label, minutes: day.minutes })));
+  });
+});
+
+describe('MetricSparkline helpers', () => {
+  it('maps metric values into source-compatible SVG paths', () => {
+    const points = [
+      { day: '2026-04-01', label: 'First', value: 0 },
+      { day: '2026-04-02', label: 'Second', value: 10 },
+      { day: '2026-04-03', label: 'Third', value: 5 },
+    ];
+
+    expect(buildLinePath(points, 100, 40, 2)).toBe('M 2.00 38.00 L 50.00 2.00 L 98.00 20.00');
+    expect(buildAreaPath(points, 100, 40, 2)).toBe('M 2.00 38.00 L 50.00 2.00 L 98.00 20.00 L 98.00 38.00 L 2.00 38.00 Z');
+  });
+
+  it('computes trend stats using first half and second half averages', () => {
+    const stats = computeMetricSparklineStats([
+      { day: '2026-04-01', value: 10 },
+      { day: '2026-04-02', value: 20 },
+      { day: '2026-04-03', value: 40 },
+      { day: '2026-04-04', value: 60 },
+    ]);
+
+    expect(stats.total).toBe(130);
+    expect(stats.avg).toBe(32.5);
+    expect(stats.trendPct).toBeCloseTo(233.333, 3);
+  });
+
+  it('builds metric-specific time series for KPI sparklines', () => {
+    expect(mapDailyMinutesSparklineData(sampleDaily)).toEqual([
+      { day: '2026-04-01', label: 'Apr 1', value: 30 },
+      { day: '2026-04-02', label: 'Apr 2', value: 60 },
+      { day: '2026-04-03', label: 'Apr 3', value: 90 },
+    ]);
+    expect(mapCumulativeAverageSparklineData(sampleDaily).map((point) => point.value)).toEqual([30, 45, 60]);
+    expect(mapRollingAverageSparklineData(sampleDaily, 2).map((point) => point.value)).toEqual([30, 45, 75]);
   });
 });
