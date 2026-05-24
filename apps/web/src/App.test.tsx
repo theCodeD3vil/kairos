@@ -68,9 +68,9 @@ describe('Landing page', () => {
     expect(screen.getAllByText(/View on GitHub/i).length).toBeGreaterThan(0);
   });
 
-  it('uses the Kairos logo in app illustrations', () => {
+  it('uses the Kairos logo in the hero app mockup', () => {
     render(<App />);
-    expect(screen.getAllByTestId('kairos-app-logo').length).toBeGreaterThanOrEqual(5);
+    expect(screen.getAllByTestId('kairos-app-logo')).toHaveLength(2);
   });
 
   it('shows current version constant', () => {

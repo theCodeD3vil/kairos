@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/landing/cn';
 import { viewportOnce } from '@/lib/landing/motion';
-import kairosMarkUrl from '@/assets/kairos-mark.svg';
 
 function Tile({
   className,
@@ -91,13 +90,6 @@ function LanguageDonut() {
             return el;
           })}
         </svg>
-        <img
-          src={kairosMarkUrl}
-          alt=""
-          aria-hidden
-          data-testid="kairos-app-logo"
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2"
-        />
       </div>
       <ul className="space-y-2 font-sans text-sm">
         {[
@@ -189,26 +181,10 @@ function MultiMachine() {
     <svg viewBox="0 0 240 80" className="w-full">
       <g>
         <rect x="10" y="20" width="60" height="40" rx="4" fill="none" stroke="#0A0A0A" strokeWidth="2.5" />
-        <image
-          data-testid="kairos-app-logo"
-          href={kairosMarkUrl}
-          x="28"
-          y="28"
-          width="24"
-          height="24"
-        />
         <rect x="5" y="60" width="70" height="4" fill="#0A0A0A" />
       </g>
       <g>
         <rect x="170" y="20" width="60" height="40" rx="4" fill="none" stroke="#0A0A0A" strokeWidth="2.5" />
-        <image
-          data-testid="kairos-app-logo"
-          href={kairosMarkUrl}
-          x="188"
-          y="28"
-          width="24"
-          height="24"
-        />
         <rect x="165" y="60" width="70" height="4" fill="#0A0A0A" />
       </g>
       <line
@@ -286,7 +262,7 @@ export function FeatureGrid() {
             <MultiMachine />
           </Tile>
           <Tile
-            className="md:col-span-2"
+            className="md:col-span-4"
             title="Ready when you are."
             body="It starts when you begin working and keeps your activity on your computer."
           >

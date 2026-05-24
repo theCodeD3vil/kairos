@@ -7,7 +7,7 @@ test('renders the landing page with all major sections', async ({ page }) => {
   await expect(page.locator('h1')).toContainText(/On\s+your\s+machine\./i);
   await expect(page.locator('h1')).toContainText(/In\s+the\s+open\./i);
   await expect(page.getByAltText('Kairos logo')).toBeVisible();
-  await expect(page.getByTestId('kairos-app-logo')).toHaveCount(5);
+  await expect(page.getByTestId('kairos-app-logo')).toHaveCount(2);
   await expect(page.getByText(/An open source alternative/i).first()).toBeVisible();
   await expect(page.getByText('Built on a few simple ideas.')).toBeVisible();
   await expect(page.getByText('Three pieces. Local data.')).toBeVisible();
