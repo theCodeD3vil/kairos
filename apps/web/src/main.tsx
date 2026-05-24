@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import '@fontsource-variable/space-grotesk';
-import '@fontsource-variable/inter';
+import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/jetbrains-mono';
 import App from './App';
 import './index.css';

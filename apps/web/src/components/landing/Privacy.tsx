@@ -66,11 +66,11 @@ function SignalRail() {
       {[0, 1, 2, 3].map((item) => (
         <motion.span
           key={item}
-          initial={{ scale: 0 }}
-          whileInView={{ scale: 1 }}
+          initial={{ x: '-50%', scale: 0 }}
+          whileInView={{ x: '-50%', scale: 1 }}
           viewport={viewportOnce}
           transition={{ duration: 0.25, ease: 'easeOut', delay: item * 0.1 }}
-          className="absolute left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-ink bg-signal"
+          className="absolute left-1/2 h-5 w-5 rounded-full border-2 border-ink bg-signal"
           style={{ top: `${14 + item * 24}%` }}
         />
       ))}

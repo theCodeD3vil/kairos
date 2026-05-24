@@ -3,16 +3,14 @@ import { expect, test } from '@playwright/test';
 test('renders the landing page with all major sections', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.locator('h1')).toContainText(/Your\s+coding\s+time\./i);
-  await expect(page.locator('h1')).toContainText(/On\s+your\s+machine\./i);
-  await expect(page.locator('h1')).toContainText(/In\s+the\s+open\./i);
+  await expect(page.locator('h1')).toContainText(/Track\s+your\s+coding\s*metrics/i);
   await expect(page.getByAltText('Kairos logo')).toBeVisible();
   await expect(page.getByTestId('kairos-app-logo')).toHaveCount(2);
   await expect(page.getByText(/An open source alternative/i).first()).toBeVisible();
   await expect(page.getByText('Built on a few simple ideas.')).toBeVisible();
   await expect(page.getByText('Three pieces. Local data.')).toBeVisible();
   await expect(page.getByText('Built for everyday coding.')).toBeVisible();
-  await expect(page.getByText('Your data never leaves home.')).toBeVisible();
+  await expect(page.getByText('Local history.')).toBeVisible();
   await expect(page.getByText('Try Kairos today.')).toBeVisible();
   await expect(page.getByText(/Time trackers became spyware|Pick your poison|Stop renting your data/i)).toHaveCount(0);
 });

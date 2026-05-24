@@ -47,14 +47,12 @@ describe('Landing page', () => {
     const text = container.textContent ?? '';
 
     expect(text).toMatch(/KAIROS/i);
-    expect(text).toMatch(/Your\s+coding\s+time\./i);
-    expect(text).toMatch(/On\s+your\s+machine\./i);
-    expect(text).toMatch(/In\s+the\s+open\./i);
+    expect(text).toMatch(/Track\s+your\s+coding\s*metrics/i);
     expect(text).toMatch(/An open source alternative/i);
     expect(text).toMatch(/Built on a few simple ideas\./i);
     expect(text).toMatch(/Three pieces\.\s+Local data\./i);
     expect(text).toMatch(/Built for everyday coding\./i);
-    expect(text).toMatch(/Your data never leaves home\./i);
+    expect(text).toMatch(/Local history\./i);
     expect(text).toMatch(/Try Kairos today\./i);
     expect(text).not.toMatch(/Time trackers became spyware|Pick your poison|Stop renting your data/i);
   });

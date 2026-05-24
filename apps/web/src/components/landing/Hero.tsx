@@ -1,5 +1,14 @@
-import { motion } from 'framer-motion';
-import { Download, ArrowRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Download,
+  ArrowRight,
+  CalendarDays,
+  CalendarRange,
+  LineChart,
+  ClockAlert,
+  type LucideIcon,
+} from 'lucide-react';
 import { BrutalAnchor } from './primitives/BrutalButton';
 import { Crosshair } from './primitives/Crosshair';
 import { useCursorTilt } from './hooks/useCursorTilt';
@@ -7,39 +16,92 @@ import { useReducedMotion } from './hooks/useReducedMotion';
 import { VERSION, REPO_URL, RELEASES_URL } from '@/lib/landing/constants';
 import kairosMarkUrl from '@/assets/kairos-mark.svg';
 
-const LINES = ['Your coding time.', 'On your machine.', 'In the open.'];
+const HERO_TEXT = 'Track your coding';
+const HERO_WORDS: Array<{
+  label: string;
+  icon: LucideIcon;
+  colorClassName: string;
+  iconClassName: string;
+}> = [
+    {
+      label: 'metrics',
+      icon: LineChart,
+      colorClassName: 'text-ink',
+      iconClassName: 'text-[#1E40FF] ',
+    },
+    {
+      label: 'time',
+      icon: ClockAlert,
+      colorClassName: 'text-ink',
+      iconClassName: 'text-[#FF4D1C]',
+    },
+    {
+      label: 'patterns',
+      icon: CalendarRange,
+      colorClassName: 'text-ink',
+      iconClassName: 'text-[#1CBCC6] ',
+    },
+  ];
 
-function SplitHeadline() {
+function LayoutTextFlip({
+  text,
+  words,
+  duration = 3000,
+}: {
+  text: string;
+  words: typeof HERO_WORDS;
+  duration?: number;
+}) {
   const reduced = useReducedMotion();
-  let counter = 0;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (reduced || words.length < 2) return;
+
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % words.length);
+    }, duration);
+
+    return () => window.clearInterval(id);
+  }, [duration, reduced, words.length]);
+
+  const word = words[index] ?? words[0];
+  const Icon = word.icon;
+
   return (
-    <h1 className="font-display font-extrabold leading-[0.95] tracking-tight text-[clamp(48px,9vw,140px)]">
-      {LINES.map((line, lineIdx) => {
-        const words = line.split(' ');
-        return (
-          <span key={lineIdx} className="block">
-            {words.map((word, wIdx) => (
-              <span key={wIdx} className="inline-block whitespace-nowrap">
-                {Array.from(word).map((ch, i) => {
-                  const delay = reduced ? 0 : counter++ * 0.02;
-                  return (
-                    <motion.span
-                      key={i}
-                      initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, ease: 'easeOut', delay }}
-                      className="inline-block"
-                    >
-                      {ch}
-                    </motion.span>
-                  );
-                })}
-                {wIdx < words.length - 1 && <span className="inline-block">&nbsp;</span>}
-              </span>
-            ))}
-          </span>
-        );
-      })}
+    <h1 className="flex flex-col items-center justify-center gap-3 font-display text-[clamp(44px,8vw,100px)] font-extrabold leading-[0.95] tracking-tight">
+      <motion.span
+        initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
+        {text}
+      </motion.span>
+      <motion.span
+        layout
+        aria-live="polite"
+        className="inline-flex overflow-hidden"
+        transition={{ layout: { duration: 0.35, ease: 'easeOut' } }}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={word.label}
+            initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: -32 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className={`inline-flex items-center gap-[0.16em] whitespace-nowrap ${word.colorClassName}`}
+          >
+            <span
+              className={`grid size-[1.2em] p-3 rounded-full bg-slate-200/60  shrink-0 place-items-center  ${word.iconClassName}`}
+              aria-hidden
+            >
+              <Icon className="size-[0.8em] stroke-[3px]" />
+            </span>
+            <span className=' font-mono' >{word.label}</span>
+          </motion.span>
+        </AnimatePresence>
+      </motion.span>
     </h1>
   );
 }
@@ -129,10 +191,7 @@ export function Hero() {
       <Crosshair className="absolute bottom-6 right-6 opacity-40" />
 
       <div className="relative mx-auto max-w-7xl px-6 md:px-10 pt-32 md:pt-40 pb-20 flex flex-col items-center text-center gap-10">
-        <SplitHeadline />
-        <p className="font-sans text-lg md:text-xl text-ink/80 max-w-xl">
-          An open source alternative for tracking coding time locally.
-        </p>
+        <LayoutTextFlip text={HERO_TEXT} words={HERO_WORDS} />
         <div className="flex flex-wrap justify-center gap-4">
           <BrutalAnchor as="a" href={RELEASES_URL} variant="primary">
             <Download className="h-4 w-4" />

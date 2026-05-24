@@ -56,7 +56,7 @@ export function HowItWorks() {
           Three pieces. Local data.
         </h2>
 
-        <div className="mt-16 md:mt-20 gap-6 grid md:grid-cols-[1fr_auto_1fr_auto_1fr]  items-stretch text-left">
+        <div className="mt-16 md:mt-20 gap-6 md:gap-0 grid md:grid-cols-[1fr_auto_1fr_auto_1fr]  items-stretch text-left">
           {STEPS.map((s, i) => (
             <Fragment key={s.n}>
               <motion.div

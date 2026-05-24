@@ -12,8 +12,8 @@ export default {
         interrupt: '#1E40FF',
       },
       fontFamily: {
-        display: ['"Space Grotesk Variable"', 'system-ui', 'sans-serif'],
-        sans: ['"Inter Variable"', 'system-ui', 'sans-serif'],
+        display: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
+        sans: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
