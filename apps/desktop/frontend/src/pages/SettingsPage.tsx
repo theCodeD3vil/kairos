@@ -1701,6 +1701,33 @@ export function SettingsPage() {
       ),
     },
     {
+      label: 'Analytics',
+      value: 'analytics',
+      content: (
+        <SettingsSection
+          title="Analytics"
+          action={
+            <ResetButton
+              onClick={() => {
+                updateAppBehaviorState({ ...appBehavior, enableAdvancedAnalytics: false });
+                success('Analytics Settings Reset', 'Analytics preferences have been returned to defaults.');
+              }}
+            />
+          }
+        >
+          <SettingsRow
+            label="Enable Advanced Analytics"
+            helper="Show advanced metrics, insight scores, and period comparisons under a dedicated 'Advanced Analytics' tab."
+          >
+            <SettingsToggle
+              checked={appBehavior.enableAdvancedAnalytics}
+              onChange={(next) => updateAppBehaviorState({ ...appBehavior, enableAdvancedAnalytics: next })}
+            />
+          </SettingsRow>
+        </SettingsSection>
+      ),
+    },
+    {
       label: 'About',
       value: 'about',
       content: (

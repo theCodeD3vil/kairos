@@ -22,6 +22,7 @@ const baseState: AppBehaviorSettings = {
   rememberLastSelectedPage: true,
   restoreLastSelectedDateRange: true,
   reopenLastViewedContext: true,
+  enableAdvancedAnalytics: false,
 };
 
 describe('settings behavior helpers', () => {

@@ -6,6 +6,7 @@ export const LAST_PAGE_STORAGE_KEY = 'kairos:last-page';
 export const REOPEN_LAST_VIEWED_CONTEXT_STORAGE_KEY = 'kairos:reopen-last-viewed-context';
 export const LAST_CALENDAR_MONTH_STORAGE_KEY = 'kairos:last-calendar-month';
 export const LAST_ANALYTICS_FILTERS_STORAGE_KEY = 'kairos:last-analytics-filters';
+export const ADVANCED_ANALYTICS_STORAGE_KEY = 'kairos:enable-advanced-analytics';
 
 const lastRangeStorageKeys = {
   overview: 'kairos:last-range:overview',
@@ -130,6 +131,24 @@ export function saveReopenLastViewedContextPreference(enabled: boolean): void {
 
 export function readReopenLastViewedContextPreference(fallback = true): boolean {
   const raw = localStorage.getItem(REOPEN_LAST_VIEWED_CONTEXT_STORAGE_KEY);
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    const decoded = JSON.parse(raw) as unknown;
+    return typeof decoded === 'boolean' ? decoded : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveEnableAdvancedAnalyticsPreference(enabled: boolean): void {
+  localStorage.setItem(ADVANCED_ANALYTICS_STORAGE_KEY, JSON.stringify(enabled));
+}
+
+export function readEnableAdvancedAnalyticsPreference(fallback = false): boolean {
+  const raw = localStorage.getItem(ADVANCED_ANALYTICS_STORAGE_KEY);
   if (!raw) {
     return fallback;
   }

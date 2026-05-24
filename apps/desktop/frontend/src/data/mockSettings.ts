@@ -79,6 +79,7 @@ export type AppBehaviorSettings = {
   rememberLastSelectedPage: boolean;
   restoreLastSelectedDateRange: boolean;
   reopenLastViewedContext: boolean;
+  enableAdvancedAnalytics: boolean;
 };
 
 export type DataStorageInfo = {
@@ -277,6 +278,7 @@ export const settingsDefaults: SettingsDefaults = {
     rememberLastSelectedPage: true,
     restoreLastSelectedDateRange: true,
     reopenLastViewedContext: true,
+    enableAdvancedAnalytics: false,
   },
   dataStorage: {
     localStoragePath: '~/Library/Application Support/Kairos',

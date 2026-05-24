@@ -26,6 +26,8 @@ import type { AppStatus, MachineInfo } from '@/mocks/system-info';
 import {
   readReopenLastViewedContextPreference,
   saveReopenLastViewedContextPreference,
+  readEnableAdvancedAnalyticsPreference,
+  saveEnableAdvancedAnalyticsPreference,
 } from '@/lib/settings/preferences';
 import { trackSyncOperation } from '@/lib/sync-status';
 
@@ -237,6 +239,7 @@ function emptyViewModel(): SettingsDefaults {
       rememberLastSelectedPage: true,
       restoreLastSelectedDateRange: true,
       reopenLastViewedContext: readReopenLastViewedContextPreference(true),
+      enableAdvancedAnalytics: readEnableAdvancedAnalyticsPreference(false),
     },
     dataStorage: {
       localStoragePath: '—',
@@ -397,6 +400,7 @@ function toAppBehavior(input: contracts.AppBehaviorSettings): AppBehaviorSetting
     rememberLastSelectedPage: input.rememberLastPage,
     restoreLastSelectedDateRange: input.restoreLastDateRange,
     reopenLastViewedContext: readReopenLastViewedContextPreference(true),
+    enableAdvancedAnalytics: readEnableAdvancedAnalyticsPreference(false),
   };
 }
 
@@ -696,6 +700,7 @@ export async function saveAppBehaviorSettings(
         restoreLastDateRange: input.restoreLastSelectedDateRange,
       });
       saveReopenLastViewedContextPreference(input.reopenLastViewedContext);
+      saveEnableAdvancedAnalyticsPreference(input.enableAdvancedAnalytics);
       return toAppBehavior(updated);
     },
     {
