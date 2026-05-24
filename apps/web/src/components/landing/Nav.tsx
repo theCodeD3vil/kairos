@@ -21,7 +21,7 @@ export function Nav() {
           <li key={l.label}>
             <a
               href={l.href}
-              className="hover:text-signal transition-colors duration-150"
+              className="hover:text-kairos-cyan transition-colors duration-150"
               target={l.href.startsWith('http') ? '_blank' : undefined}
               rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
             >

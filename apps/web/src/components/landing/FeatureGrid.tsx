@@ -44,7 +44,7 @@ function SessionBars() {
           whileInView={{ scaleY: 1 }}
           viewport={viewportOnce}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0.05 * i }}
-          className="flex-1 origin-bottom bg-ink rounded-sm"
+          className="flex-1 origin-bottom bg-ink hover:bg-kairos-cyan rounded-sm"
           style={{ height: `${h}px` }}
         />
       ))}
@@ -55,8 +55,8 @@ function SessionBars() {
 function LanguageDonut() {
   const segments = [
     { color: '#0A0A0A', pct: 62 },
-    { color: '#FF4D1C', pct: 24 },
-    { color: '#1E40FF', pct: 14 },
+    { color: '#C8D956', pct: 24 },
+    { color: '#0F4E57', pct: 14 },
   ];
   const r = 36;
   const c = 2 * Math.PI * r;
@@ -122,8 +122,8 @@ function CalendarHeatmap() {
           'bg-ink/30',
           'bg-ink/50',
           'bg-ink/70',
-          'bg-signal/60',
-          'bg-signal',
+          'bg-kairos-teal/60',
+          'bg-kairos-teal',
         ];
         return (
           <motion.div
@@ -163,8 +163,8 @@ function PrivacyToggle() {
         >
           <span
             className={cn(
-              'absolute top-0.5 h-4 w-4 rounded-full bg-ink transition-all',
-              redact ? 'left-[26px]' : 'left-0.5',
+              'absolute top-1 h-4 w-4 rounded-full  transition-all',
+              redact ? 'left-[26px] bg-ink' : 'left-0.5 bg-kairos-teal',
             )}
           />
         </button>
@@ -196,7 +196,7 @@ function MultiMachine() {
         strokeWidth="2"
         strokeDasharray="6 4"
       />
-      <circle r="5" fill="#FF4D1C">
+      <circle r="5" fill="#0F4E57">
         <animateMotion dur="2.5s" repeatCount="indefinite" path="M 70 40 L 170 40" />
       </circle>
     </svg>

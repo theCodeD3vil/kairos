@@ -9,7 +9,7 @@ type Props = {
 const stroke: Record<NonNullable<Props['color']>, string> = {
   ink: '#0A0A0A',
   paper: '#F5F2EC',
-  signal: '#FF4D1C',
+  signal: '#0F4E57',
 };
 
 export function Crosshair({ className, color = 'ink', size = 14 }: Props) {

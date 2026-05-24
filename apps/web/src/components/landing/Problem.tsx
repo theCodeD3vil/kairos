@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { viewportOnce } from '@/lib/landing/motion';
+import { SquigglyText } from './primitives/SquigglyText';
 
 const CARDS = [
   {
@@ -21,7 +22,7 @@ export function Problem() {
     <section className="relative bg-ink text-paper py-28 md:py-36 px-6 md:px-10 overflow-hidden">
       <div className="mx-auto max-w-7xl">
         <h2 className="font-display font-extrabold text-[clamp(40px,7vw,96px)] leading-[0.95] tracking-tight max-w-4xl">
-          Built on a few simple ideas.
+          Built on a few simple <SquigglyText>ideas.</SquigglyText>
         </h2>
 
         <div className="mt-16 md:mt-20 grid md:grid-cols-3 gap-6 md:gap-8">

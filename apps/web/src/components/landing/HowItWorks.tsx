@@ -41,7 +41,7 @@ function ArrowConnector() {
         strokeDasharray="4 4"
       />
       {/* <polygon points="195,14 200,20 195,26" fill="#0A0A0A" /> */}
-      <circle r="4" fill="#FF4D1C">
+      <circle r="4" className=' fill-kairos-cyan'>
         <animateMotion dur="3s" repeatCount="indefinite" path="M 0 20 L 200 20" />
       </circle>
     </svg>
@@ -66,7 +66,7 @@ export function HowItWorks() {
                 transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.1 }}
                 className="bg-paper border-[3px] border-ink rounded-brutal shadow-brutal p-6 md:p-8 flex flex-col"
               >
-                <p className="font-display font-extrabold text-5xl text-signal">{s.n}</p>
+                <p className="font-display font-extrabold text-5xl text-kairos-teal">{s.n}</p>
                 <h3 className="mt-4 font-display font-bold text-2xl md:text-3xl leading-tight">
                   {s.title}
                 </h3>

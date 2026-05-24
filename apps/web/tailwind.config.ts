@@ -8,8 +8,15 @@ export default {
       colors: {
         paper: '#F5F2EC',
         ink: '#0A0A0A',
-        signal: '#FF4D1C',
-        interrupt: '#1E40FF',
+        signal: '#C8D956',
+        interrupt: '#0F4E57',
+        kairos: {
+          teal: '#0F4E57',
+          cyan: '#1CBCC6',
+          mint: '#80E1B8',
+          lime: '#C8D956',
+          accent: '#CDE367',
+        },
       },
       fontFamily: {
         display: ['"DM Sans Variable"', 'system-ui', 'sans-serif'],
@@ -20,8 +27,8 @@ export default {
         brutal: '6px 6px 0 0 #0A0A0A',
         'brutal-sm': '2px 2px 0 0 #0A0A0A',
         'brutal-lg': '8px 8px 0 0 #0A0A0A',
-        'brutal-orange': '6px 6px 0 0 #FF4D1C',
-        'brutal-orange-sm': '2px 2px 0 0 #FF4D1C',
+        'brutal-signal': '6px 6px 0 0 #0F4E57',
+        'brutal-signal-sm': '2px 2px 0 0 #0F4E57',
         'brutal-inverse': '6px 6px 0 0 #F5F2EC',
         'brutal-inverse-sm': '2px 2px 0 0 #F5F2EC',
       },
