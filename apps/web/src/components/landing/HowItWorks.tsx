@@ -50,13 +50,13 @@ function ArrowConnector() {
 
 export function HowItWorks() {
   return (
-    <section className="relative bg-paper text-ink py-28 md:py-36 md:px-12 px-6 grid-overlay overflow-hidden">
+    <section className="relative bg-paper text-ink py-20 sm:py-28 md:py-36 md:px-12 px-6 grid-overlay overflow-hidden">
       <div className="mx-auto  text-center">
-        <h2 className="font-display font-extrabold text-[clamp(40px,7vw,96px)] leading-[0.95] tracking-tight">
+        <h2 className="font-display font-extrabold text-[clamp(36px,7vw,96px)] leading-[0.95] tracking-tight">
           Three pieces. Local data.
         </h2>
 
-        <div className="mt-16 md:mt-20 gap-6 md:gap-0 grid md:grid-cols-[1fr_auto_1fr_auto_1fr]  items-stretch text-left">
+        <div className="mt-10 sm:mt-16 md:mt-20 gap-5 sm:gap-6 md:gap-0 grid md:grid-cols-[1fr_auto_1fr_auto_1fr]  items-stretch text-left">
           {STEPS.map((s, i) => (
             <Fragment key={s.n}>
               <motion.div
@@ -64,13 +64,13 @@ export function HowItWorks() {
                 whileInView={{ opacity: 1, y: 0, rotate: s.tilt }}
                 viewport={viewportOnce}
                 transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.1 }}
-                className="bg-paper border-[3px] border-ink rounded-brutal shadow-brutal p-6 md:p-8 flex flex-col"
+                className="bg-paper border-[3px] border-ink rounded-brutal shadow-brutal p-5 sm:p-6 md:p-8 flex flex-col"
               >
-                <p className="font-display font-extrabold text-5xl text-kairos-teal">{s.n}</p>
-                <h3 className="mt-4 font-display font-bold text-2xl md:text-3xl leading-tight">
+                <p className="font-display font-extrabold text-4xl sm:text-5xl text-kairos-teal">{s.n}</p>
+                <h3 className="mt-3 sm:mt-4 font-display font-bold text-xl sm:text-2xl md:text-3xl leading-tight">
                   {s.title}
                 </h3>
-                <p className="mt-3 font-sans text-ink/75 text-sm md:text-base leading-relaxed">
+                <p className="mt-2 sm:mt-3 font-sans text-ink/75 text-sm md:text-base leading-relaxed">
                   {s.body}
                 </p>
               </motion.div>

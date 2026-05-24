@@ -19,13 +19,13 @@ const CARDS = [
 
 export function Problem() {
   return (
-    <section className="relative bg-ink text-paper py-28 md:py-36 px-6 md:px-10 overflow-hidden">
+    <section className="relative bg-ink text-paper py-20 sm:py-28 md:py-36 px-6 md:px-10 overflow-hidden">
       <div className="mx-auto max-w-7xl">
-        <h2 className="font-display font-extrabold text-[clamp(40px,7vw,96px)] leading-[0.95] tracking-tight max-w-4xl">
+        <h2 className="font-display font-extrabold text-[clamp(36px,7vw,96px)] leading-[0.95] tracking-tight max-w-4xl">
           Built on a few simple <SquigglyText>ideas.</SquigglyText>
         </h2>
 
-        <div className="mt-16 md:mt-20 grid md:grid-cols-3 gap-6 md:gap-8">
+        <div className="mt-10 sm:mt-16 md:mt-20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
           {CARDS.map((c, i) => (
             <motion.div
               key={c.title}
@@ -33,12 +33,12 @@ export function Problem() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={viewportOnce}
               transition={{ duration: 0.4, ease: 'easeOut', delay: i * 0.08 }}
-              className="relative border-2 border-paper rounded-brutal p-6 bg-ink"
+              className="relative border-2 border-paper rounded-brutal p-5 sm:p-6 bg-ink"
             >
-              <h3 className="font-display font-bold text-2xl md:text-3xl leading-tight">
+              <h3 className="font-display font-bold text-xl sm:text-2xl md:text-3xl leading-tight">
                 {c.title}
               </h3>
-              <p className="mt-5 font-sans text-paper/75 text-base leading-relaxed">{c.body}</p>
+              <p className="mt-4 sm:mt-5 font-sans text-paper/75 text-sm sm:text-base leading-relaxed">{c.body}</p>
             </motion.div>
           ))}
         </div>

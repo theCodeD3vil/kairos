@@ -31,7 +31,7 @@ const PRINCIPLES = [
 
 function PrincipleList() {
   return (
-    <div className="mt-12 grid sm:grid-cols-2 gap-px border-2 border-ink bg-ink">
+    <div className="mt-8 sm:mt-12 grid sm:grid-cols-2 gap-px border-2 border-ink bg-ink">
       {PRINCIPLES.map((item, i) => {
         const Icon = item.icon;
         return (
@@ -41,7 +41,7 @@ function PrincipleList() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={viewportOnce}
             transition={{ duration: 0.4, ease: 'easeOut', delay: i * 0.06 }}
-            className="bg-ink p-5 text-paper md:p-6 min-h-44"
+            className="bg-ink p-4 sm:p-5 text-paper md:p-6 min-h-40 sm:min-h-44"
           >
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-brutal border-2 border-paper bg-paper text-ink">
@@ -105,33 +105,33 @@ function LocalStoreVisual() {
           <p className="font-display text-xs mr-2 font-bold uppercase tracking-[0.22em]">Local Store</p>
         </div>
 
-        <div className="grid gap-5 p-5 md:p-7">
+        <div className="grid gap-5 p-4 sm:p-5 md:p-7">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
-            <div className="border-2 border-ink bg-paper px-4 py-4">
+            <div className="border-2 border-ink bg-paper px-3 py-3 sm:px-4 sm:py-4">
               <p className="font-display text-xs font-bold uppercase tracking-widest text-ink/45">
                 Step 1
               </p>
-              <p className="mt-2 font-display text-2xl font-bold">Editor</p>
+              <p className="mt-2 font-display text-xl sm:text-2xl font-bold">Editor</p>
             </div>
-            <div className="hidden md:block h-[3px] w-10 bg-ink" />
-            <div className="border-2 border-ink bg-paper px-4 py-4">
+            <div className="hidden md:block h-[3px] w-6 lg:w-10 bg-ink" />
+            <div className="border-2 border-ink bg-paper px-3 py-3 sm:px-4 sm:py-4">
               <p className="font-display text-xs font-bold uppercase tracking-widest text-ink/45">
                 Step 2
               </p>
-              <p className="mt-2 font-display text-2xl font-bold">Kairos</p>
+              <p className="mt-2 font-display text-xl sm:text-2xl font-bold">Kairos</p>
             </div>
-            <div className="hidden md:block h-[3px] w-10 bg-ink" />
-            <div className="border-2 border-ink bg-paper px-4 py-4">
+            <div className="hidden md:block h-[3px] w-6 lg:w-10 bg-ink" />
+            <div className="border-2 border-ink bg-paper px-3 py-3 sm:px-4 sm:py-4">
               <p className="font-display text-xs font-bold uppercase tracking-widest text-ink/45">
                 Step 3
               </p>
-              <p className="mt-2 font-display text-2xl font-bold">Disk</p>
+              <p className="mt-2 font-display text-xl sm:text-2xl font-bold">Disk</p>
             </div>
           </div>
 
-          <div className="border-2 border-ink bg-ink p-5 text-paper">
+          <div className="border-2 border-ink bg-ink p-4 sm:p-5 text-paper">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="font-display text-sm font-bold uppercase tracking-widest text-paper/55">
+              <p className="font-display text-xs sm:text-sm font-bold uppercase tracking-widest text-paper/55">
                 Private activity
               </p>
               <span className="inline-flex items-center gap-2 rounded-full border-2 border-paper px-3 py-1 font-display text-xs font-bold uppercase tracking-widest">
@@ -145,7 +145,7 @@ function LocalStoreVisual() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className="mt-8 min-h-[5rem] font-display text-4xl md:text-5xl font-extrabold leading-[0.95]"
+              className="mt-6 sm:mt-8 min-h-[4rem] sm:min-h-[5rem] font-display text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[0.95]"
             >
               {showReal ? REAL_VALUE : HIDDEN_VALUE}
             </motion.p>
@@ -182,7 +182,7 @@ function LocalStoreVisual() {
 
 export function Privacy() {
   return (
-    <section id="privacy" className="relative overflow-hidden bg-paper px-6 py-28 text-ink md:px-10 md:py-36">
+    <section id="privacy" className="relative overflow-hidden bg-paper px-6 py-20 sm:py-28 text-ink md:px-10 md:py-36">
       <div
         className="absolute inset-0 opacity-10"
         aria-hidden

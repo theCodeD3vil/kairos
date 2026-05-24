@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/landing/cn';
 import { viewportOnce } from '@/lib/landing/motion';
-import { SectionTag } from './primitives/SectionTag';
 
 type Feature = {
   icon: LucideIcon;
@@ -100,20 +99,20 @@ export function FeaturesOfKairos() {
   return (
     <section
       id="features-of-kairos"
-      className="relative bg-paper text-ink py-28 md:py-36 px-6 md:px-10 grid-overlay overflow-hidden"
+      className="relative bg-paper text-ink py-20 sm:py-28 md:py-36 px-6 md:px-10 grid-overlay overflow-hidden"
     >
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-4 max-w-3xl">
-          <SectionTag index="03" label="What Kairos does" />
-          <h2 className="font-display font-extrabold text-[clamp(40px,7vw,96px)] leading-[0.95] tracking-tight">
+          {/* <SectionTag index="03" label="What Kairos does" /> */}
+          <h2 className="font-display font-extrabold text-[clamp(36px,7vw,96px)] leading-[0.95] tracking-tight">
             Everything you need. Nothing you don’t.
           </h2>
-          <p className="font-sans text-ink/70 text-base md:text-lg max-w-2xl">
+          {/* <p className="font-sans text-ink/70 text-base md:text-lg max-w-2xl">
             Six pieces that work together quietly while you build. Local, private, and shaped around the way you actually code.
-          </p>
+          </p> */}
         </div>
 
-        <div className="mt-16 md:mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+        <div className="mt-10 sm:mt-16 md:mt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {FEATURES.map((f, i) => (
             <FeatureCard key={f.title} feature={f} index={i} />
           ))}

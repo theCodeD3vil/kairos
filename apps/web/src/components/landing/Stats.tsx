@@ -58,16 +58,16 @@ function Counter({ to, suffix = '', label }: { to: number; suffix?: string; labe
 
 export function Stats() {
   return (
-    <section className="relative bg-ink text-paper py-24 md:py-32 px-6 md:px-10 overflow-hidden md:flex justify-center">
+    <section className="relative bg-ink text-paper py-20 sm:py-24 md:py-32 px-6 md:px-10 overflow-hidden">
       <div className="mx-auto max-w-7xl">
-        <div className="grid md:grid-cols-3 gap-12 md:gap-24">
-          <div className="space-y-3  w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-12 md:gap-24 text-center sm:text-left">
+          <div className="space-y-3 w-full">
             <p className="font-display font-extrabold tabular-nums text-[clamp(56px,10vw,100px)] leading-none">
               v{VERSION}
             </p>
             <p className="font-display text-base font-bold text-paper/70">Available today</p>
           </div>
-          <div className="space-y-3 mx-auto w-max">
+          <div className="space-y-3 w-full">
             <p className="font-display font-extrabold text-[clamp(56px,10vw,100px)] leading-none">
               Free
             </p>

@@ -226,14 +226,14 @@ export function FeatureGrid() {
   return (
     <section
       id="features"
-      className="relative bg-paper text-ink py-28 md:py-36 px-6 md:px-10 grid-overlay overflow-hidden"
+      className="relative bg-paper text-ink py-20 sm:py-28 md:py-36 px-6 md:px-10 grid-overlay overflow-hidden"
     >
       <div className="mx-auto max-w-7xl">
-        <h2 className="font-display font-extrabold text-[clamp(40px,7vw,96px)] leading-[0.95] tracking-tight max-w-4xl">
+        <h2 className="font-display font-extrabold text-[clamp(36px,7vw,96px)] leading-[0.95] tracking-tight max-w-4xl">
           Built for everyday coding.
         </h2>
 
-        <div className="mt-16 md:mt-20 grid grid-cols-1 md:grid-cols-4 gap-5 md:gap-6">
+        <div className="mt-10 sm:mt-16 md:mt-20 grid grid-cols-1 md:grid-cols-4 gap-5 md:gap-6">
           <Tile
             className="md:col-span-2 md:row-span-2"
             title="Your week, on one page."

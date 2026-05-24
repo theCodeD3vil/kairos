@@ -137,15 +137,15 @@ export function Hero() {
       id="top"
       className="relative min-h-screen bg-paper text-ink overflow-hidden grid-overlay"
     >
-      <Crosshair className="absolute top-6 left-6 opacity-40" />
-      <Crosshair className="absolute top-6 right-6 opacity-40" />
-      <Crosshair className="absolute bottom-6 left-6 opacity-40" />
-      <Crosshair className="absolute bottom-6 right-6 opacity-40" />
+      <Crosshair className="absolute top-3 left-3 sm:top-6 sm:left-6 opacity-40" />
+      <Crosshair className="absolute top-3 right-3 sm:top-6 sm:right-6 opacity-40" />
+      <Crosshair className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 opacity-40" />
+      <Crosshair className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 opacity-40" />
 
-      <div className="relative mx-auto max-w-7xl px-6 md:px-10 pt-32 md:pt-40 pb-20 flex flex-col items-center text-center gap-10">
+      <div className="relative mx-auto max-w-7xl px-6 md:px-10 pt-28 sm:pt-32 md:pt-40 pb-16 sm:pb-20 flex flex-col items-center text-center gap-8 sm:gap-10">
         <LayoutTextFlip text={HERO_TEXT} words={HERO_WORDS} />
-        <div className="flex flex-wrap justify-center gap-4">
-          <BrutalAnchor as="a" href={RELEASES_URL} variant="primary">
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <BrutalAnchor as="a" href={RELEASES_URL} variant="primary" className="w-full sm:w-auto">
             <Download className="h-4 w-4" />
             Download v{VERSION}
           </BrutalAnchor>
@@ -155,13 +155,14 @@ export function Hero() {
             variant="outline"
             target="_blank"
             rel="noopener noreferrer"
+            className="w-full sm:w-auto"
           >
             View on GitHub
             <ArrowRight className="h-4 w-4" />
           </BrutalAnchor>
         </div>
 
-        <div className="w-full max-w-3xl mt-8 md:mt-12">
+        <div className="w-full max-w-3xl mt-4 sm:mt-8 md:mt-12 px-2 sm:px-0">
           <ScreenshotCard />
         </div>
       </div>
