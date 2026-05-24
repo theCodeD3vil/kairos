@@ -2,51 +2,55 @@ import type { Config } from 'tailwindcss';
 import tailwindcssAnimate from 'tailwindcss-animate';
 
 export default {
-  darkMode: ['class'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
+        paper: '#F5F2EC',
+        ink: '#0A0A0A',
+        signal: '#FF4D1C',
+        interrupt: '#1E40FF',
+      },
+      fontFamily: {
+        display: ['"Space Grotesk Variable"', 'system-ui', 'sans-serif'],
+        sans: ['"Inter Variable"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace'],
+      },
+      boxShadow: {
+        brutal: '6px 6px 0 0 #0A0A0A',
+        'brutal-sm': '2px 2px 0 0 #0A0A0A',
+        'brutal-lg': '8px 8px 0 0 #0A0A0A',
+        'brutal-orange': '6px 6px 0 0 #FF4D1C',
+        'brutal-orange-sm': '2px 2px 0 0 #FF4D1C',
+        'brutal-inverse': '6px 6px 0 0 #F5F2EC',
+        'brutal-inverse-sm': '2px 2px 0 0 #F5F2EC',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        brutal: '4px',
+      },
+      transitionTimingFunction: {
+        slam: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+      },
+      keyframes: {
+        'marquee-left': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'marquee-right': {
+          '0%': { transform: 'translateX(-50%)' },
+          '100%': { transform: 'translateX(0%)' },
+        },
+        'pulse-signal': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.35' },
+        },
+      },
+      animation: {
+        'marquee-left': 'marquee-left 30s linear infinite',
+        'marquee-right': 'marquee-right 30s linear infinite',
+        'pulse-signal': 'pulse-signal 1.2s ease-in-out infinite',
       },
     },
   },
-  plugins: [tailwindcssAnimate, require('@tailwindcss/typography')],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;
