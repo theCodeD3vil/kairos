@@ -97,11 +97,11 @@ export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
         />
       </section>
 
-      {/* ── Context ── */}
+      {/* ── Switches and shares ── */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Context</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Switches and shares</h2>
 
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-4">
           <AnalyticsKpiCard
             label="Project switches"
             value={`${snapshot.contextKpis.projectSwitchCount}`}
@@ -113,28 +113,23 @@ export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
             hint={`${snapshot.contextKpis.languageSwitchRatePerDay}/day`}
           />
           <AnalyticsKpiCard
-            label="Project focus"
+            label="Top project share"
             value={`${snapshot.contextKpis.projectFocusScore}%`}
             hint={snapshot.contextKpis.topProjectByTime.name || 'No project'}
           />
           <AnalyticsKpiCard
-            label="Language focus"
+            label="Top language share"
             value={`${snapshot.contextKpis.languageFocusScore}%`}
             hint={snapshot.contextKpis.topLanguageByTime.name || 'No language'}
-          />
-          <AnalyticsKpiCard
-            label="Machine resumes"
-            value={`${snapshot.contextKpis.crossMachineResumeCount}`}
-            hint={`${snapshot.contextKpis.crossMachineResumeRate}%`}
           />
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2">
           <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
-            <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Project momentum</h3>
+            <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Project time change</h3>
             <div className="mt-2 h-64">
               {snapshot.contextKpis.projectMomentum.length === 0 ? (
-                <p className="text-sm text-[var(--ink-muted)]">No project momentum yet.</p>
+                <p className="text-sm text-[var(--ink-muted)]">No project comparison yet.</p>
               ) : (
                 <KairosBarChart
                   data={snapshot.contextKpis.projectMomentum.map((p) => ({
@@ -156,10 +151,10 @@ export function AnalyticsProjectsTab({ snapshot }: AnalyticsProjectsTabProps) {
           </article>
 
           <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
-            <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Language momentum</h3>
+            <h3 className="text-sm font-semibold text-[var(--ink-strong)]">Language time change</h3>
             <div className="mt-2 h-64">
               {snapshot.contextKpis.languageMomentum.length === 0 ? (
-                <p className="text-sm text-[var(--ink-muted)]">No language momentum yet.</p>
+                <p className="text-sm text-[var(--ink-muted)]">No language comparison yet.</p>
               ) : (
                 <KairosBarChart
                   data={snapshot.contextKpis.languageMomentum.map((l) => ({

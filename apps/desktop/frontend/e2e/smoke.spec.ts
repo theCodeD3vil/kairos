@@ -80,6 +80,7 @@ test.beforeEach(async ({ page }) => {
         openOnSystemLogin: false,
         rememberLastPage: true,
         restoreLastDateRange: true,
+        enableAdvancedAnalytics: true,
       },
       dataStorage: {
         localDataPath: '/tmp/kairos.sqlite3',
@@ -249,6 +250,7 @@ test.beforeEach(async ({ page }) => {
 
     window.localStorage.clear();
     window.sessionStorage.clear();
+    window.localStorage.setItem('kairos:enable-advanced-analytics', JSON.stringify(true));
   });
 });
 
@@ -260,9 +262,12 @@ test('loads and navigates core desktop routes with mocked bridge data', async ({
 
   await page.getByRole('button', { name: 'Analytics' }).click();
   await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Comparison' })).toBeVisible();
+  await page.getByRole('main').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.getByRole('main').getByRole('button', { name: 'Comparison' })).toHaveCount(0);
   await expect(page).toHaveURL(/#\/analytics$/);
 
-  await page.getByRole('button', { name: 'Sessions' }).click();
+  await page.getByRole('navigation').getByRole('button', { name: 'Sessions' }).click();
   await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Session summary' })).toBeVisible();
 

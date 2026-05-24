@@ -18,9 +18,14 @@ export function AnalyticsSessionsTab({
   snapshot,
   onSessionSelect,
 }: AnalyticsSessionsTabProps) {
-  const eventsInSessions = snapshot.eventKpis.eventsInSessions;
+  const codeEventCount =
+    snapshot.eventKpis.editCount + snapshot.eventKpis.saveCount + snapshot.eventKpis.openCount;
   const trackEditEvents = snapshot.eventKpis.trackEditEvents;
   const trackSaveEvents = snapshot.eventKpis.trackSaveEvents;
+  const trackFileOpenEvents = snapshot.eventKpis.trackFileOpenEvents;
+  const hasCodeEventMix = snapshot.eventKpis.eventTypeMixByProject.some(
+    (project) => project.editCount > 0 || project.saveCount > 0 || project.openCount > 0,
+  );
 
   return (
     <div className="space-y-6">
@@ -57,32 +62,39 @@ export function AnalyticsSessionsTab({
         />
       </section>
 
-      {/* Activity rhythm */}
+      {/* Tracked events */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">
-          Activity rhythm
+          Tracked events
         </h2>
-        {eventsInSessions === 0 ? (
+        {codeEventCount === 0 ? (
           <div className="rounded-[14px] bg-[var(--surface-muted)] p-4 text-[var(--ink-tertiary)]">
-            {trackEditEvents || trackSaveEvents
-              ? 'No matched events for this range yet.'
-              : 'Enable edit or save tracking in Settings → Tracking to populate this section.'}
+            {trackEditEvents || trackSaveEvents || trackFileOpenEvents
+              ? 'No edit, save, or file-open events matched this range yet.'
+              : 'Enable edit, save, or file-open tracking in Settings → Tracking to populate this section.'}
           </div>
         ) : (
           <>
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-5">
               <AnalyticsKpiCard
-                label="Event density"
-                value={`${snapshot.eventKpis.eventDensityPerMinute}/min`}
-                hint={`${snapshot.eventKpis.eventsInSessions} events in sessions`}
+                label="Matched events"
+                value={`${codeEventCount}`}
+                hint="Edits, saves, and file opens"
               />
               <AnalyticsKpiCard
-                label="Active share"
-                value={`${snapshot.eventKpis.activeShare}%`}
-                hint={`${snapshot.eventKpis.activeEventCount} edits + saves`}
+                label="Edits"
+                value={`${snapshot.eventKpis.editCount}`}
               />
               <AnalyticsKpiCard
-                label="Edit / save ratio"
+                label="Saves"
+                value={`${snapshot.eventKpis.saveCount}`}
+              />
+              <AnalyticsKpiCard
+                label="File opens"
+                value={`${snapshot.eventKpis.openCount}`}
+              />
+              <AnalyticsKpiCard
+                label="Edits per save"
                 value={
                   snapshot.eventKpis.saveCount === 0
                     ? '—'
@@ -90,49 +102,11 @@ export function AnalyticsSessionsTab({
                 }
                 hint={`${snapshot.eventKpis.editCount} edits · ${snapshot.eventKpis.saveCount} saves`}
               />
-              <AnalyticsKpiCard
-                label="Heartbeat-only sessions"
-                value={`${snapshot.eventKpis.heartbeatOnlySessionCount}`}
-                hint={`${snapshot.eventKpis.heartbeatOnlySessionShare}%`}
-              />
             </div>
-            <div className="grid gap-3 md:grid-cols-4">
-              <AnalyticsKpiCard
-                label="Warm-up median"
-                value={
-                  snapshot.eventKpis.warmupQualifyingSessionCount === 0
-                    ? '—'
-                    : `${snapshot.eventKpis.medianSessionWarmupSeconds}s`
-                }
-                hint={`${snapshot.eventKpis.warmupQualifyingSessionCount} qualifying sessions`}
-              />
-              <AnalyticsKpiCard
-                label="Edit → save median"
-                value={
-                  snapshot.eventKpis.medianEditToSaveSeconds === 0
-                    ? '—'
-                    : `${snapshot.eventKpis.medianEditToSaveSeconds}s`
-                }
-              />
-              <AnalyticsKpiCard
-                label="Return after idle"
-                value={
-                  snapshot.eventKpis.medianReturnAfterIdleMinutes === 0
-                    ? '—'
-                    : `${snapshot.eventKpis.medianReturnAfterIdleMinutes}m`
-                }
-                hint="median across same-day gaps"
-              />
-              <AnalyticsKpiCard
-                label="Activity bursts"
-                value={`${snapshot.eventKpis.activityBurstCount}`}
-                hint="≥5 active events in 5min"
-              />
-            </div>
-            {snapshot.eventKpis.eventTypeMixByProject.length > 0 && (
+            {hasCodeEventMix && (
               <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
                 <h3 className="text-sm font-semibold text-[var(--ink-strong)]">
-                  Event type mix by project
+                  Events by project
                 </h3>
                 <div className="mt-2 h-64">
                   <KairosBarChart
@@ -142,7 +116,6 @@ export function AnalyticsSessionsTab({
                         edits: p.editCount,
                         saves: p.saveCount,
                         opens: p.openCount,
-                        heartbeats: p.heartbeatCount,
                       })
                     )}
                     index="label"
@@ -150,13 +123,11 @@ export function AnalyticsSessionsTab({
                       'edits',
                       'saves',
                       'opens',
-                      'heartbeats',
                     ]}
                     colors={[
                       overviewChartPalette[0],
                       overviewChartPalette[1],
                       overviewChartPalette[2],
-                      overviewChartPalette[3],
                     ]}
                     rotateLabelX={{ angle: -20, xAxisHeight: 70 }}
                     valueFormatter={(value) => `${value}`}
@@ -164,8 +135,7 @@ export function AnalyticsSessionsTab({
                     seriesLabels={{
                       edits: 'Edits',
                       saves: 'Saves',
-                      opens: 'Opens',
-                      heartbeats: 'Heartbeats',
+                      opens: 'File opens',
                     }}
                     height={240}
                   />

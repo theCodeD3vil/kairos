@@ -770,7 +770,7 @@ export function SettingsPage() {
           <SettingsRow label="Minimize extension metadata" helper="Reduces non-essential VS Code metadata included in extension traffic and status.">
             <SettingsToggle checked={privacy.minimizeExtensionMetadata} onChange={(next) => updatePrivacyState({ ...privacy, minimizeExtensionMetadata: next })} />
           </SettingsRow>
-          <SettingsRow label="Enable file metrics" helper="Opt-in for path-derived analytics: hotspots, file categories, and focus blocks. Needs file path mode set to Masked or Full.">
+          <SettingsRow label="Enable file metrics" helper="Opt-in for path-derived analytics: top files, file categories, and long file activity. Needs file path mode set to Masked or Full.">
             <SettingsToggle checked={privacy.fileMetricsEnabled} onChange={(next) => updatePrivacyState({ ...privacy, fileMetricsEnabled: next })} />
           </SettingsRow>
         </SettingsSection>
@@ -861,7 +861,7 @@ export function SettingsPage() {
               ) : null}
             </div>
           </SettingsRow>
-          <SettingsRow label="Deep work threshold" helper="Minutes. Sessions at or above this duration count as deep work.">
+          <SettingsRow label="Long session threshold" helper="Minutes. Sessions at or above this duration count as long sessions.">
             <div className="w-full max-w-sm space-y-1">
               <SettingsInput
                 value={deepWorkThresholdDraft}
@@ -1716,8 +1716,8 @@ export function SettingsPage() {
           }
         >
           <SettingsRow
-            label="Enable Advanced Analytics"
-            helper="Show advanced metrics, insight scores, and period comparisons under a dedicated 'Advanced Analytics' tab."
+            label="Show comparison tab"
+            helper="Adds a comparison tab with current and previous period totals."
           >
             <SettingsToggle
               checked={appBehavior.enableAdvancedAnalytics}

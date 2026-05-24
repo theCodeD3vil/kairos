@@ -49,11 +49,11 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
             hint={`${snapshot.summary.activeDays} active days`}
           />
           <AnalyticsKpiCard
-            label="Rolling 7d"
+            label="7-day average"
             value={formatMinutes(snapshot.sessionKpis.rolling7DayAverageMinutes)}
           />
           <AnalyticsKpiCard
-            label="Rolling 30d"
+            label="30-day average"
             value={formatMinutes(snapshot.sessionKpis.rolling30DayAverageMinutes)}
           />
         </div>
@@ -64,10 +64,10 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
         />
       </section>
 
-      {/* Patterns */}
+      {/* Activity by time */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-[var(--ink-strong)]">
-          Patterns
+          Activity by time
         </h2>
         <div className="grid gap-3 md:grid-cols-3">
           <AnalyticsKpiCard
@@ -87,24 +87,24 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
             value={`${snapshot.sessionKpis.longestStreakDays} days`}
           />
           <AnalyticsKpiCard
-            label="Focus window"
-            value={
-              snapshot.sessionKpis.focusWindowStart &&
-              snapshot.sessionKpis.focusWindowEnd
-                ? `${snapshot.sessionKpis.focusWindowStart} - ${snapshot.sessionKpis.focusWindowEnd}`
-                : '—'
-            }
+            label="Earliest start"
+            value={snapshot.sessionKpis.focusWindowStart ?? '—'}
           />
           <AnalyticsKpiCard
-            label="Fragmentation"
-            value={`${snapshot.sessionKpis.fragmentationScore}%`}
+            label="Latest end"
+            value={snapshot.sessionKpis.focusWindowEnd ?? '—'}
+          />
+          <AnalyticsKpiCard
+            label="Short sessions"
+            value={`${snapshot.sessionKpis.shortSessionCount}`}
+            hint={`Under ${snapshot.sessionKpis.shortSessionThresholdMinutes}m`}
           />
           <AnalyticsKpiCard
             label="Longest break"
             value={formatMinutes(snapshot.sessionKpis.longestBreakMinutes)}
           />
           <AnalyticsKpiCard
-            label="Best day"
+            label="Highest time day"
             value={
               snapshot.sessionKpis.bestDay.date
                 ? formatMinutes(snapshot.sessionKpis.bestDay.totalMinutes)

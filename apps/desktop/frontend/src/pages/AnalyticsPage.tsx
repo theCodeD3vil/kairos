@@ -4,8 +4,8 @@ import { AnalyticsFilesTab } from '@/components/analytics/AnalyticsFilesTab';
 import { AnalyticsProjectsTab } from '@/components/analytics/AnalyticsProjectsTab';
 import { AnalyticsSessionsTab } from '@/components/analytics/AnalyticsSessionsTab';
 import { AnalyticsSummaryTab } from '@/components/analytics/AnalyticsSummaryTab';
-import { AnalyticsAdvancedTab } from '@/components/analytics/AnalyticsAdvancedTab';
 import { AnalyticsTimeTab } from '@/components/analytics/AnalyticsTimeTab';
+import { AnalyticsComparison } from '@/components/analytics/AnalyticsComparison';
 import { normalizeOverviewRange } from '@/components/overview/types';
 import {
   SessionDetailsDialog,
@@ -27,6 +27,7 @@ import {
 import {
   getRangeStorageKey,
   readAnalyticsContextPreference,
+  readEnableAdvancedAnalyticsPreference,
   readRangePreference,
   resolveInitialRangePreference,
   saveAnalyticsContextPreference,
@@ -125,13 +126,16 @@ export function AnalyticsPage() {
     });
   }, [filters.language, filters.machine, filters.project]);
 
-  const enableAdvanced = settingsData.viewModel.appBehavior.enableAdvancedAnalytics;
+  const showComparisonTab = readEnableAdvancedAnalyticsPreference(
+    settingsData.viewModel.appBehavior.enableAdvancedAnalytics,
+  );
+  const canShowComparisonTab = showComparisonTab && filters.range !== 'all-time';
 
   useEffect(() => {
-    if (!enableAdvanced && activeTab === 'advanced') {
+    if (!canShowComparisonTab && activeTab === 'comparison') {
       setActiveTab('summary');
     }
-  }, [enableAdvanced, activeTab]);
+  }, [canShowComparisonTab, activeTab]);
 
   const handleFiltersChange = (next: Filters) => {
     rangeTouchedRef.current = true;
@@ -197,7 +201,7 @@ export function AnalyticsPage() {
 
   const tabs = [
     {
-      label: 'Summary',
+      label: 'Overview',
       value: 'summary',
       content: showSkeleton ? (
         skeletonContent
@@ -216,7 +220,7 @@ export function AnalyticsPage() {
       content: showSkeleton ? skeletonContent : <AnalyticsTimeTab snapshot={snapshot} filters={filters} />,
     },
     {
-      label: 'Projects & Languages',
+      label: 'Projects',
       value: 'projects',
       content: showSkeleton ? skeletonContent : <AnalyticsProjectsTab snapshot={snapshot} />,
     },
@@ -234,15 +238,15 @@ export function AnalyticsPage() {
       value: 'files',
       content: showSkeleton ? skeletonContent : <AnalyticsFilesTab snapshot={snapshot} />,
     },
-    ...(enableAdvanced
+    ...(canShowComparisonTab
       ? [
         {
-          label: 'Advanced',
-          value: 'advanced',
+          label: 'Comparison',
+          value: 'comparison',
           content: showSkeleton ? (
             skeletonContent
           ) : (
-            <AnalyticsAdvancedTab snapshot={snapshot} filters={filters} />
+              <AnalyticsComparison snapshot={snapshot} />
           ),
         },
       ]

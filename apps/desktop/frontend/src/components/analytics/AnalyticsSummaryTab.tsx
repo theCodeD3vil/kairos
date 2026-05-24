@@ -31,7 +31,7 @@ export function AnalyticsSummaryTab({
     <div className="space-y-6">
       {/* ── Summary Cards Grid ── */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Summary Dashboard</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink-strong)]">Summary</h2>
         {snapshot.summary.totalMinutes === 0 ? (
           <div className="rounded-[14px] bg-[var(--surface-muted)] p-4 text-[var(--ink-tertiary)]">
             No activity for this filter. Try a wider range or a different project.

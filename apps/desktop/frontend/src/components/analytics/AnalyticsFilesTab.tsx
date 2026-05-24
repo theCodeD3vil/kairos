@@ -129,7 +129,7 @@ export function AnalyticsFilesTab({ snapshot }: AnalyticsFilesTabProps) {
           {snapshot.fileKpis.longRunningFocusBlocks.length > 0 && (
             <article className="rounded-[14px] bg-[var(--surface-muted)] p-3 shadow-[var(--shadow-inset-soft)]">
               <h3 className="text-sm font-semibold text-[var(--ink-strong)]">
-                Focus blocks
+                Long file activity
               </h3>
               <ul className="mt-2 space-y-2">
                 {snapshot.fileKpis.longRunningFocusBlocks.map((block) => (

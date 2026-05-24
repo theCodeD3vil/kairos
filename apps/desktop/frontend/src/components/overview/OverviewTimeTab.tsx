@@ -7,10 +7,10 @@ import { formatDurationHours, formatDurationMinutes } from '@/lib/time-format';
 import SegmentedButton from '@/components/ui/segmented-button';
 import { useEffect, useMemo, useState } from 'react';
 import type { TodayTrendInterval } from '@/components/overview/types';
-import calendarIcon from '../../../public/kairos-icons/calendar.svg?raw';
-import chartIcon from '../../../public/kairos-icons/chart.svg?raw';
-import gridIcon from '../../../public/kairos-icons/grid.svg?raw';
-import stopwatchIcon from '../../../public/kairos-icons/stopwatch.svg?raw';
+import calendarIcon from '@/assets/kairos-icons/calendar.svg?raw';
+import chartIcon from '@/assets/kairos-icons/chart.svg?raw';
+import gridIcon from '@/assets/kairos-icons/grid.svg?raw';
+import stopwatchIcon from '@/assets/kairos-icons/stopwatch.svg?raw';
 
 type OverviewTimeTabProps = {
   snapshot: OverviewSnapshot;
