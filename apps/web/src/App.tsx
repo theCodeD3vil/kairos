@@ -4,6 +4,7 @@ import { Hero } from '@/components/landing/Hero';
 import { Problem } from '@/components/landing/Problem';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { FeatureGrid } from '@/components/landing/FeatureGrid';
+import { FeaturesOfKairos } from '@/components/landing/FeaturesOfKairos';
 import { DemoMarquee } from '@/components/landing/DemoMarquee';
 import { Privacy } from '@/components/landing/Privacy';
 import { Stats } from '@/components/landing/Stats';
@@ -23,6 +24,7 @@ export default function App() {
         <Problem />
         <HowItWorks />
         <FeatureGrid />
+        <FeaturesOfKairos />
         <DemoMarquee />
         <Privacy />
         <Stats />

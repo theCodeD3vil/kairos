@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Download,
   ArrowRight,
-  CalendarDays,
   CalendarRange,
   LineChart,
   ClockAlert,
