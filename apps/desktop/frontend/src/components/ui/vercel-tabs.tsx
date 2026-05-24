@@ -36,10 +36,28 @@ export function VercelTabs({
   const [hoverStyle, setHoverStyle] = useState({});
   const [activeStyle, setActiveStyle] = useState({ left: "0px", width: "0px" });
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollHeaderToTop = () => {
+    const node = headerRef.current;
+    if (!node) return;
+    let parent: HTMLElement | null = node.parentElement;
+    while (parent) {
+      const style = window.getComputedStyle(parent);
+      const canScroll = /(auto|scroll|overlay)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight;
+      if (canScroll) {
+        parent.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      parent = parent.parentElement;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const setActiveTab = (next: string) => {
     setInternalTab(next);
     onValueChange?.(next);
+    scrollHeaderToTop();
   };
 
   const activeIndex = tabs.findIndex((tab) => tab.value === activeTab);
@@ -84,6 +102,7 @@ export function VercelTabs({
   return (
     <div className={`flex w-full flex-col items-center ${className}`}>
       <div
+        ref={headerRef}
         className={`w-full ${
           stickyTabList
             ? (stickyClassName || 'sticky top-0 z-20 bg-[var(--surface)] pb-2')

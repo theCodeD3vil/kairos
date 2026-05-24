@@ -142,12 +142,12 @@ export function AnalyticsTimeTab({ snapshot, filters }: AnalyticsTimeTabProps) {
                 : '—'
             }
             hint={snapshot.sessionKpis.bestDay.label || 'No active day'}
-            sparkline={{
-              data: dailySparklineData,
-              variant: 'area',
-              color: overviewChartPalette[1],
-              showBaseline: true,
-            }}
+            // sparkline={{
+            //   data: dailySparklineData,
+            //   variant: 'area',
+            //   color: overviewChartPalette[1],
+            //   showBaseline: true,
+            // }}
           />
         </div>
 
