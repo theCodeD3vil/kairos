@@ -29,6 +29,7 @@ import {
 
 export const DATA_REFRESH_INTERVAL_MS = 60_000;
 const EXTENSION_PROBE_INTERVAL_MS = DATA_REFRESH_INTERVAL_MS;
+const FOCUS_REFRESH_THROTTLE_MS = 2_000;
 
 export type DesktopRefreshReason = 'poll' | 'event' | 'manual' | 'query';
 export type DesktopRefreshSignal = {
@@ -420,6 +421,7 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
   const latestEventRevisionRef = useRef(0);
   const refreshInFlightRef = useRef(false);
   const queuedRefreshSignalRef = useRef<DesktopRefreshSignal | null>(null);
+  const lastFocusRefreshAtRef = useRef(0);
 
   const refreshAll = async (signal: DesktopRefreshSignal) => {
     const handlers = Array.from(refreshersRef.current.entries()).flatMap(([key, group]) => {
@@ -539,6 +541,46 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!bootstrapped) {
+      return;
+    }
+
+    const runFocusRefresh = () => {
+      const now = Date.now();
+      if (now - lastFocusRefreshAtRef.current < FOCUS_REFRESH_THROTTLE_MS) {
+        return;
+      }
+      lastFocusRefreshAtRef.current = now;
+
+      if (!extensionProbeInFlightRef.current) {
+        extensionProbeInFlightRef.current = true;
+        void probeVSCodeExtensionStatus()
+          .catch(() => undefined)
+          .finally(() => {
+            lastExtensionProbeAtRef.current = Date.now();
+            extensionProbeInFlightRef.current = false;
+          });
+      }
+
+      queueRefresh('manual');
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runFocusRefresh();
+      }
+    };
+
+    window.addEventListener('focus', runFocusRefresh);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', runFocusRefresh);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [bootstrapped]);
 
   const value = useMemo<DesktopDataContextValue>(() => ({
     bootstrapped,
