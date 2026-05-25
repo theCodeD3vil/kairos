@@ -1,4 +1,4 @@
-export const VERSION = '1.1.14';
+export const VERSION = '1.1.15';
 
 export const NAV_LINKS = [
   { label: 'Features', href: '#features' },
