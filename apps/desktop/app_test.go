@@ -325,3 +325,64 @@ func TestIsLoginLaunchInvocation(t *testing.T) {
 		t.Fatal("expected non-login args to return false")
 	}
 }
+
+func TestXDGQuoteExecArgument(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"simple", "/usr/bin/kairos", `"/usr/bin/kairos"`},
+		{"space", "/home/me/My Apps/Kairos", `"/home/me/My Apps/Kairos"`},
+		{"quote", `/tmp/a"b`, `"/tmp/a\"b"`},
+		{"backslash", `/tmp/a\b`, `"/tmp/a\\b"`},
+		{"dollar", `/tmp/$HOME/Kairos`, `"/tmp/\$HOME/Kairos"`},
+		{"backtick", "/tmp/a`b", "\"/tmp/a\\`b\""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := xdgQuoteExecArgument(tc.in)
+			if got != tc.want {
+				t.Fatalf("xdgQuoteExecArgument(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRenderLinuxDesktopEntryQuotesExecAndAppendsLoginLaunch(t *testing.T) {
+	entry := renderLinuxDesktopEntry("/home/me/My Apps/Kairos", false)
+	if !strings.Contains(entry, `Exec="/home/me/My Apps/Kairos"`) {
+		t.Fatalf("expected quoted Exec= line, got: %s", entry)
+	}
+	if strings.Contains(entry, "--login-launch") {
+		t.Fatalf("expected no --login-launch when menubar=false, got: %s", entry)
+	}
+
+	withMenubar := renderLinuxDesktopEntry("/opt/kairos/Kairos", true)
+	if !strings.Contains(withMenubar, `Exec="/opt/kairos/Kairos" --login-launch`) {
+		t.Fatalf("expected --login-launch flag appended for menubar mode, got: %s", withMenubar)
+	}
+}
+
+func TestResolveLinuxAutostartExecutablePathPrefersAppImageEnv(t *testing.T) {
+	t.Setenv("APPIMAGE", "/home/me/Apps/Kairos-1.1.14.AppImage")
+	path, err := resolveLinuxAutostartExecutablePath()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if path != "/home/me/Apps/Kairos-1.1.14.AppImage" {
+		t.Fatalf("expected AppImage env path, got %s", path)
+	}
+}
+
+func TestResolveLinuxAutostartExecutablePathPrefersSnapInstance(t *testing.T) {
+	t.Setenv("APPIMAGE", "")
+	t.Setenv("SNAP_INSTANCE_NAME", "kairos")
+	path, err := resolveLinuxAutostartExecutablePath()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if path != "/snap/bin/kairos" {
+		t.Fatalf("expected snap bin path, got %s", path)
+	}
+}

@@ -824,7 +824,7 @@ func ensureAutostart(enabled bool, loginLaunchMode string) error {
 	case "darwin":
 		return ensureMacLaunchAgent(enabled, loginLaunchMode)
 	case "linux":
-		return ensureLinuxAutostartDesktopEntry(enabled)
+		return ensureLinuxAutostartDesktopEntry(enabled, loginLaunchMode)
 	case "windows":
 		return ensureWindowsStartupRegistry(enabled)
 	default:
@@ -839,6 +839,8 @@ func ensureMacLaunchAgent(enabled bool, loginLaunchMode string) error {
 	}
 
 	if !enabled {
+		// Best-effort unload; ignore errors (job may not be loaded).
+		_ = macLaunchctlBootout()
 		if err := os.Remove(agentPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("remove launch agent: %w", err)
 		}
@@ -864,10 +866,55 @@ func ensureMacLaunchAgent(enabled bool, loginLaunchMode string) error {
 		return fmt.Errorf("write launch agent plist: %w", writeErr)
 	}
 
+	// Replace any previously loaded version so changes take effect this session
+	// instead of waiting for a logout/login cycle.
+	_ = macLaunchctlBootout()
+	if err := macLaunchctlBootstrap(agentPath); err != nil {
+		log.Printf("app: launchctl bootstrap failed (autostart will still register at next login): %v", err)
+	}
+
 	return nil
 }
 
-func ensureLinuxAutostartDesktopEntry(enabled bool) error {
+func macLaunchctlBootstrap(plistPath string) error {
+	target, err := macLaunchctlDomain()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("launchctl", "bootstrap", target, plistPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("launchctl bootstrap %s: %w (%s)", target, err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func macLaunchctlBootout() error {
+	target, err := macLaunchctlDomain()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("launchctl", "bootout", target+"/"+launchAgentLabel)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("launchctl bootout %s: %w (%s)", target, err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func macLaunchctlDomain() (string, error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("resolve current user for launchctl domain: %w", err)
+	}
+	uid := strings.TrimSpace(currentUser.Uid)
+	if uid == "" {
+		return "", fmt.Errorf("current user uid is empty")
+	}
+	return "gui/" + uid, nil
+}
+
+func ensureLinuxAutostartDesktopEntry(enabled bool, loginLaunchMode string) error {
 	desktopPath, err := linuxAutostartDesktopFilePath()
 	if err != nil {
 		return err
@@ -880,7 +927,7 @@ func ensureLinuxAutostartDesktopEntry(enabled bool) error {
 		return nil
 	}
 
-	executablePath, err := os.Executable()
+	executablePath, err := resolveLinuxAutostartExecutablePath()
 	if err != nil {
 		return fmt.Errorf("resolve executable path: %w", err)
 	}
@@ -889,12 +936,27 @@ func ensureLinuxAutostartDesktopEntry(enabled bool) error {
 		return fmt.Errorf("create linux autostart directory: %w", err)
 	}
 
-	content := []byte(renderLinuxDesktopEntry(executablePath))
+	menubar := strings.EqualFold(strings.TrimSpace(loginLaunchMode), "menubar")
+	content := []byte(renderLinuxDesktopEntry(executablePath, menubar))
 	if writeErr := os.WriteFile(desktopPath, content, 0o644); writeErr != nil {
 		return fmt.Errorf("write linux autostart desktop file: %w", writeErr)
 	}
 
 	return nil
+}
+
+// resolveLinuxAutostartExecutablePath returns a path that will still be valid at
+// next login. AppImage and Snap runtimes set env vars pointing at the persistent
+// artifact; os.Executable() returns ephemeral mount paths under /tmp or /run that
+// disappear on reboot.
+func resolveLinuxAutostartExecutablePath() (string, error) {
+	if appImage := strings.TrimSpace(os.Getenv("APPIMAGE")); appImage != "" {
+		return appImage, nil
+	}
+	if snap := strings.TrimSpace(os.Getenv("SNAP_INSTANCE_NAME")); snap != "" {
+		return "/snap/bin/" + snap, nil
+	}
+	return os.Executable()
 }
 
 func ensureWindowsStartupRegistry(enabled bool) error {
@@ -1129,8 +1191,11 @@ func renderLaunchAgentPlist(programArguments []string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func renderLinuxDesktopEntry(executablePath string) string {
-	escaped := strings.ReplaceAll(executablePath, " ", `\ `)
+func renderLinuxDesktopEntry(executablePath string, menubar bool) string {
+	execValue := xdgQuoteExecArgument(executablePath)
+	if menubar {
+		execValue += " --login-launch"
+	}
 	return fmt.Sprintf(`[Desktop Entry]
 Type=Application
 Version=1.0
@@ -1139,7 +1204,25 @@ Comment=Kairos Desktop
 Exec=%s
 Terminal=false
 X-GNOME-Autostart-enabled=true
-`, escaped)
+`, execValue)
+}
+
+// xdgQuoteExecArgument double-quotes a single Exec= argument and escapes the
+// reserved characters per the XDG Desktop Entry spec §5.
+// Inside double quotes the spec requires backslash-escaping of: \ " ` $.
+func xdgQuoteExecArgument(value string) string {
+	var b strings.Builder
+	b.Grow(len(value) + 4)
+	b.WriteByte('"')
+	for _, r := range value {
+		switch r {
+		case '\\', '"', '`', '$':
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 func (a *App) emitDataChanged(kind string) {
