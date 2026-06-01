@@ -1,5 +1,10 @@
 package contracts
 
+const (
+	EditorVSCode = "vscode"
+	EditorFresh  = "fresh"
+)
+
 type ActivityEvent struct {
 	ID          string `json:"id"`
 	Timestamp   string `json:"timestamp"`

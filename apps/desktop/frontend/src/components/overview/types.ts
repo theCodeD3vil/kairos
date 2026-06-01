@@ -1,4 +1,5 @@
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+import type { EditorIntegrationStatus } from '@/data/mockSettings';
 
 export type OverviewRange = 'today' | 'week' | 'month' | 'last-90-days' | 'all-time' | 'custom';
 
@@ -106,5 +107,6 @@ export type OverviewSnapshot = {
   machineDistribution: MachineTimeShare[];
   recentSessions: RecentSession[];
   activeHoursSummary: string;
+  editorIntegrations: EditorIntegrationStatus[];
   syncHealth: SyncHealth;
 };

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -23,9 +24,13 @@ type Service interface {
 	UpdateAppBehaviorSettings(ctx context.Context, data contracts.AppBehaviorSettings) (contracts.AppBehaviorSettings, error)
 	ResetSettingsSection(ctx context.Context, section string) (contracts.SettingsData, error)
 	GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error)
+	GetExtensionStatusForEditor(ctx context.Context, editor string) (contracts.ExtensionStatus, error)
+	ListExtensionStatuses(ctx context.Context) ([]contracts.ExtensionStatus, error)
 	GetSystemInfo(ctx context.Context) (contracts.SystemInfo, error)
 	GetExtensionEffectiveSettings(ctx context.Context) (contracts.ExtensionEffectiveSettings, error)
 }
+
+var supportedExtensionEditors = []string{contracts.EditorVSCode, contracts.EditorFresh}
 
 type ServiceImpl struct {
 	store                 *storage.Store
@@ -78,6 +83,10 @@ func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsDa
 	if err != nil {
 		return contracts.SettingsData{}, err
 	}
+	extensionStatuses, err := s.ListExtensionStatuses(ctx)
+	if err != nil {
+		return contracts.SettingsData{}, err
+	}
 	systemInfo, err := s.GetSystemInfo(ctx)
 	if err != nil {
 		return contracts.SettingsData{}, err
@@ -98,17 +107,18 @@ func (s *ServiceImpl) GetSettingsData(ctx context.Context) (contracts.SettingsDa
 	}
 
 	return contracts.SettingsData{
-		General:         general,
-		Privacy:         privacy,
-		Tracking:        tracking,
-		Exclusions:      exclusions,
-		Extension:       extension,
-		ExtensionStatus: extensionStatus,
-		System:          systemInfo,
-		AppBehavior:     appBehavior,
-		DataStorage:     dataStorage,
-		About:           about,
-		Reliability:     reliability,
+		General:           general,
+		Privacy:           privacy,
+		Tracking:          tracking,
+		Exclusions:        exclusions,
+		Extension:         extension,
+		ExtensionStatus:   extensionStatus,
+		ExtensionStatuses: extensionStatuses,
+		System:            systemInfo,
+		AppBehavior:       appBehavior,
+		DataStorage:       dataStorage,
+		About:             about,
+		Reliability:       reliability,
 	}, nil
 }
 
@@ -223,19 +233,67 @@ func (s *ServiceImpl) ResetSettingsSection(ctx context.Context, section string) 
 }
 
 func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {
+	return s.GetExtensionStatusForEditor(ctx, contracts.EditorVSCode)
+}
+
+func (s *ServiceImpl) GetExtensionStatusForEditor(ctx context.Context, editor string) (contracts.ExtensionStatus, error) {
+	normalizedEditor := normalizeEditor(editor)
 	if s.store == nil {
 		return contracts.ExtensionStatus{
 			Installed: false,
 			Connected: false,
-			Editor:    "vscode",
+			Editor:    normalizedEditor,
 		}, nil
 	}
 
-	status, err := s.store.GetExtensionStatus(ctx, "vscode")
+	status, err := s.store.GetExtensionStatus(ctx, normalizedEditor)
 	if err != nil {
 		return contracts.ExtensionStatus{}, err
 	}
 	return status, nil
+}
+
+func (s *ServiceImpl) ListExtensionStatuses(ctx context.Context) ([]contracts.ExtensionStatus, error) {
+	seeded := make(map[string]contracts.ExtensionStatus, len(supportedExtensionEditors))
+	for _, editor := range supportedExtensionEditors {
+		seeded[editor] = contracts.ExtensionStatus{
+			Installed: false,
+			Connected: false,
+			Editor:    editor,
+		}
+	}
+
+	if s.store != nil {
+		statuses, err := s.store.ListExtensionStatuses(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, status := range statuses {
+			seeded[normalizeEditor(status.Editor)] = status
+		}
+	}
+
+	result := make([]contracts.ExtensionStatus, 0, len(seeded))
+	for _, editor := range supportedExtensionEditors {
+		result = append(result, seeded[editor])
+		delete(seeded, editor)
+	}
+	extraEditors := make([]string, 0, len(seeded))
+	for editor := range seeded {
+		if strings.TrimSpace(editor) != "" {
+			extraEditors = append(extraEditors, editor)
+		}
+	}
+	sort.Strings(extraEditors)
+	for _, editor := range extraEditors {
+		status := seeded[editor]
+		if strings.TrimSpace(status.Editor) == "" {
+			continue
+		}
+		result = append(result, status)
+	}
+
+	return result, nil
 }
 
 func (s *ServiceImpl) GetSystemInfo(_ context.Context) (contracts.SystemInfo, error) {
@@ -276,6 +334,14 @@ func (s *ServiceImpl) GetExtensionEffectiveSettings(ctx context.Context) (contra
 
 func (s *ServiceImpl) SetDataStorageInfo(localDataPath string, databaseStatus string) {
 	s.databaseStatus = databaseStatus
+}
+
+func normalizeEditor(editor string) string {
+	trimmed := strings.TrimSpace(editor)
+	if trimmed == "" {
+		return contracts.EditorVSCode
+	}
+	return trimmed
 }
 
 func (s *ServiceImpl) persistSection(ctx context.Context, section string, value any) error {

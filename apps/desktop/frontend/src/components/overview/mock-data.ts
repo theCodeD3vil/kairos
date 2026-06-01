@@ -38,6 +38,27 @@ function buildSyncBlocks(
 type PresetOverviewRange = Exclude<OverviewRange, 'custom'>;
 type SeededOverviewRange = Exclude<PresetOverviewRange, 'all-time' | 'last-90-days'>;
 
+const mockEditorIntegrations = [
+  {
+    editor: 'vscode',
+    label: 'VS Code',
+    installed: true,
+    connected: true,
+    extensionVersion: systemInfoSnapshot.currentMachine.extensionVersion,
+    lastExtensionSync: 'Today 14:27',
+    lastExtensionEvent: 'Today 14:26',
+  },
+  {
+    editor: 'fresh',
+    label: 'Fresh',
+    installed: false,
+    connected: false,
+    extensionVersion: '—',
+    lastExtensionSync: '—',
+    lastExtensionEvent: '—',
+  },
+];
+
 const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> = {
   today: {
     todayMinutes: 408,
@@ -100,6 +121,7 @@ const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       },
     ],
     activeHoursSummary: '09:00 - 12:00',
+    editorIntegrations: mockEditorIntegrations,
     syncHealth: {
       status: 'Healthy',
       bridgeReachable: true,
@@ -172,6 +194,7 @@ const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       },
     ],
     activeHoursSummary: '09:00 - 12:00',
+    editorIntegrations: mockEditorIntegrations,
     syncHealth: {
       status: 'Healthy',
       bridgeReachable: true,
@@ -241,6 +264,7 @@ const rangeSeeds: Record<SeededOverviewRange, Omit<OverviewSnapshot, 'range'>> =
       },
     ],
     activeHoursSummary: '10:00 - 14:00',
+    editorIntegrations: mockEditorIntegrations,
     syncHealth: {
       status: 'Degraded',
       bridgeReachable: false,

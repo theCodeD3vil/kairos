@@ -67,8 +67,13 @@ import {
   savePrivacySettings,
   saveTrackingSettings,
   refreshVSCodeExtensionStatus,
+  refreshExtensionStatusForEditor,
+  installFreshPlugin,
+  checkFreshInstallation,
+  type FreshInstallStatus,
   settingsSections,
 } from '@/lib/backend/settings';
+import type { EditorIntegrationStatus } from '@/data/mockSettings';
 import {
   isSensitiveFilePresetEnabled,
   sensitiveFilePresets,
@@ -123,6 +128,21 @@ function toReliabilityBadgeStatus(status: string): StatusBadgeStatus {
   return 'pending';
 }
 
+const RECENT_ACTIVITY_MS = 5 * 60 * 1000;
+
+function isRecentlyActive(rawTimestamp?: string): boolean {
+  if (!rawTimestamp) return false;
+  const ts = Date.parse(rawTimestamp);
+  return !Number.isNaN(ts) && Date.now() - ts < RECENT_ACTIVITY_MS;
+}
+
+function toIntegrationBadgeStatus(status: EditorIntegrationStatus): StatusBadgeStatus {
+  if (!status.installed) return 'inactive';
+  if (status.connected) return 'healthy';
+  if (isRecentlyActive(status.lastEventAtRaw)) return 'healthy';
+  return 'offline';
+}
+
 function formatReliabilityTime(value?: string): string {
   if (!value) {
     return '—';
@@ -173,9 +193,11 @@ export function SettingsPage() {
   const [dataStorage, setDataStorage] = useState(initialData.viewModel.dataStorage);
   const [reliability, setReliability] = useState(initialData.viewModel.reliability);
   const [about, setAbout] = useState(initialData.viewModel.about);
+  const [editorIntegrations, setEditorIntegrations] = useState(initialData.editorIntegrations);
   const [currentMachine, setCurrentMachine] = useState(initialData.currentMachine);
   const [appStatus, setAppStatus] = useState(initialData.appStatus);
   const [bridgeReachable, setBridgeReachable] = useState<boolean | null>(null);
+  const [freshInstallStatus, setFreshInstallStatus] = useState<FreshInstallStatus | null>(null);
   const [autostartRegistrationLabel, setAutostartRegistrationLabel] = useState('Checking…');
   const [updateStatusLabel, setUpdateStatusLabel] = useState('Checking…');
   const [latestVersionLabel, setLatestVersionLabel] = useState('—');
@@ -225,6 +247,7 @@ export function SettingsPage() {
     setDataStorage(next.viewModel.dataStorage);
     setReliability(next.viewModel.reliability);
     setAbout(next.viewModel.about);
+    setEditorIntegrations(next.editorIntegrations);
     setCurrentMachine(next.currentMachine);
     setAppStatus(next.appStatus);
   }, []);
@@ -259,6 +282,19 @@ export function SettingsPage() {
     return () => {
       active = false;
     };
+  }, [settingsScreenData]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const status = await checkFreshInstallation();
+        if (active) setFreshInstallStatus(status);
+      } catch {
+        // not critical
+      }
+    })();
+    return () => { active = false; };
   }, [settingsScreenData]);
 
   useEffect(() => {
@@ -967,95 +1003,146 @@ export function SettingsPage() {
       ),
     },
     {
-      label: 'VS Code Extension',
+      label: 'Editor Integrations',
       value: 'extension',
       content: (
         <div className="space-y-3">
-          <SettingsSection title="VS Code Extension" action={<ResetButton onClick={() => void handleResetSection(settingsSections.extension, 'VS Code Extension Settings')} />}>
-            <SettingsStatusPanel
-              title="Extension status"
-              status={
-                !vscodeExtension.extensionInstalled
-                  ? 'inactive'
-                  : vscodeExtension.extensionConnected
-                    ? 'healthy'
-                    : 'offline'
-              }
-              rows={[
-                { label: 'Installed', value: vscodeExtension.extensionInstalled ? 'Yes' : 'No' },
-                { label: 'Connected', value: vscodeExtension.extensionConnected ? 'Yes' : 'No' },
-                { label: 'Bridge reachable', value: bridgeReachable === null ? 'Checking…' : (bridgeReachable ? 'Reachable' : 'Unreachable') },
-                { label: 'Editor detected', value: vscodeExtension.editorDetected },
-                { label: 'Extension version', value: vscodeExtension.extensionVersion },
-                { label: 'Last extension sync', value: vscodeExtension.lastExtensionSync },
-                { label: 'Last extension event', value: vscodeExtension.lastExtensionEvent },
-              ]}
-              action={
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-full!"
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          const status = await refreshVSCodeExtensionStatus();
-                          await reloadSettings({ silent: true });
-                          setBridgeReachable(true);
-                          success('Extension Status', status.connected
-                            ? 'VS Code extension responded and status was refreshed.'
-                            : 'Refresh completed, but extension remains offline.');
-                        } catch (cause) {
-                          setBridgeReachable(false);
-                          error(
-                            'Extension Status',
-                            cause instanceof Error ? cause.message : 'Unable to refresh VS Code extension status.',
-                          );
-                        }
-                      })();
-                    }}
-                  >
-                    Refresh Status
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          const status = await reconnectVSCodeExtension();
-                          await reloadSettings({ silent: true });
-                          setBridgeReachable(true);
-                          success(
-                            'VS Code Extension',
-                            status.connected
-                              ? 'Reconnect succeeded and extension is online.'
-                              : 'Reconnect attempted, but extension is still offline.',
-                          );
-                        } catch (cause) {
-                          setBridgeReachable(false);
-                          error(
-                            'VS Code Extension',
-                            cause instanceof Error ? cause.message : 'Unable to reach VS Code extension.',
-                          );
-                        }
-                      })();
-                    }}
-                  >
-                    Reconnect
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full! border-[hsl(var(--border)/0.7)]"
-                    disabled
-                  >
-                    View Workspaces
-                  </Button>
-                </div>
-              }
-            />
+          <SettingsSection title="Editor Integrations">
+            {editorIntegrations.map((integration) => (
+              <SettingsStatusPanel
+                key={integration.editor}
+                title={`${integration.label} status`}
+                status={toIntegrationBadgeStatus(integration)}
+                rows={[
+                  { label: 'Installed', value: integration.installed ? 'Yes' : 'No' },
+                  {
+                    label: 'Connected',
+                    value: integration.connected
+                      ? 'Yes'
+                      : isRecentlyActive(integration.lastEventAtRaw)
+                        ? 'Active (short-lived)'
+                        : 'No',
+                  },
+                  ...(integration.editor === 'vscode'
+                    ? [
+                        {
+                          label: 'Bridge reachable',
+                          value: bridgeReachable === null
+                            ? 'Checking…'
+                            : (bridgeReachable ? 'Reachable' : 'Unreachable'),
+                        },
+                        { label: 'Editor detected', value: vscodeExtension.editorDetected },
+                      ]
+                    : []),
+                  { label: 'Extension version', value: integration.extensionVersion },
+                  { label: 'Last extension sync', value: integration.lastExtensionSync },
+                  { label: 'Last extension event', value: integration.lastExtensionEvent },
+                ]}
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="rounded-full!"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            const status = integration.editor === 'vscode'
+                              ? await refreshVSCodeExtensionStatus()
+                              : await refreshExtensionStatusForEditor(integration.editor);
+                            await reloadSettings({ silent: true });
+                            if (integration.editor === 'vscode') {
+                              setBridgeReachable(true);
+                            }
+                            success('Extension Status', status.connected
+                              ? `${integration.label} responded and status was refreshed.`
+                              : 'Refresh completed, but extension remains offline.');
+                          } catch (cause) {
+                            if (integration.editor === 'vscode') {
+                              setBridgeReachable(false);
+                            }
+                            error(
+                              'Extension Status',
+                              cause instanceof Error ? cause.message : `Unable to refresh ${integration.label} status.`,
+                            );
+                          }
+                        })();
+                      }}
+                    >
+                      Refresh Status
+                    </Button>
+                    {integration.editor === 'vscode' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                          onClick={() => {
+                            void (async () => {
+                              try {
+                                const status = await reconnectVSCodeExtension();
+                                await reloadSettings({ silent: true });
+                                setBridgeReachable(true);
+                                success(
+                                  'VS Code Extension',
+                                  status.connected
+                                    ? 'Reconnect succeeded and extension is online.'
+                                    : 'Reconnect attempted, but extension is still offline.',
+                                );
+                              } catch (cause) {
+                                setBridgeReachable(false);
+                                error(
+                                  'VS Code Extension',
+                                  cause instanceof Error ? cause.message : 'Unable to reach VS Code extension.',
+                                );
+                              }
+                            })();
+                          }}
+                        >
+                          Reconnect
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                          disabled
+                        >
+                          View Workspaces
+                        </Button>
+                      </>
+                    )}
+                    {integration.editor === 'fresh' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full! border-[hsl(var(--border)/0.7)]"
+                        onClick={() => {
+                          void (async () => {
+                            try {
+                              await installFreshPlugin();
+                              const status = await checkFreshInstallation();
+                              setFreshInstallStatus(status);
+                              await reloadSettings({ silent: true });
+                            } catch (cause) {
+                              error(
+                                'Fresh Plugin',
+                                cause instanceof Error ? cause.message : 'Installation failed.',
+                              );
+                            }
+                          })();
+                        }}
+                      >
+                        {freshInstallStatus?.bridgeInstalled && freshInstallStatus?.pluginInstalled
+                          ? 'Reinstall Plugin'
+                          : 'Install Plugin'}
+                      </Button>
+                    )}
+                  </div>
+                }
+              />
+            ))}
+          </SettingsSection>
+          <SettingsSection title="VS Code Settings" action={<ResetButton onClick={() => void handleResetSection(settingsSections.extension, 'VS Code Extension Settings')} />}>
             <SettingsRow label="Auto-connect to desktop app" helper="The extension attempts to connect to the local Kairos desktop server on startup.">
               <SettingsToggle checked={vscodeExtension.autoConnectToDesktop} onChange={(next) => updateExtensionState({ ...vscodeExtension, autoConnectToDesktop: next })} />
             </SettingsRow>
@@ -1165,7 +1252,15 @@ export function SettingsPage() {
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--surface-subtle)] px-3 py-3">
               <StatusBadge status={appStatus.trackingEnabled ? 'enabled' : 'disabled'} />
               <StatusBadge status={appStatus.localOnlyMode ? 'enabled' : 'disabled'} />
-              <StatusBadge status={vscodeExtension.extensionConnected ? 'healthy' : 'offline'} />
+              {editorIntegrations.map((integration) => (
+                <span
+                  key={integration.editor}
+                  className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--border)/0.7)] bg-[var(--surface-chip)] px-2 py-1"
+                >
+                  <span className="text-xs font-medium text-[var(--ink-secondary)]">{integration.label}</span>
+                  <StatusBadge status={toIntegrationBadgeStatus(integration)} />
+                </span>
+              ))}
             </div>
           </SettingsSection>
         </div>

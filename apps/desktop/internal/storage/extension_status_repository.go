@@ -51,6 +51,63 @@ func (s *Store) UpsertExtensionStatus(ctx context.Context, status contracts.Exte
 }
 
 func (s *Store) GetExtensionStatus(ctx context.Context, editor string) (contracts.ExtensionStatus, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT
+			editor, connected, extension_version, editor_version, last_event_at, last_handshake_at,
+			pending_event_count, oldest_pending_event_at, quarantined_event_count, outbox_size_bytes,
+			last_successful_sync_at, desktop_instance_seen
+		FROM extension_status
+		WHERE editor = ?
+	`, editor)
+	status, err := scanExtensionStatus(row)
+	if err == sql.ErrNoRows {
+		return contracts.ExtensionStatus{
+			Installed: false,
+			Connected: false,
+			Editor:    editor,
+		}, nil
+	}
+	if err != nil {
+		return contracts.ExtensionStatus{}, fmt.Errorf("get extension status for %s: %w", editor, err)
+	}
+
+	return status, nil
+}
+
+func (s *Store) ListExtensionStatuses(ctx context.Context) ([]contracts.ExtensionStatus, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT
+			editor, connected, extension_version, editor_version, last_event_at, last_handshake_at,
+			pending_event_count, oldest_pending_event_at, quarantined_event_count, outbox_size_bytes,
+			last_successful_sync_at, desktop_instance_seen
+		FROM extension_status
+		ORDER BY editor ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list extension statuses: %w", err)
+	}
+	defer rows.Close()
+
+	statuses := make([]contracts.ExtensionStatus, 0)
+	for rows.Next() {
+		status, err := scanExtensionStatus(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan extension status: %w", err)
+		}
+		statuses = append(statuses, status)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate extension statuses: %w", err)
+	}
+
+	return statuses, nil
+}
+
+type extensionStatusScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanExtensionStatus(scanner extensionStatusScanner) (contracts.ExtensionStatus, error) {
 	var status contracts.ExtensionStatus
 	var connected int
 	var extensionVersion sql.NullString
@@ -64,14 +121,7 @@ func (s *Store) GetExtensionStatus(ctx context.Context, editor string) (contract
 	var lastSuccessfulSyncAt sql.NullString
 	var desktopInstanceSeen sql.NullString
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT
-			editor, connected, extension_version, editor_version, last_event_at, last_handshake_at,
-			pending_event_count, oldest_pending_event_at, quarantined_event_count, outbox_size_bytes,
-			last_successful_sync_at, desktop_instance_seen
-		FROM extension_status
-		WHERE editor = ?
-	`, editor).Scan(
+	err := scanner.Scan(
 		&status.Editor,
 		&connected,
 		&extensionVersion,
@@ -85,15 +135,8 @@ func (s *Store) GetExtensionStatus(ctx context.Context, editor string) (contract
 		&lastSuccessfulSyncAt,
 		&desktopInstanceSeen,
 	)
-	if err == sql.ErrNoRows {
-		return contracts.ExtensionStatus{
-			Installed: false,
-			Connected: false,
-			Editor:    editor,
-		}, nil
-	}
 	if err != nil {
-		return contracts.ExtensionStatus{}, fmt.Errorf("get extension status for %s: %w", editor, err)
+		return contracts.ExtensionStatus{}, err
 	}
 
 	status.Installed = true

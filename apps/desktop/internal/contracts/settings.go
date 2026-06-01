@@ -213,15 +213,16 @@ type AboutInfo struct {
 }
 
 type SettingsData struct {
-	General         GeneralSettings       `json:"general"`
-	Privacy         PrivacySettings       `json:"privacy"`
-	Tracking        TrackingSettings      `json:"tracking"`
-	Exclusions      ExclusionsSettings    `json:"exclusions"`
-	Extension       ExtensionSettings     `json:"extension"`
-	ExtensionStatus ExtensionStatus       `json:"extensionStatus"`
-	System          SystemInfo            `json:"system"`
-	AppBehavior     AppBehaviorSettings   `json:"appBehavior"`
-	DataStorage     DataStorageInfo       `json:"dataStorage"`
-	About           AboutInfo             `json:"about"`
-	Reliability     ReliabilityKpiSummary `json:"reliability"`
+	General           GeneralSettings       `json:"general"`
+	Privacy           PrivacySettings       `json:"privacy"`
+	Tracking          TrackingSettings      `json:"tracking"`
+	Exclusions        ExclusionsSettings    `json:"exclusions"`
+	Extension         ExtensionSettings     `json:"extension"`
+	ExtensionStatus   ExtensionStatus       `json:"extensionStatus"`
+	ExtensionStatuses []ExtensionStatus     `json:"extensionStatuses"`
+	System            SystemInfo            `json:"system"`
+	AppBehavior       AppBehaviorSettings   `json:"appBehavior"`
+	DataStorage       DataStorageInfo       `json:"dataStorage"`
+	About             AboutInfo             `json:"about"`
+	Reliability       ReliabilityKpiSummary `json:"reliability"`
 }

@@ -448,6 +448,15 @@ func TestGetSettingsDataReturnsRuntimeAndStorageState(t *testing.T) {
 	if data.ExtensionStatus.EditorVersion != "1.99.0" || data.ExtensionStatus.PendingEventCount == nil || *data.ExtensionStatus.PendingEventCount != 7 {
 		t.Fatalf("expected enriched extension status values, got %+v", data.ExtensionStatus)
 	}
+	if len(data.ExtensionStatuses) != 2 {
+		t.Fatalf("expected vscode and fresh extension statuses, got %+v", data.ExtensionStatuses)
+	}
+	if data.ExtensionStatuses[0].Editor != contracts.EditorVSCode || !data.ExtensionStatuses[0].Connected {
+		t.Fatalf("expected connected vscode status first, got %+v", data.ExtensionStatuses)
+	}
+	if data.ExtensionStatuses[1].Editor != contracts.EditorFresh || data.ExtensionStatuses[1].Installed {
+		t.Fatalf("expected placeholder fresh status second, got %+v", data.ExtensionStatuses)
+	}
 	if data.DataStorage.LocalDataPath != store.Path() || data.DataStorage.DatabaseStatus != "ready" {
 		t.Fatalf("expected populated storage info, got %+v", data.DataStorage)
 	}
@@ -521,6 +530,43 @@ func TestGetExtensionStatusPreservesPersistedDisconnectedState(t *testing.T) {
 	}
 	if status.Connected {
 		t.Fatalf("expected disconnected extension status to stay disconnected, got %+v", status)
+	}
+}
+
+func TestListExtensionStatusesIncludesFreshPlaceholderAndPersistedStatus(t *testing.T) {
+	service, store := newTestSettingsService(t)
+
+	if err := store.UpsertExtensionStatus(context.Background(), contracts.ExtensionStatus{
+		Installed:        true,
+		Connected:        true,
+		Editor:           contracts.EditorFresh,
+		EditorVersion:    "0.3.0",
+		ExtensionVersion: "0.1.0",
+		LastHandshakeAt:  "2026-04-08T12:00:00Z",
+	}, "2026-04-08T12:00:00Z"); err != nil {
+		t.Fatalf("upsert fresh extension status failed: %v", err)
+	}
+
+	statuses, err := service.ListExtensionStatuses(context.Background())
+	if err != nil {
+		t.Fatalf("ListExtensionStatuses failed: %v", err)
+	}
+	if len(statuses) != 2 {
+		t.Fatalf("expected two supported editor statuses, got %+v", statuses)
+	}
+	if statuses[0].Editor != contracts.EditorVSCode || statuses[0].Installed {
+		t.Fatalf("expected vscode placeholder first, got %+v", statuses)
+	}
+	if statuses[1].Editor != contracts.EditorFresh || !statuses[1].Connected || statuses[1].EditorVersion != "0.3.0" {
+		t.Fatalf("expected persisted fresh status second, got %+v", statuses)
+	}
+
+	freshStatus, err := service.GetExtensionStatusForEditor(context.Background(), contracts.EditorFresh)
+	if err != nil {
+		t.Fatalf("GetExtensionStatusForEditor failed: %v", err)
+	}
+	if !freshStatus.Installed || !freshStatus.Connected {
+		t.Fatalf("expected fresh status to be installed and connected, got %+v", freshStatus)
 	}
 }
 

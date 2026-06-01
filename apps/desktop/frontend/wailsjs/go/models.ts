@@ -1903,6 +1903,7 @@ export namespace contracts {
 	    exclusions: ExclusionsSettings;
 	    extension: ExtensionSettings;
 	    extensionStatus: ExtensionStatus;
+	    extensionStatuses: ExtensionStatus[];
 	    system: SystemInfo;
 	    appBehavior: AppBehaviorSettings;
 	    dataStorage: DataStorageInfo;
@@ -1921,6 +1922,7 @@ export namespace contracts {
 	        this.exclusions = this.convertValues(source["exclusions"], ExclusionsSettings);
 	        this.extension = this.convertValues(source["extension"], ExtensionSettings);
 	        this.extensionStatus = this.convertValues(source["extensionStatus"], ExtensionStatus);
+	        this.extensionStatuses = this.convertValues(source["extensionStatuses"], ExtensionStatus);
 	        this.system = this.convertValues(source["system"], SystemInfo);
 	        this.appBehavior = this.convertValues(source["appBehavior"], AppBehaviorSettings);
 	        this.dataStorage = this.convertValues(source["dataStorage"], DataStorageInfo);
@@ -1957,6 +1959,28 @@ export namespace contracts {
 
 export namespace main {
 	
+	export class FreshInstallStatus {
+	    bridgeInstalled: boolean;
+	    bridgePath?: string;
+	    pluginInstalled: boolean;
+	    pluginPath?: string;
+	    pluginVersion: string;
+	    bridgeVersion: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FreshInstallStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.bridgeInstalled = source["bridgeInstalled"];
+	        this.bridgePath = source["bridgePath"];
+	        this.pluginInstalled = source["pluginInstalled"];
+	        this.pluginPath = source["pluginPath"];
+	        this.pluginVersion = source["pluginVersion"];
+	        this.bridgeVersion = source["bridgeVersion"];
+	    }
+	}
 	export class autostartRegistrationStatus {
 	    enabled: boolean;
 	    platform: string;

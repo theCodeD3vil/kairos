@@ -318,7 +318,7 @@ func (s *ServiceImpl) emitDataChanged(kind string) {
 }
 
 func (s *ServiceImpl) GetExtensionStatus(ctx context.Context) (contracts.ExtensionStatus, error) {
-	return s.store.GetExtensionStatus(ctx, "vscode")
+	return s.store.GetExtensionStatus(ctx, contracts.EditorVSCode)
 }
 
 func (s *ServiceImpl) MarkExtensionDisconnected(ctx context.Context, editor string) error {
@@ -328,7 +328,7 @@ func (s *ServiceImpl) MarkExtensionDisconnected(ctx context.Context, editor stri
 
 	trimmedEditor := strings.TrimSpace(editor)
 	if trimmedEditor == "" {
-		trimmedEditor = "vscode"
+		trimmedEditor = contracts.EditorVSCode
 	}
 
 	current, err := s.store.GetExtensionStatus(ctx, trimmedEditor)

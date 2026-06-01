@@ -146,26 +146,35 @@ type wsResponseEnvelope struct {
 
 type extensionConnectionTracker struct {
 	mu      sync.Mutex
-	active  int
+	active  map[string]int
 	service ingestion.Service
 }
 
 func newExtensionConnectionTracker(service ingestion.Service) *extensionConnectionTracker {
-	return &extensionConnectionTracker{service: service}
+	return &extensionConnectionTracker{
+		active:  make(map[string]int),
+		service: service,
+	}
 }
 
-func (t *extensionConnectionTracker) onConnect() {
+func (t *extensionConnectionTracker) onConnect(editor string) string {
+	normalizedEditor := normalizeConnectionEditor(editor)
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.active++
+	t.active[normalizedEditor]++
+	return normalizedEditor
 }
 
-func (t *extensionConnectionTracker) onDisconnect() {
+func (t *extensionConnectionTracker) onDisconnect(editor string) {
+	normalizedEditor := normalizeConnectionEditor(editor)
 	t.mu.Lock()
-	if t.active > 0 {
-		t.active--
+	if t.active[normalizedEditor] > 0 {
+		t.active[normalizedEditor]--
 	}
-	shouldMarkDisconnected := t.active == 0
+	shouldMarkDisconnected := t.active[normalizedEditor] == 0
+	if shouldMarkDisconnected {
+		delete(t.active, normalizedEditor)
+	}
 	t.mu.Unlock()
 
 	if !shouldMarkDisconnected {
@@ -174,15 +183,27 @@ func (t *extensionConnectionTracker) onDisconnect() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), wsDisconnectTimeout)
 	defer cancel()
-	if err := t.service.MarkExtensionDisconnected(ctx, "vscode"); err != nil {
-		log.Printf("server: mark extension disconnected failed: %v", err)
+	if err := t.service.MarkExtensionDisconnected(ctx, normalizedEditor); err != nil {
+		log.Printf("server: mark %s extension disconnected failed: %v", normalizedEditor, err)
 	}
 }
 
 func (t *extensionConnectionTracker) activeConnections() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.active
+	total := 0
+	for _, count := range t.active {
+		total += count
+	}
+	return total
+}
+
+func normalizeConnectionEditor(editor string) string {
+	trimmed := strings.TrimSpace(editor)
+	if trimmed == "" {
+		return contracts.EditorVSCode
+	}
+	return trimmed
 }
 
 func NewHandler(ingestionService ingestion.Service, config Config) http.Handler {
@@ -233,10 +254,11 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 		go runWebSocketKeepAlive(conn, pingDone)
 		handshakeCompleted := false
 		connectionCounted := false
+		connectionEditor := contracts.EditorVSCode
 		defer func() {
 			close(pingDone)
 			if connectionCounted {
-				connectionTracker.onDisconnect()
+				connectionTracker.onDisconnect(connectionEditor)
 			}
 			_ = conn.Close()
 		}()
@@ -280,7 +302,7 @@ func NewHandler(ingestionService ingestion.Service, config Config) http.Handler 
 				}
 				handshakeCompleted = true
 				if !connectionCounted {
-					connectionTracker.onConnect()
+					connectionEditor = connectionTracker.onConnect(request.Extension.Editor)
 					connectionCounted = true
 				}
 			case wsRequestTypeIngest:

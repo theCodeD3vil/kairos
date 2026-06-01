@@ -27,6 +27,7 @@ import type {
 import type { CalendarDay, CalendarDayDetail } from '@/data/mockCalendar';
 import type { DateRange } from '@/components/ruixen/range-calendar';
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+import { adaptEditorIntegrationStatuses, editorDisplayName } from '@/lib/editor-integrations';
 import { trackSyncOperation } from '@/lib/sync-status';
 
 type LoadSnapshotOptions = {
@@ -506,7 +507,7 @@ function adaptMachine(
     os: formatOsLabel(system),
     osVersion: system.osVersion ?? '',
     architecture: system.arch ?? '',
-    editorName: system.editor === 'vscode' ? 'VS Code' : system.editor,
+    editorName: editorDisplayName(system.editor),
     editorVersion: preferences.minimizeExtensionMetadata ? '' : (system.editorVersion ?? ''),
     extensionVersion: preferences.minimizeExtensionMetadata
       ? ''
@@ -1669,6 +1670,7 @@ export function emptyOverviewSnapshot(range: OverviewRange): OverviewSnapshot {
     machineDistribution: [],
     recentSessions: [],
     activeHoursSummary: 'No activity processed yet',
+    editorIntegrations: adaptEditorIntegrationStatuses({}, (value) => formatDateTime(value, false)),
     syncHealth: {
       status: 'Offline',
       bridgeReachable: false,
@@ -2276,6 +2278,9 @@ export async function loadOverviewSnapshot(
         })),
       })),
       activeHoursSummary: overview.activeHoursSummary,
+      editorIntegrations: adaptEditorIntegrationStatuses(settings, (value) =>
+        formatDateTime(value, preferences.hour12),
+      ),
       syncHealth: buildSyncHealth(
         settings.extensionStatus,
         overview.lastUpdatedAt,

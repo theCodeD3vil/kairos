@@ -1,0 +1,26 @@
+{
+  "name": "kairos-fresh",
+  "displayName": "Kairos for Fresh",
+  "version": "0.1.0",
+  "description": "Local-first activity tracking for Kairos Desktop from inside Fresh.",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc --noEmit false --outDir dist",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "kairos",
+    "fresh",
+    "productivity",
+    "activity-tracking",
+    "local-first"
+  ],
+  "dependencies": {
+    "@kairos/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/michaelnji/kairos/apps/desktop/internal/buildinfo"
 	"github.com/michaelnji/kairos/apps/desktop/internal/contracts"
+	"github.com/michaelnji/kairos/apps/desktop/internal/freshplugin"
 	"github.com/michaelnji/kairos/apps/desktop/internal/ingestion"
 	desktopserver "github.com/michaelnji/kairos/apps/desktop/internal/server"
 	"github.com/michaelnji/kairos/apps/desktop/internal/sessionization"
@@ -362,6 +363,41 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	behavior := a.launchBehaviorOptions(a.requestContext())
 	setupMacMenubar(a, behavior.enableMenubar)
+	go a.autoUpdateFreshPluginIfInstalled()
+}
+
+// autoUpdateFreshPluginIfInstalled silently overwrites the installed Fresh
+// plugin when its version doesn't match the bundled version. Called in a
+// goroutine so it never blocks startup.
+func (a *App) autoUpdateFreshPluginIfInstalled() {
+	pluginPath, installed := findFreshPluginPath()
+	if !installed {
+		return
+	}
+	data, err := os.ReadFile(pluginPath)
+	if err != nil {
+		return
+	}
+	if installedVersion(data) == freshplugin.PluginVersion {
+		return
+	}
+	if err := os.WriteFile(pluginPath, freshplugin.PluginSource, 0o644); err != nil {
+		log.Printf("fresh: auto-update plugin failed: %v", err)
+		return
+	}
+	log.Printf("fresh: plugin auto-updated to v%s at %s (restart Fresh to activate)", freshplugin.PluginVersion, pluginPath)
+}
+
+// installedVersion extracts the @kairos-version marker from a plugin file.
+func installedVersion(content []byte) string {
+	const marker = "// @kairos-version: "
+	for _, line := range bytes.SplitAfterN(content, []byte("\n"), 5) {
+		s := strings.TrimSpace(string(line))
+		if strings.HasPrefix(s, marker) {
+			return strings.TrimPrefix(s, marker)
+		}
+	}
+	return ""
 }
 
 func (a *App) shutdown(_ context.Context) {
@@ -641,6 +677,20 @@ func (a *App) GetExtensionStatus() (contracts.ExtensionStatus, error) {
 		return contracts.ExtensionStatus{}, a.initErr
 	}
 	return a.settingsService.GetExtensionStatus(a.requestContext())
+}
+
+func (a *App) GetExtensionStatusForEditor(editor string) (contracts.ExtensionStatus, error) {
+	if a.initErr != nil {
+		return contracts.ExtensionStatus{}, a.initErr
+	}
+	return a.settingsService.GetExtensionStatusForEditor(a.requestContext(), editor)
+}
+
+func (a *App) ListExtensionStatuses() ([]contracts.ExtensionStatus, error) {
+	if a.initErr != nil {
+		return nil, a.initErr
+	}
+	return a.settingsService.ListExtensionStatuses(a.requestContext())
 }
 
 func (a *App) GetVSCodeBridgeHealth() (bool, error) {
@@ -1239,4 +1289,156 @@ func (a *App) emitDataChanged(kind string) {
 
 	// Keep "kind" as the first argument for backwards compatibility with older frontend listeners.
 	wailsruntime.EventsEmit(a.ctx, dataChangedEventName, kind, payload)
+}
+
+// FreshInstallStatus describes the current state of the Fresh integration.
+type FreshInstallStatus struct {
+	BridgeInstalled  bool   `json:"bridgeInstalled"`
+	BridgePath       string `json:"bridgePath,omitempty"`
+	PluginInstalled  bool   `json:"pluginInstalled"`
+	PluginPath       string `json:"pluginPath,omitempty"`
+	PluginVersion    string `json:"pluginVersion"`
+	BridgeVersion    string `json:"bridgeVersion"`
+}
+
+func (a *App) CheckFreshInstallation() (FreshInstallStatus, error) {
+	bridgePath, bridgeOk := findFreshBridgeBinary()
+	pluginPath, pluginOk := findFreshPluginPath()
+	return FreshInstallStatus{
+		BridgeInstalled: bridgeOk,
+		BridgePath:      bridgePath,
+		PluginInstalled: pluginOk,
+		PluginPath:      pluginPath,
+		PluginVersion:   freshplugin.PluginVersion,
+		BridgeVersion:   freshplugin.PluginVersion,
+	}, nil
+}
+
+func (a *App) InstallFreshPlugin() error {
+	if a.initErr != nil {
+		return a.initErr
+	}
+
+	bridgeSrc, err := freshBridgeSourceBinary()
+	if err != nil {
+		return fmt.Errorf("bridge binary not bundled with this release: %w", err)
+	}
+
+	if err := installFreshBridgeBinary(bridgeSrc); err != nil {
+		return fmt.Errorf("install bridge: %w", err)
+	}
+
+	pluginDir, err := freshPluginDir()
+	if err != nil {
+		return fmt.Errorf("locate Fresh plugins dir: %w", err)
+	}
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+		return fmt.Errorf("create plugins dir: %w", err)
+	}
+	pluginDest := filepath.Join(pluginDir, "kairos.ts")
+	if err := os.WriteFile(pluginDest, freshplugin.PluginSource, 0o644); err != nil {
+		return fmt.Errorf("write plugin: %w", err)
+	}
+
+	log.Printf("fresh: plugin installed at %s", pluginDest)
+	a.emitDataChanged("extension-status")
+	return nil
+}
+
+// freshBridgeSourceBinary returns the path to the bridge binary that shipped
+// with this Kairos installation (inside the app bundle or dist/).
+func freshBridgeSourceBinary() (string, error) {
+	exe, _ := os.Executable()
+	candidates := []string{
+		// Inside macOS .app bundle: Contents/MacOS/Kairos → Contents/Resources/bin/
+		filepath.Join(filepath.Dir(exe), "..", "Resources", "bin", "kairos-fresh-bridge"),
+		// Linux/Windows alongside the executable
+		filepath.Join(filepath.Dir(exe), "kairos-fresh-bridge"),
+		// Dev/build output
+		filepath.Join("dist", "kairos-fresh-bridge"),
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return filepath.Clean(p), nil
+		}
+	}
+	return "", fmt.Errorf("not found in bundle")
+}
+
+func installFreshBridgeBinary(srcPath string) error {
+	dest := "/usr/local/bin/kairos-fresh-bridge"
+
+	// Try direct copy first (works if /usr/local/bin is writable by this user).
+	if err := copyFilePerm(srcPath, dest, 0o755); err == nil {
+		log.Printf("fresh: bridge installed at %s", dest)
+		return nil
+	}
+
+	// macOS fallback: osascript elevation dialog.
+	if stdruntime.GOOS == "darwin" {
+		script := fmt.Sprintf(
+			`do shell script "cp %s %s && chmod +x %s" with administrator privileges`,
+			shellQuote(srcPath), shellQuote(dest), shellQuote(dest),
+		)
+		out, err := exec.Command("osascript", "-e", script).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("elevated install failed: %w — %s", err, strings.TrimSpace(string(out)))
+		}
+		log.Printf("fresh: bridge installed (elevated) at %s", dest)
+		return nil
+	}
+
+	// Linux fallback: pkexec or sudo.
+	for _, elevate := range []string{"pkexec", "sudo"} {
+		if _, err := exec.LookPath(elevate); err != nil {
+			continue
+		}
+		out, err := exec.Command(elevate, "cp", srcPath, dest).CombinedOutput()
+		if err != nil {
+			continue
+		}
+		_, _ = exec.Command(elevate, "chmod", "+x", dest).Output()
+		log.Printf("fresh: bridge installed via %s at %s: %s", elevate, dest, strings.TrimSpace(string(out)))
+		return nil
+	}
+
+	return fmt.Errorf("cannot write to %s — try: sudo cp %s %s", dest, srcPath, dest)
+}
+
+func freshPluginDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "fresh", "plugins"), nil
+}
+
+func findFreshBridgeBinary() (string, bool) {
+	for _, p := range []string{"/usr/local/bin/kairos-fresh-bridge", "/usr/bin/kairos-fresh-bridge"} {
+		if _, err := os.Stat(p); err == nil {
+			return p, true
+		}
+	}
+	return "", false
+}
+
+func findFreshPluginPath() (string, bool) {
+	home, _ := os.UserHomeDir()
+	p := filepath.Join(home, ".config", "fresh", "plugins", "kairos.ts")
+	if _, err := os.Stat(p); err == nil {
+		return p, true
+	}
+	return "", false
+}
+
+func copyFilePerm(src, dst string, perm os.FileMode) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, perm)
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }

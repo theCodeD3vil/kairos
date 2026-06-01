@@ -1,4 +1,4 @@
-import type { ExtensionInfo, MachineInfo, OsPlatform } from '../ingestion/types';
+import type { EditorKind, ExtensionInfo, MachineInfo, OsPlatform } from '../ingestion/types';
 
 export type GeneralSettings = {
   machineDisplayName: string;
@@ -108,7 +108,7 @@ export type ExtensionProtocolLimits = {
 export type ExtensionStatus = {
   installed: boolean;
   connected: boolean;
-  editor: 'vscode';
+  editor: EditorKind;
   editorVersion?: string;
   extensionVersion?: string;
   lastEventAt?: string;
@@ -128,7 +128,7 @@ export type SystemInfo = {
   osPlatform: OsPlatform;
   osVersion?: string;
   arch?: string;
-  editor: 'vscode';
+  editor: EditorKind;
   editorVersion?: string;
   appVersion?: string;
   extensionVersion?: string;
@@ -214,6 +214,7 @@ export type SettingsData = {
   exclusions: ExclusionsSettings;
   extension: ExtensionSettings;
   extensionStatus: ExtensionStatus;
+  extensionStatuses: ExtensionStatus[];
   system: SystemInfo;
   appBehavior: AppBehaviorSettings;
   dataStorage: DataStorageInfo;

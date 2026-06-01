@@ -313,6 +313,26 @@ func TestExtensionStatusUpsertAndReadWorks(t *testing.T) {
 	if updated.OutboxSizeBytes == nil || *updated.OutboxSizeBytes != outboxSizeBytes {
 		t.Fatalf("expected outbox size to be retained on partial update, got %+v", updated)
 	}
+
+	if err := store.UpsertExtensionStatus(ctx, contracts.ExtensionStatus{
+		Installed:        true,
+		Connected:        false,
+		Editor:           contracts.EditorFresh,
+		EditorVersion:    "0.3.0",
+		ExtensionVersion: "0.1.0",
+	}, "2026-04-05T11:05:00Z"); err != nil {
+		t.Fatalf("upsert fresh extension status failed: %v", err)
+	}
+	statuses, err := store.ListExtensionStatuses(ctx)
+	if err != nil {
+		t.Fatalf("list extension statuses failed: %v", err)
+	}
+	if len(statuses) != 2 {
+		t.Fatalf("expected 2 extension statuses, got %+v", statuses)
+	}
+	if statuses[0].Editor != contracts.EditorFresh || statuses[1].Editor != contracts.EditorVSCode {
+		t.Fatalf("expected extension statuses ordered by editor, got %+v", statuses)
+	}
 }
 
 func TestListAndCountMethodsReturnExpectedValues(t *testing.T) {

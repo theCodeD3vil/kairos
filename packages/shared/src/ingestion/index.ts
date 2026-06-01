@@ -1,6 +1,7 @@
 export type {
   ActivityEvent,
   ActivityEventType,
+  EditorKind,
   ExtensionInfo,
   ExtensionStatusReport,
   IngestEventsRequest,

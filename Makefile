@@ -85,8 +85,26 @@ extension-release-package: ## Build and package VS Code extension .vsix
 extension-release-publish: ## Publish VS Code extension to Marketplace using VSCE_PAT
 	pnpm --filter kairos-vscode publish:marketplace
 
-desktop-build: ## Build Go desktop scaffold
+fresh-plugin-sync: ## Sync Fresh plugin source into embed location (required before any go build)
+	@cp apps/fresh-extension/src/kairos.ts apps/desktop/internal/freshplugin/src/kairos.ts
+
+fresh-bridge-build: fresh-plugin-sync ## Build kairos-fresh-bridge helper binary into dist/
+	@mkdir -p dist/
+	cd apps/desktop && go build -o "$(ROOT_DIR)/dist/kairos-fresh-bridge$(shell go env GOEXE 2>/dev/null)" ./cmd/kairos-fresh-bridge
+
+fresh-bridge-bundle-app: ## Inject fresh bridge + plugin into a built .app bundle (macOS only)
+	@APP_PATH="$$(find apps/desktop/build/bin -maxdepth 1 -name '*.app' 2>/dev/null | head -n1)"; \
+	if [ -z "$$APP_PATH" ]; then echo "no .app bundle found — run desktop-release-build first"; exit 1; fi; \
+	mkdir -p "$$APP_PATH/Contents/Resources/bin"; \
+	cp dist/kairos-fresh-bridge "$$APP_PATH/Contents/Resources/bin/kairos-fresh-bridge"; \
+	chmod +x "$$APP_PATH/Contents/Resources/bin/kairos-fresh-bridge"; \
+	mkdir -p "$$APP_PATH/Contents/Resources/fresh-plugin"; \
+	cp apps/fresh-extension/src/kairos.ts "$$APP_PATH/Contents/Resources/fresh-plugin/kairos.ts"; \
+	echo "bundled fresh bridge into $$APP_PATH"
+
+desktop-build: fresh-plugin-sync ## Build Go desktop scaffold (includes fresh-bridge helper)
 	cd apps/desktop && go mod tidy && go build ./...
+	$(MAKE) fresh-bridge-build
 
 desktop-release-build: ## Build the packaged desktop app with Wails
 	@if command -v wails >/dev/null 2>&1; then \
@@ -107,7 +125,7 @@ desktop-release-build: ## Build the packaged desktop app with Wails
 		exit 1; \
 	fi
 
-desktop-release-artifacts: desktop-release-build ## Collect desktop release artifacts into dist/release/desktop/<version>/<platform>
+desktop-release-artifacts: desktop-release-build fresh-bridge-build ## Collect desktop release artifacts into dist/release/desktop/<version>/<platform>
 	@platform="$$(uname -s | tr '[:upper:]' '[:lower:]')"; \
 	output_dir="$(ROOT_DIR)/dist/release/desktop/$(KAIROS_VERSION)/$$platform"; \
 	./scripts/release/collect-desktop-artifacts.sh "$(KAIROS_VERSION)" "$$platform" "$$output_dir"
@@ -117,10 +135,11 @@ desktop-release-checksums: ## Recompute checksums for existing desktop release a
 	output_dir="$(ROOT_DIR)/dist/release/desktop/$(KAIROS_VERSION)/$$platform"; \
 	./scripts/release/write-checksums.sh "$$output_dir" "$$output_dir/SHA256SUMS-$$platform.txt"
 
-desktop-release-check: ## Verify desktop release inputs before packaging
+desktop-release-check: fresh-plugin-sync ## Verify desktop release inputs before packaging
 	pnpm --filter @kairos/desktop-frontend typecheck
 	pnpm --filter @kairos/desktop-frontend build
 	cd apps/desktop && go test ./...
+	$(MAKE) fresh-bridge-build
 
 build: shared-build frontend-build extension-build desktop-build ## Build scaffold components
 

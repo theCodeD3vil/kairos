@@ -99,7 +99,7 @@ func defaultSystemInfo() contracts.SystemInfo {
 		OSPlatform:  runtime.GOOS,
 		OSVersion:   "",
 		Arch:        runtime.GOARCH,
-		Editor:      "vscode",
+		Editor:      contracts.EditorVSCode,
 		AppVersion:  buildinfo.DesktopVersion,
 	}
 }

@@ -92,6 +92,9 @@ jobs:
       - name: Build desktop package
         shell: bash
         run: |
+          # Sync plugin source into embed location before any go build step
+          make fresh-plugin-sync
+
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             export KAIROS_DESKTOP_CGO_LDFLAGS="-framework UniformTypeIdentifiers"
           fi
@@ -100,6 +103,40 @@ jobs:
           BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           export KAIROS_GO_LDFLAGS="-X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.DesktopVersion=${VERSION} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildChannel=${KAIROS_BUILD_CHANNEL} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.GitCommit=${COMMIT} -X github.com/michaelnji/kairos/apps/desktop/internal/buildinfo.BuildDate=${BUILD_DATE}"
           make desktop-release-build
+
+      - name: Build Fresh bridge binaries
+        shell: bash
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          LDFLAGS="-X main.version=${VERSION}"
+          mkdir -p dist/
+
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            # Universal binary (arm64 + amd64) so one binary runs on all Macs
+            cd apps/desktop
+            GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o ../../dist/bridge-amd64 ./cmd/kairos-fresh-bridge
+            GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o ../../dist/bridge-arm64 ./cmd/kairos-fresh-bridge
+            cd ../..
+            lipo -create -output dist/kairos-fresh-bridge dist/bridge-amd64 dist/bridge-arm64
+            rm dist/bridge-amd64 dist/bridge-arm64
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            cd apps/desktop
+            GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o ../../dist/kairos-fresh-bridge-linux-amd64 ./cmd/kairos-fresh-bridge
+            GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o ../../dist/kairos-fresh-bridge-linux-arm64 ./cmd/kairos-fresh-bridge
+            cd ../..
+            # Use amd64 as the canonical dist binary for bundling
+            cp dist/kairos-fresh-bridge-linux-amd64 dist/kairos-fresh-bridge
+          fi
+
+      - name: Bundle Fresh bridge into app package
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            make fresh-bridge-bundle-app
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            # On Linux the bridge ships as a standalone artifact alongside the deb
+            echo "Linux: bridge ships as standalone binary in release artifacts"
+          fi
 
       - name: Import macOS signing certificate
         if: runner.os == 'macOS'
@@ -173,6 +210,16 @@ jobs:
           VERSION="${RELEASE_TAG#v}"
           OUT_DIR="dist/release/desktop/${VERSION}/${{ matrix.platform }}"
           ./scripts/release/collect-desktop-artifacts.sh "${VERSION}" "${{ matrix.platform }}" "${OUT_DIR}"
+
+          # Copy standalone bridge binaries so users can install them without the app
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            cp dist/kairos-fresh-bridge "${OUT_DIR}/kairos-fresh-bridge-macos-v${VERSION}"
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            cp dist/kairos-fresh-bridge-linux-amd64 "${OUT_DIR}/kairos-fresh-bridge-linux-amd64-v${VERSION}"
+            cp dist/kairos-fresh-bridge-linux-arm64 "${OUT_DIR}/kairos-fresh-bridge-linux-arm64-v${VERSION}"
+          fi
+          cp apps/fresh-extension/src/kairos.ts "${OUT_DIR}/kairos-fresh-plugin-v${VERSION}.ts"
+
           ./scripts/release/validate-desktop-artifacts.sh "${OUT_DIR}"
 
       - name: Upload platform artifacts

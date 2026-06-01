@@ -1,6 +1,8 @@
 import {
+  CheckFreshInstallation,
   GetSettingsData,
   GetVSCodeBridgeHealth,
+  InstallFreshPlugin,
   ResetSettingsSection,
   UpdateAppBehaviorSettings,
   UpdateExclusionsSettings,
@@ -9,11 +11,13 @@ import {
   UpdatePrivacySettings,
   UpdateTrackingSettings,
 } from '../../../wailsjs/go/main/App';
+import type { main } from '../../../wailsjs/go/models';
 import type { contracts } from '../../../wailsjs/go/models';
 import type {
   AboutInfo,
   AppBehaviorSettings,
   DataStorageInfo,
+  EditorIntegrationStatus,
   ExclusionsSettings,
   GeneralSettings,
   PrivacySettings,
@@ -23,6 +27,7 @@ import type {
   VscodeExtensionSettings,
 } from '@/data/mockSettings';
 import type { AppStatus, MachineInfo } from '@/mocks/system-info';
+import { adaptEditorIntegrationStatuses, editorDisplayName } from '@/lib/editor-integrations';
 import {
   readReopenLastViewedContextPreference,
   saveReopenLastViewedContextPreference,
@@ -70,6 +75,22 @@ function callAppBridgeMethod<T>(
   }
 
   return (candidate as () => Promise<T>)();
+}
+
+function callAppBridgeMethodWithArg<T>(methodName: 'GetExtensionStatusForEditor', arg: string): Promise<T> {
+  const candidate = (
+    window as unknown as {
+      go?: { main?: { App?: Record<string, unknown> } };
+    }
+  ).go?.main?.App?.[methodName];
+
+  if (typeof candidate !== 'function') {
+    throw new Error(
+      `Desktop bridge "${methodName}" is unavailable. Restart Kairos Desktop and try again.`,
+    );
+  }
+
+  return (candidate as (a: string) => Promise<T>)(arg);
 }
 
 function callAutostartStatusMethod(): Promise<AutostartRegistrationStatus> {
@@ -131,6 +152,7 @@ export const settingsSections = {
 
 export type SettingsScreenData = {
   viewModel: SettingsDefaults;
+  editorIntegrations: EditorIntegrationStatus[];
   currentMachine: MachineInfo;
   appStatus: AppStatus;
 };
@@ -405,12 +427,18 @@ function toAppBehavior(input: contracts.AppBehaviorSettings): AppBehaviorSetting
 }
 
 function toDataStorage(input: contracts.SettingsData): DataStorageInfo {
+  const connectedEditors = adaptEditorIntegrationStatuses(input, formatDateTime)
+    .filter((status) => status.connected)
+    .map((status) => status.label);
+
   return {
     localStoragePath: input.dataStorage.localDataPath,
     databaseStatus: toDatabaseStatus(input.dataStorage.databaseStatus),
     lastProcessedTime: formatDateTime(input.dataStorage.lastProcessedAt),
     analyticsCacheStatus: 'Derived on demand',
-    extensionQueueStatus: input.extensionStatus.connected ? 'Connected' : 'No desktop-side queue',
+    extensionQueueStatus: connectedEditors.length
+      ? `${connectedEditors.join(', ')} connected`
+      : 'No desktop-side queue',
     pendingEventCount: input.dataStorage.pendingEventCount ?? 0,
   };
 }
@@ -488,7 +516,7 @@ function toCurrentMachine(input: contracts.SettingsData): MachineInfo {
     os: input.system.osPlatform,
     osVersion: input.system.osVersion ?? '—',
     architecture: input.system.arch ?? '—',
-    editorName: input.system.editor === 'vscode' ? 'VS Code' : input.system.editor,
+    editorName: editorDisplayName(input.system.editor),
     editorVersion: input.system.editorVersion ?? '—',
     extensionVersion:
       input.extensionStatus.extensionVersion ?? input.system.extensionVersion ?? '—',
@@ -508,14 +536,18 @@ function toAppStatus(input: contracts.SettingsData): AppStatus {
 function adaptSettingsScreenData(input: contracts.SettingsData): SettingsScreenData {
   return {
     viewModel: adaptSettingsData(input),
+    editorIntegrations: adaptEditorIntegrationStatuses(input, formatDateTime),
     currentMachine: toCurrentMachine(input),
     appStatus: toAppStatus(input),
   };
 }
 
 export function emptySettingsScreenData(): SettingsScreenData {
+  const editorIntegrations = adaptEditorIntegrationStatuses({}, formatDateTime);
+
   return {
     viewModel: emptyViewModel(),
+    editorIntegrations,
     currentMachine: {
       machineName: 'Kairos',
       machineId: 'unknown-machine',
@@ -746,6 +778,35 @@ export async function reconnectVSCodeExtension(): Promise<contracts.ExtensionSta
       inProgressMessage: 'Reconnecting VS Code extension',
       successMessage: 'Reconnect command sent',
       errorMessage: 'Reconnecting VS Code extension failed',
+    },
+  );
+}
+
+export async function refreshExtensionStatusForEditor(editor: string): Promise<contracts.ExtensionStatus> {
+  const label = editorDisplayName(editor);
+  return trackSyncOperation(
+    async () => callAppBridgeMethodWithArg<contracts.ExtensionStatus>('GetExtensionStatusForEditor', editor),
+    {
+      inProgressMessage: `Refreshing ${label} status`,
+      successMessage: `${label} status refreshed`,
+      errorMessage: `Refreshing ${label} status failed`,
+    },
+  );
+}
+
+export type FreshInstallStatus = main.FreshInstallStatus;
+
+export async function checkFreshInstallation(): Promise<FreshInstallStatus> {
+  return CheckFreshInstallation();
+}
+
+export async function installFreshPlugin(): Promise<void> {
+  return trackSyncOperation(
+    () => InstallFreshPlugin(),
+    {
+      inProgressMessage: 'Installing Fresh plugin',
+      successMessage: 'Fresh plugin installed — restart Fresh to activate',
+      errorMessage: 'Fresh plugin installation failed',
     },
   );
 }

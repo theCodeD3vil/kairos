@@ -66,6 +66,17 @@ export type VscodeExtensionSettings = {
   lastExtensionEvent: string;
 };
 
+export type EditorIntegrationStatus = {
+  editor: string;
+  label: string;
+  installed: boolean;
+  connected: boolean;
+  extensionVersion: string;
+  lastExtensionSync: string;
+  lastExtensionEvent: string;
+  lastEventAtRaw?: string;
+};
+
 export type AppBehaviorSettings = {
   launchOnStartup: boolean;
   startMinimized: boolean;
@@ -167,7 +178,7 @@ export const settingsTabOrder = [
   { label: 'Privacy', value: 'privacy' },
   { label: 'Tracking', value: 'tracking' },
   { label: 'Exclusions', value: 'exclusions' },
-  { label: 'VS Code Extension', value: 'extension' },
+  { label: 'Editor Integrations', value: 'extension' },
   { label: 'Device / System', value: 'system' },
   { label: 'App Behavior', value: 'behavior' },
   { label: 'Menubar', value: 'menubar' },

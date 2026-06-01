@@ -27,7 +27,7 @@ func NewMemoryStore() *MemoryStore {
 		extensionStatus: contracts.ExtensionStatus{
 			Installed: false,
 			Connected: false,
-			Editor:    "vscode",
+			Editor:    contracts.EditorVSCode,
 		},
 	}
 }

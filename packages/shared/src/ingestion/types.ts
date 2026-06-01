@@ -2,6 +2,8 @@ export type ActivityEventType = 'heartbeat' | 'edit' | 'save' | 'open' | 'focus'
 
 export type OsPlatform = 'darwin' | 'windows' | 'linux';
 
+export type EditorKind = 'vscode' | 'fresh';
+
 export type ActivityEvent = {
   id: string;
   timestamp: string;
@@ -24,7 +26,7 @@ export type MachineInfo = {
 };
 
 export type ExtensionInfo = {
-  editor: 'vscode';
+  editor: EditorKind;
   editorVersion?: string;
   extensionVersion?: string;
   statusReport?: ExtensionStatusReport;

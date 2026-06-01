@@ -516,6 +516,82 @@ func TestHandshakeExtensionIncludesProtocolMetadata(t *testing.T) {
 	}
 }
 
+func TestFreshExtensionStatusIsTrackedSeparately(t *testing.T) {
+	service := newTestService(t)
+	ctx := context.Background()
+
+	if _, err := service.HandshakeExtension(ctx, contracts.ExtensionHandshakeRequest{
+		Machine: validRequest().Machine,
+		Extension: contracts.ExtensionInfo{
+			Editor:           contracts.EditorVSCode,
+			EditorVersion:    "1.99.0",
+			ExtensionVersion: "1.1.15",
+		},
+	}); err != nil {
+		t.Fatalf("vscode handshake failed: %v", err)
+	}
+	if _, err := service.HandshakeExtension(ctx, contracts.ExtensionHandshakeRequest{
+		Machine: validRequest().Machine,
+		Extension: contracts.ExtensionInfo{
+			Editor:           contracts.EditorFresh,
+			EditorVersion:    "0.3.0",
+			ExtensionVersion: "0.1.0",
+		},
+	}); err != nil {
+		t.Fatalf("fresh handshake failed: %v", err)
+	}
+
+	request := validRequest()
+	request.Extension = contracts.ExtensionInfo{
+		Editor:           contracts.EditorFresh,
+		EditorVersion:    "0.3.0",
+		ExtensionVersion: "0.1.0",
+	}
+	request.Events[0].ID = "fresh-event-1"
+	request.Events[0].Language = "go"
+	request.Events = request.Events[:1]
+	if _, err := service.IngestEvents(ctx, request); err != nil {
+		t.Fatalf("fresh ingest failed: %v", err)
+	}
+
+	freshStatus, err := service.store.GetExtensionStatus(ctx, contracts.EditorFresh)
+	if err != nil {
+		t.Fatalf("get fresh extension status failed: %v", err)
+	}
+	if !freshStatus.Installed || !freshStatus.Connected {
+		t.Fatalf("expected fresh status to be installed and connected, got %+v", freshStatus)
+	}
+	if freshStatus.EditorVersion != "0.3.0" || freshStatus.ExtensionVersion != "0.1.0" {
+		t.Fatalf("expected fresh versions to persist, got %+v", freshStatus)
+	}
+	if freshStatus.LastEventAt != "2026-04-05T09:00:00Z" {
+		t.Fatalf("expected fresh last event from ingest, got %+v", freshStatus)
+	}
+
+	if err := service.MarkExtensionDisconnected(ctx, contracts.EditorFresh); err != nil {
+		t.Fatalf("mark fresh disconnected failed: %v", err)
+	}
+
+	freshStatus, err = service.store.GetExtensionStatus(ctx, contracts.EditorFresh)
+	if err != nil {
+		t.Fatalf("get fresh extension status after disconnect failed: %v", err)
+	}
+	if freshStatus.Connected {
+		t.Fatalf("expected fresh status to be disconnected, got %+v", freshStatus)
+	}
+
+	vscodeStatus, err := service.GetExtensionStatus(ctx)
+	if err != nil {
+		t.Fatalf("get vscode extension status failed: %v", err)
+	}
+	if !vscodeStatus.Connected {
+		t.Fatalf("expected vscode status to remain connected, got %+v", vscodeStatus)
+	}
+	if vscodeStatus.ExtensionVersion != "1.1.15" {
+		t.Fatalf("expected vscode status to remain unchanged, got %+v", vscodeStatus)
+	}
+}
+
 func TestFilePathPrivacyAndExclusionsAreApplied(t *testing.T) {
 	service, settingsService := newTestServiceWithSettings(t)
 	if _, err := settingsService.UpdatePrivacySettings(context.Background(), contracts.PrivacySettings{

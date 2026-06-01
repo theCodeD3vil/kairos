@@ -6,6 +6,10 @@ export function CheckForDesktopUpdate() {
   return window['go']['main']['App']['CheckForDesktopUpdate']();
 }
 
+export function CheckFreshInstallation() {
+  return window['go']['main']['App']['CheckFreshInstallation']();
+}
+
 export function ClearLocalData() {
   return window['go']['main']['App']['ClearLocalData']();
 }
@@ -36,6 +40,10 @@ export function GetExtensionEffectiveSettings() {
 
 export function GetExtensionStatus() {
   return window['go']['main']['App']['GetExtensionStatus']();
+}
+
+export function GetExtensionStatusForEditor(arg1) {
+  return window['go']['main']['App']['GetExtensionStatusForEditor'](arg1);
 }
 
 export function GetIngestionStats() {
@@ -80,6 +88,14 @@ export function ImportLocalDataFromDisk(arg1) {
 
 export function IngestEvents(arg1) {
   return window['go']['main']['App']['IngestEvents'](arg1);
+}
+
+export function InstallFreshPlugin() {
+  return window['go']['main']['App']['InstallFreshPlugin']();
+}
+
+export function ListExtensionStatuses() {
+  return window['go']['main']['App']['ListExtensionStatuses']();
 }
 
 export function ListKnownMachines() {

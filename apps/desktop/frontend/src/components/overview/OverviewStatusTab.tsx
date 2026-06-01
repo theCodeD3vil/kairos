@@ -1,4 +1,5 @@
 import { KairosTracker } from '@/components/charts/kairos-charts';
+import { EditorIntegrationStatusList } from '@/components/overview/EditorIntegrationStatusList';
 import { syncUptimeColors } from '@/components/overview/chart-colors';
 import type { OverviewSnapshot } from '@/components/overview/types';
 import { StatusBadge, type StatusBadgeStatus } from '@/components/ui/status-badge';
@@ -80,7 +81,8 @@ export function OverviewStatusTab({ snapshot }: OverviewStatusTabProps) {
       </article>
 
       <article className="rounded-xl bg-[var(--surface-muted)] p-3">
-        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">VS Code Sync Health</h3>
+        <h3 className="text-sm font-medium text-[var(--ink-secondary)]">Editor Sync Health</h3>
+        <EditorIntegrationStatusList integrations={snapshot.editorIntegrations} />
         <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">

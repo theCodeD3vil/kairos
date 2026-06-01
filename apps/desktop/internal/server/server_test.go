@@ -323,6 +323,113 @@ func TestWebSocketEndpointMarksDisconnectedWhenClientStopsRespondingToPing(t *te
 	}
 }
 
+func TestWebSocketEndpointMarksHandshakeEditorDisconnected(t *testing.T) {
+	service := &stubIngestionService{
+		handshakeResponse: contracts.ExtensionHandshakeResponse{
+			DesktopInstanceID: "desktop-instance-1",
+			ProtocolVersion:   wsProtocolVersion,
+		},
+		ingestResponse: contracts.IngestEventsResponse{
+			AcceptedCount:   1,
+			RejectedCount:   0,
+			ServerTimestamp: "2026-04-06T10:00:01Z",
+		},
+	}
+
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen on loopback for websocket test: %v", err)
+	}
+	httpServer := &http.Server{
+		Handler: NewHandler(service, DefaultConfig()),
+	}
+	go func() {
+		_ = httpServer.Serve(listener)
+	}()
+	defer func() {
+		_ = httpServer.Shutdown(context.Background())
+	}()
+
+	wsURL := "ws://" + listener.Addr().String() + extensionWebSocketPath
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+
+	handshakePayload := contracts.ExtensionHandshakeRequest{
+		Machine: contracts.MachineInfo{
+			MachineID:   "machine-1",
+			MachineName: "Kairos",
+			OSPlatform:  "darwin",
+		},
+		Extension: contracts.ExtensionInfo{Editor: contracts.EditorFresh},
+	}
+	if err := conn.WriteJSON(wsRequestEnvelope{
+		ID:              "h-1",
+		ProtocolVersion: wsProtocolVersion,
+		Type:            wsRequestTypeHandshake,
+		Payload:         mustMarshalRawJSON(t, handshakePayload),
+	}); err != nil {
+		t.Fatalf("write handshake request: %v", err)
+	}
+
+	var response wsResponseEnvelope
+	if err := conn.ReadJSON(&response); err != nil {
+		t.Fatalf("read handshake response: %v", err)
+	}
+	if response.Type != wsResponseTypeHandshake {
+		t.Fatalf("expected handshake response type, got %+v", response)
+	}
+
+	ingestPayload := contracts.IngestEventsRequest{
+		Machine: contracts.MachineInfo{
+			MachineID:   "machine-1",
+			MachineName: "Kairos",
+			OSPlatform:  "darwin",
+		},
+		Extension: contracts.ExtensionInfo{Editor: contracts.EditorFresh},
+		Events: []contracts.ActivityEvent{{
+			ID:          "evt-fresh-1",
+			Timestamp:   "2026-04-06T10:00:00Z",
+			EventType:   "edit",
+			MachineID:   "machine-1",
+			WorkspaceID: "workspace-1",
+			ProjectName: "kairos",
+			Language:    "go",
+		}},
+	}
+	if err := conn.WriteJSON(wsRequestEnvelope{
+		ID:              "i-1",
+		ProtocolVersion: wsProtocolVersion,
+		Type:            wsRequestTypeIngest,
+		Payload:         mustMarshalRawJSON(t, ingestPayload),
+	}); err != nil {
+		t.Fatalf("write fresh ingestion request: %v", err)
+	}
+
+	var ingestResponse wsResponseEnvelope
+	if err := conn.ReadJSON(&ingestResponse); err != nil {
+		t.Fatalf("read fresh ingestion response: %v", err)
+	}
+	if ingestResponse.Type != wsResponseTypeIngest {
+		t.Fatalf("expected ingest response type, got %+v", ingestResponse)
+	}
+	if err := conn.Close(); err != nil {
+		t.Fatalf("close websocket connection: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for service.disconnectCallsFor(contracts.EditorFresh) == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if service.disconnectCallsFor(contracts.EditorFresh) != 1 {
+		t.Fatalf("expected fresh disconnect to be recorded once, got %d", service.disconnectCallsFor(contracts.EditorFresh))
+	}
+	if service.disconnectCallsFor(contracts.EditorVSCode) != 0 {
+		t.Fatalf("expected vscode disconnect to remain unchanged, got %d", service.disconnectCallsFor(contracts.EditorVSCode))
+	}
+}
+
 func TestWebSocketEndpointRejectsMissingTokenWhenConfigured(t *testing.T) {
 	service := &stubIngestionService{}
 	config := DefaultConfig()
@@ -487,7 +594,7 @@ func websocketAuthSubprotocols(token string) []string {
 type stubIngestionService struct {
 	mu                sync.Mutex
 	handshakeCalls    int
-	markDisconnected  int
+	markDisconnected  []string
 	handshakeResponse contracts.ExtensionHandshakeResponse
 	handshakeError    error
 	ingestResponse    contracts.IngestEventsResponse
@@ -509,9 +616,9 @@ func (s *stubIngestionService) GetExtensionStatus(_ context.Context) (contracts.
 	return contracts.ExtensionStatus{}, nil
 }
 
-func (s *stubIngestionService) MarkExtensionDisconnected(_ context.Context, _ string) error {
+func (s *stubIngestionService) MarkExtensionDisconnected(_ context.Context, editor string) error {
 	s.mu.Lock()
-	s.markDisconnected++
+	s.markDisconnected = append(s.markDisconnected, editor)
 	s.mu.Unlock()
 	return nil
 }
@@ -519,7 +626,20 @@ func (s *stubIngestionService) MarkExtensionDisconnected(_ context.Context, _ st
 func (s *stubIngestionService) disconnectCalls() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.markDisconnected
+	return len(s.markDisconnected)
+}
+
+func (s *stubIngestionService) disconnectCallsFor(editor string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	count := 0
+	for _, disconnectedEditor := range s.markDisconnected {
+		if disconnectedEditor == editor {
+			count++
+		}
+	}
+	return count
 }
 
 func (s *stubIngestionService) handshakeCallCount() int {
