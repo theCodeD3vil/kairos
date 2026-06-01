@@ -100,7 +100,11 @@ fresh-bridge-bundle-app: ## Inject fresh bridge + plugin into a built .app bundl
 	chmod +x "$$APP_PATH/Contents/Resources/bin/kairos-fresh-bridge"; \
 	mkdir -p "$$APP_PATH/Contents/Resources/fresh-plugin"; \
 	cp apps/fresh-extension/src/kairos.ts "$$APP_PATH/Contents/Resources/fresh-plugin/kairos.ts"; \
-	echo "bundled fresh bridge into $$APP_PATH"
+	echo "bundled fresh bridge into $$APP_PATH"; \
+	if command -v codesign >/dev/null 2>&1; then \
+		codesign --force --deep --sign - "$$APP_PATH" 2>/dev/null && \
+		echo "re-applied ad-hoc codesign (restores signature invalidated by bundle injection)"; \
+	fi
 
 desktop-build: fresh-plugin-sync ## Build Go desktop scaffold (includes fresh-bridge helper)
 	cd apps/desktop && go mod tidy && go build ./...
