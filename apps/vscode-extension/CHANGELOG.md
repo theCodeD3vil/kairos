@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- recovered gracefully from a corrupted local outbox database during activation
+- preserved corrupt outbox files for diagnosis while recreating a fresh outbox
+- added regression coverage for corrupted outbox startup recovery
+
 ## 0.1.1
 
 - added the live Kairos status bar with today tracking time, richer tooltip detail, and quick actions

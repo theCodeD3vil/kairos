@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -40,11 +41,32 @@ export class OutboxDatabase {
       }
     }
 
-    const db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
-    const outboxDB = new OutboxDatabase(dbPath, db);
-    await outboxDB.runMigrations();
-    await outboxDB.hardenPermissions();
-    return outboxDB;
+    let db: SqlJsDatabase | undefined;
+    try {
+      db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
+      const outboxDB = new OutboxDatabase(dbPath, db);
+      await outboxDB.runMigrations();
+      await outboxDB.hardenPermissions();
+      return outboxDB;
+    } catch (error) {
+      closeDatabaseQuietly(db);
+
+      if (!dbBytes || !isRecoverableDatabaseOpenError(error)) {
+        throw error;
+      }
+
+      const backupPath = await moveCorruptDatabaseAside(dbPath);
+      options.onCorruptDatabaseRecovered?.({
+        databasePath: dbPath,
+        backupPath,
+        reason: formatError(error),
+      });
+
+      const recoveredDB = new OutboxDatabase(dbPath, new SQL.Database());
+      await recoveredDB.runMigrations();
+      await recoveredDB.hardenPermissions();
+      return recoveredDB;
+    }
   }
 
   query(sql: string, params: SqlParams = []): SqlRow[] {
@@ -173,6 +195,44 @@ function isNotFound(error: unknown): boolean {
     return false;
   }
   return 'code' in error && (error as { code?: string }).code === 'ENOENT';
+}
+
+function isRecoverableDatabaseOpenError(error: unknown): boolean {
+  const message = formatError(error).toLowerCase();
+  return [
+    'database disk image is malformed',
+    'file is not a database',
+    'malformed database schema',
+    'not an sqlite database',
+    'unsupported file format',
+  ].some((pattern) => message.includes(pattern));
+}
+
+async function moveCorruptDatabaseAside(dbPath: string): Promise<string | undefined> {
+  const backupPath = [
+    dbPath,
+    'corrupt',
+    new Date().toISOString().replace(/[:.]/g, '-'),
+    String(process.pid),
+    crypto.randomUUID(),
+  ].join('.');
+  try {
+    await fs.rename(dbPath, backupPath);
+    return backupPath;
+  } catch (error) {
+    if (isNotFound(error)) {
+      return undefined;
+    }
+    throw new Error(`move corrupt outbox database aside: ${formatError(error)}`);
+  }
+}
+
+function closeDatabaseQuietly(db: SqlJsDatabase | undefined): void {
+  try {
+    db?.close();
+  } catch {
+    // Ignore close failures while recovering from a failed open.
+  }
 }
 
 function formatError(error: unknown): string {

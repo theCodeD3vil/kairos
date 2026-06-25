@@ -110,6 +110,36 @@ const SQL_WASM_PATH = require.resolve('sql.js/dist/sql-wasm.wasm');
     await strict_1.default.rejects(() => (0, storage_1.openOutboxStorage)({ databasePath: harness.dbPath }), /schema version 99 is newer than supported version/);
     harness.cleanup();
 });
+(0, node_test_1.default)('corrupt outbox database is moved aside and recreated', async () => {
+    const harness = await createHarness();
+    const corruptBytes = Buffer.from('this is not sqlite');
+    await node_fs_1.default.promises.writeFile(harness.dbPath, corruptBytes);
+    let recovery;
+    const store = await (0, storage_1.openOutboxStorage)({
+        databasePath: harness.dbPath,
+        onCorruptDatabaseRecovered(details) {
+            recovery = details;
+        },
+    });
+    try {
+        strict_1.default.ok(recovery);
+        strict_1.default.equal(recovery.databasePath, node_path_1.default.resolve(harness.dbPath));
+        strict_1.default.match(recovery.reason, /database|sqlite/i);
+        strict_1.default.ok(recovery.backupPath);
+        strict_1.default.deepEqual(node_fs_1.default.readFileSync(recovery.backupPath), corruptBytes);
+    }
+    finally {
+        await store.close();
+    }
+    try {
+        const status = await (0, storage_1.getOutboxStorageMigrationStatus)({ databasePath: harness.dbPath });
+        strict_1.default.equal(status.currentVersion, storage_1.OUTBOX_SCHEMA_VERSION);
+        strict_1.default.deepEqual(status.appliedVersions, [storage_1.OUTBOX_SCHEMA_VERSION]);
+    }
+    finally {
+        harness.cleanup();
+    }
+});
 (0, node_test_1.default)('enqueue and fetch pending batch returns ordered pending events', async () => {
     const harness = await createHarness();
     const store = await (0, storage_1.openOutboxStorage)({ databasePath: harness.dbPath });

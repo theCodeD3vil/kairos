@@ -101,7 +101,15 @@ async function activate(context) {
     const machineId = await ensureMachineID(context);
     const installationID = await ensureInstallationID(context);
     const outboxDatabasePath = (0, storage_1.resolveOutboxDatabasePath)({ context });
-    const outboxStorage = await (0, storage_1.openOutboxStorage)({ databasePath: outboxDatabasePath });
+    const outboxStorage = await (0, storage_1.openOutboxStorage)({
+        databasePath: outboxDatabasePath,
+        onCorruptDatabaseRecovered(details) {
+            const recoveryTarget = details.backupPath
+                ? `moved aside at ${details.backupPath}`
+                : 'already moved aside by another Kairos extension host';
+            observer.logWarn(`Outbox database was corrupt (${details.reason}); ${recoveryTarget} and initialized a fresh outbox`);
+        },
+    });
     runtime = new runtime_1.KairosRuntime({
         client: new client_1.WebSocketDesktopClient(),
         storage: outboxStorage,

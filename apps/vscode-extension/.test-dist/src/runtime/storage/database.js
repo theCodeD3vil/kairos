@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OutboxDatabase = void 0;
+const node_crypto_1 = __importDefault(require("node:crypto"));
 const promises_1 = __importDefault(require("node:fs/promises"));
 const node_path_1 = __importDefault(require("node:path"));
 const sql_asm_js_1 = __importDefault(require("sql.js/dist/sql-asm.js"));
@@ -33,11 +34,30 @@ class OutboxDatabase {
                 throw new Error(`read outbox database file: ${formatError(error)}`);
             }
         }
-        const db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
-        const outboxDB = new OutboxDatabase(dbPath, db);
-        await outboxDB.runMigrations();
-        await outboxDB.hardenPermissions();
-        return outboxDB;
+        let db;
+        try {
+            db = dbBytes ? new SQL.Database(dbBytes) : new SQL.Database();
+            const outboxDB = new OutboxDatabase(dbPath, db);
+            await outboxDB.runMigrations();
+            await outboxDB.hardenPermissions();
+            return outboxDB;
+        }
+        catch (error) {
+            closeDatabaseQuietly(db);
+            if (!dbBytes || !isRecoverableDatabaseOpenError(error)) {
+                throw error;
+            }
+            const backupPath = await moveCorruptDatabaseAside(dbPath);
+            options.onCorruptDatabaseRecovered?.({
+                databasePath: dbPath,
+                backupPath,
+                reason: formatError(error),
+            });
+            const recoveredDB = new OutboxDatabase(dbPath, new SQL.Database());
+            await recoveredDB.runMigrations();
+            await recoveredDB.hardenPermissions();
+            return recoveredDB;
+        }
     }
     query(sql, params = []) {
         const statement = this.db.prepare(sql, params);
@@ -149,6 +169,43 @@ function isNotFound(error) {
         return false;
     }
     return 'code' in error && error.code === 'ENOENT';
+}
+function isRecoverableDatabaseOpenError(error) {
+    const message = formatError(error).toLowerCase();
+    return [
+        'database disk image is malformed',
+        'file is not a database',
+        'malformed database schema',
+        'not an sqlite database',
+        'unsupported file format',
+    ].some((pattern) => message.includes(pattern));
+}
+async function moveCorruptDatabaseAside(dbPath) {
+    const backupPath = [
+        dbPath,
+        'corrupt',
+        new Date().toISOString().replace(/[:.]/g, '-'),
+        String(process.pid),
+        node_crypto_1.default.randomUUID(),
+    ].join('.');
+    try {
+        await promises_1.default.rename(dbPath, backupPath);
+        return backupPath;
+    }
+    catch (error) {
+        if (isNotFound(error)) {
+            return undefined;
+        }
+        throw new Error(`move corrupt outbox database aside: ${formatError(error)}`);
+    }
+}
+function closeDatabaseQuietly(db) {
+    try {
+        db?.close();
+    }
+    catch {
+        // Ignore close failures while recovering from a failed open.
+    }
 }
 function formatError(error) {
     if (error instanceof Error) {

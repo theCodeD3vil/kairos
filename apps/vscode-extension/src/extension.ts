@@ -78,7 +78,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const machineId = await ensureMachineID(context);
   const installationID = await ensureInstallationID(context);
   const outboxDatabasePath = resolveOutboxDatabasePath({ context });
-  const outboxStorage = await openOutboxStorage({ databasePath: outboxDatabasePath });
+  const outboxStorage = await openOutboxStorage({
+    databasePath: outboxDatabasePath,
+    onCorruptDatabaseRecovered(details) {
+      const recoveryTarget = details.backupPath
+        ? `moved aside at ${details.backupPath}`
+        : 'already moved aside by another Kairos extension host';
+      observer.logWarn(
+        `Outbox database was corrupt (${details.reason}); ${recoveryTarget} and initialized a fresh outbox`,
+      );
+    },
+  });
   runtime = new KairosRuntime({
     client: new WebSocketDesktopClient(),
     storage: outboxStorage,

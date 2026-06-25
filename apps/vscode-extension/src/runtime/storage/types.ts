@@ -88,8 +88,15 @@ export type OutboxStorageStats = {
   quarantineCount: number;
 };
 
+export type CorruptDatabaseRecoveryDetails = {
+  databasePath: string;
+  backupPath?: string;
+  reason: string;
+};
+
 export type OpenOutboxStorageOptions = {
   databasePath: string;
+  onCorruptDatabaseRecovered?: (details: CorruptDatabaseRecoveryDetails) => void;
 };
 
 export type OutboxStorageHandle = {

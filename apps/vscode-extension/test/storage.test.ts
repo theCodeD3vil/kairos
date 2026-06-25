@@ -139,6 +139,45 @@ test('re-open is idempotent and newer schema version is rejected', async () => {
   harness.cleanup();
 });
 
+test('corrupt outbox database is moved aside and recreated', async () => {
+  const harness = await createHarness();
+  const corruptBytes = Buffer.from('this is not sqlite');
+  await fs.promises.writeFile(harness.dbPath, corruptBytes);
+
+  let recovery:
+    | {
+        databasePath: string;
+        backupPath?: string;
+        reason: string;
+      }
+    | undefined;
+
+  const store = await openOutboxStorage({
+    databasePath: harness.dbPath,
+    onCorruptDatabaseRecovered(details) {
+      recovery = details;
+    },
+  });
+
+  try {
+    assert.ok(recovery);
+    assert.equal(recovery.databasePath, path.resolve(harness.dbPath));
+    assert.match(recovery.reason, /database|sqlite/i);
+    assert.ok(recovery.backupPath);
+    assert.deepEqual(fs.readFileSync(recovery.backupPath), corruptBytes);
+  } finally {
+    await store.close();
+  }
+
+  try {
+    const status = await getOutboxStorageMigrationStatus({ databasePath: harness.dbPath });
+    assert.equal(status.currentVersion, OUTBOX_SCHEMA_VERSION);
+    assert.deepEqual(status.appliedVersions, [OUTBOX_SCHEMA_VERSION]);
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('enqueue and fetch pending batch returns ordered pending events', async () => {
   const harness = await createHarness();
   const store = await openOutboxStorage({ databasePath: harness.dbPath });
