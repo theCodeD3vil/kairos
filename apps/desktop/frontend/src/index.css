@@ -44,6 +44,12 @@
     --surface-chip: #dfe4e2;
     --surface-chip-hover: #d5dbd8;
     --surface-quiet: #f8faf9;
+    --loading-skeleton: #cfd8d5;
+    --loading-skeleton-highlight: rgba(255, 255, 255, 0.62);
+    --loading-toast-bg: #1d2428;
+    --loading-toast-fg: #f8faf9;
+    --loading-toast-border: rgba(0, 0, 0, 0.22);
+    --loading-toast-spinner-track: rgba(248, 250, 249, 0.34);
     --surface-accent: #cde367;
     --surface-deep: #0a0b0f;
     --surface-deep-alt: #07080d;
@@ -123,6 +129,12 @@
     --surface-chip: #1b2731;
     --surface-chip-hover: #233240;
     --surface-quiet: #0f141a;
+    --loading-skeleton: #263442;
+    --loading-skeleton-highlight: rgba(255, 255, 255, 0.12);
+    --loading-toast-bg: #e9eef2;
+    --loading-toast-fg: #0b1015;
+    --loading-toast-border: rgba(255, 255, 255, 0.18);
+    --loading-toast-spinner-track: rgba(11, 16, 21, 0.32);
     --surface-accent: #7f9743;
     --surface-deep: #05070a;
     --surface-deep-alt: #020408;
@@ -226,6 +238,12 @@
 
   .metric-accent {
     @apply bg-primary/[0.08];
+  }
+}
+
+@keyframes loading-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
 

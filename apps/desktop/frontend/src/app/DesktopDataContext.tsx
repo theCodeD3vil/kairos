@@ -1,6 +1,7 @@
 import {
   createContext,
   type PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -40,6 +41,7 @@ export type DesktopRefreshSignal = {
 
 type DesktopDataContextValue = {
   bootstrapped: boolean;
+  backgroundSyncing: boolean;
   registerRefresher: (key: string, refresher: (signal: DesktopRefreshSignal) => Promise<void> | void) => () => void;
 };
 
@@ -174,6 +176,10 @@ function matchesEventKindToResourceKey(key: string, kind?: string): boolean {
     default:
       return true;
   }
+}
+
+function isBackgroundSyncReason(reason: DesktopRefreshReason): boolean {
+  return reason === 'poll' || reason === 'event' || reason === 'manual';
 }
 
 export const desktopResourceKeys = {
@@ -415,6 +421,7 @@ async function bootstrapDesktopCache(): Promise<void> {
 
 export function DesktopDataProvider({ children }: PropsWithChildren) {
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [backgroundSyncCount, setBackgroundSyncCount] = useState(0);
   const refreshersRef = useRef(new Map<string, Set<(signal: DesktopRefreshSignal) => Promise<void> | void>>());
   const lastExtensionProbeAtRef = useRef(0);
   const extensionProbeInFlightRef = useRef(false);
@@ -422,6 +429,36 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
   const refreshInFlightRef = useRef(false);
   const queuedRefreshSignalRef = useRef<DesktopRefreshSignal | null>(null);
   const lastFocusRefreshAtRef = useRef(0);
+
+  const registerRefresher = useCallback<DesktopDataContextValue['registerRefresher']>((key, refresher) => {
+    const existing = refreshersRef.current.get(key) ?? new Set();
+    existing.add(refresher);
+    refreshersRef.current.set(key, existing);
+
+    return () => {
+      const group = refreshersRef.current.get(key);
+      if (!group) {
+        return;
+      }
+      group.delete(refresher);
+      if (group.size === 0) {
+        refreshersRef.current.delete(key);
+      }
+    };
+  }, []);
+
+  const beginBackgroundSync = () => {
+    let active = true;
+    setBackgroundSyncCount((current) => current + 1);
+
+    return () => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      setBackgroundSyncCount((current) => Math.max(0, current - 1));
+    };
+  };
 
   const refreshAll = async (signal: DesktopRefreshSignal) => {
     const handlers = Array.from(refreshersRef.current.entries()).flatMap(([key, group]) => {
@@ -461,7 +498,15 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
     void (async () => {
       let nextSignal: DesktopRefreshSignal | null = signal;
       while (nextSignal) {
-        await refreshAll(nextSignal);
+        const activeSignal = nextSignal;
+        const endBackgroundSync = isBackgroundSyncReason(activeSignal.reason)
+          ? beginBackgroundSync()
+          : undefined;
+        try {
+          await refreshAll(activeSignal);
+        } finally {
+          endBackgroundSync?.();
+        }
         nextSignal = queuedRefreshSignalRef.current;
         queuedRefreshSignalRef.current = null;
       }
@@ -584,23 +629,9 @@ export function DesktopDataProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<DesktopDataContextValue>(() => ({
     bootstrapped,
-    registerRefresher(key, refresher) {
-      const existing = refreshersRef.current.get(key) ?? new Set();
-      existing.add(refresher);
-      refreshersRef.current.set(key, existing);
-
-      return () => {
-        const group = refreshersRef.current.get(key);
-        if (!group) {
-          return;
-        }
-        group.delete(refresher);
-        if (group.size === 0) {
-          refreshersRef.current.delete(key);
-        }
-      };
-    },
-  }), [bootstrapped]);
+    backgroundSyncing: backgroundSyncCount > 0,
+    registerRefresher,
+  }), [backgroundSyncCount, bootstrapped, registerRefresher]);
 
   return (
     <DesktopDataContext.Provider value={value}>

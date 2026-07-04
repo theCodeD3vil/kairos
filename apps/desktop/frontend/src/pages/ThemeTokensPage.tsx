@@ -1,3 +1,11 @@
+import type React from 'react';
+import { useState } from 'react';
+import { SlidingCapsuleNav } from '@/components/satisui/sliding-capsule-nav';
+import { BackgroundSyncToastContent } from '@/components/system/BackgroundSyncToast';
+import { Button } from '@/components/ui/button';
+import { SegmentedButton } from '@/components/ui/segmented-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+
 const surfaceTokens = [
   'surface-strong',
   'surface',
@@ -95,6 +103,14 @@ function SegmentedDemo() {
   );
 }
 
+function SyncingToastDemo() {
+  return (
+    <div className="flex min-h-14 w-full items-center justify-end">
+      <BackgroundSyncToastContent />
+    </div>
+  );
+}
+
 const componentPreviews = [
   {
     name: 'Button',
@@ -121,6 +137,11 @@ const componentPreviews = [
         <StatusBadge status="offline" />
       </div>
     ),
+  },
+  {
+    name: 'SyncingToast',
+    description: 'Delayed background sync feedback',
+    demo: <SyncingToastDemo />,
   },
 ];
 
@@ -226,7 +247,6 @@ export function ThemeTokensPage() {
       ) : (
         <section className="space-y-3 rounded-[18px] bg-[var(--surface)] p-5">
           <h2 className="text-xl font-semibold text-[var(--ink-strong)]">Components</h2>
-          <p className="text-sm text-[var(--ink-muted)]">Core JolyUI-backed pieces available in the repo.</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {componentPreviews.map((item) => (
               <ComponentPreview key={item.name} name={item.name} description={item.description} demo={item.demo} />
@@ -237,9 +257,3 @@ export function ThemeTokensPage() {
     </div>
   );
 }
-import type React from 'react';
-import { useState } from 'react';
-import { SlidingCapsuleNav } from '@/components/satisui/sliding-capsule-nav';
-import { Button } from '@/components/ui/button';
-import { SegmentedButton } from '@/components/ui/segmented-button';
-import { StatusBadge } from '@/components/ui/status-badge';

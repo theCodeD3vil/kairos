@@ -166,5 +166,3 @@ editor.registerCommand('kairos_version', `Kairos Fresh v${EXTENSION_VERSION}`, '
 
 editor.setStatus(`Kairos v${EXTENSION_VERSION} active`);
 editor.info(`kairos-fresh: plugin loaded. config dir: ${editor.getConfigDir()}. bridge candidates: ${BRIDGE_CANDIDATES.join(', ')}`);
-
-// This is me testing kairos fdkjdkjvdf dskbsjbvsjcv uksvsuaf wurgbiuqwviuwf iuvwyggfv uwtyuigur This is me testing

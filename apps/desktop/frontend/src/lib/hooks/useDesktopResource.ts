@@ -81,10 +81,12 @@ export function useDesktopResource<T>({
   const queuedRefreshSignalRef = useRef<DesktopRefreshSignal | null>(null);
   const latestSeenRevisionRef = useRef(0);
   const keyRef = useRef(cacheKey);
+  const emptyValueRef = useRef(emptyValue);
   const loadRef = useRef(load);
   const errorMessageRef = useRef(errorMessage);
 
   keyRef.current = cacheKey;
+  emptyValueRef.current = emptyValue;
   loadRef.current = load;
   errorMessageRef.current = errorMessage;
 
@@ -93,9 +95,12 @@ export function useDesktopResource<T>({
     const cached = getCachedDesktopResource<T>(cacheKey);
     if (cached !== undefined) {
       setData(cached);
-      setLoadError(null);
       setHasResolvedOnce(true);
+      return;
     }
+
+    setData(emptyValueRef.current);
+    setHasResolvedOnce(false);
   }, [cacheKey]);
 
   const runLoad = async (input?: DesktopRefreshReason | DesktopRefreshSignal) => {
@@ -175,29 +180,10 @@ export function useDesktopResource<T>({
       return;
     }
 
-    void (async () => {
-      if (inFlightRef.current) {
-        return;
-      }
-      inFlightRef.current = true;
-      const activeKey = keyRef.current;
-
-      try {
-        const next = await loadRef.current({ quiet: true });
-        setCachedDesktopResource(activeKey, next);
-        if (keyRef.current === activeKey) {
-          setData(next);
-          setLoadError(null);
-          setHasResolvedOnce(true);
-        }
-      } catch {
-        if (keyRef.current === activeKey) {
-          setLoadError(errorMessageRef.current);
-        }
-      } finally {
-        inFlightRef.current = false;
-      }
-    })();
+    void runLoad({
+      reason: 'query',
+      revision: latestSeenRevisionRef.current,
+    });
   }, [bootstrapped, cacheKey, enabled]);
 
   return {

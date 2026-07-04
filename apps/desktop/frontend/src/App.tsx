@@ -7,6 +7,7 @@ import { ThemeModeController } from '@/app/ThemeModeController';
 import { UpdateNotifier } from '@/app/UpdateNotifier';
 import { AppRoutes } from '@/app/routes';
 import { SyncStatusProvider } from '@/components/sync/SyncStatusProvider';
+import { BackgroundSyncToast } from '@/components/system/BackgroundSyncToast';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
                 <PostUpdateChangelogGate />
                 <UpdateNotifier />
                 <AppRoutes />
+                <BackgroundSyncToast />
               </DesktopBootstrapGate>
             </DesktopDataProvider>
           </SyncStatusProvider>

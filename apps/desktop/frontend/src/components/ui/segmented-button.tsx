@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface SegmentedButtonItem {
   id: string;
@@ -30,8 +30,10 @@ function SegmentedButton({
   size = 'md',
   tone = 'neutral',
 }: SegmentedButtonProps) {
-  const normalizedButtons =
-    options?.map((option) => ({ id: option.value, label: option.label, title: option.title })) ?? buttons ?? [];
+  const normalizedButtons = useMemo(
+    () => options?.map((option) => ({ id: option.value, label: option.label, title: option.title })) ?? buttons ?? [],
+    [buttons, options],
+  );
 
   const [activeButton, setActiveButton] = useState(
     value || defaultActive || normalizedButtons[0]?.id || "",
@@ -52,9 +54,12 @@ function SegmentedButton({
     const activeElement = buttonRefs.current[activeIndex];
     if (!activeElement) return;
 
-    setIndicatorStyle({
-      left: activeElement.offsetLeft,
-      width: activeElement.offsetWidth,
+    setIndicatorStyle((current) => {
+      const next = {
+        left: activeElement.offsetLeft,
+        width: activeElement.offsetWidth,
+      };
+      return current.left === next.left && current.width === next.width ? current : next;
     });
   }, [activeButton, normalizedButtons]);
 

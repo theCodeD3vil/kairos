@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 
 export type NavTab = {
   title: string;
@@ -19,9 +19,11 @@ export function SlidingCapsuleNav({
   tabs,
   currentTab,
   onChange,
-  layoutId = 'capsule-nav',
+  layoutId,
   className,
 }: SlidingCapsuleNavProps) {
+  const generatedLayoutId = useId().replace(/:/g, '');
+  const resolvedLayoutId = layoutId ?? `capsule-nav-${generatedLayoutId}`;
   const navClassName = `inline-flex items-center rounded-full bg-[var(--surface-pill)] p-1 ${className ?? ''}`.trim();
 
   return (
@@ -38,18 +40,14 @@ export function SlidingCapsuleNav({
           >
             {active && (
               <motion.div
-                layoutId={`${layoutId}-active`}
+                layoutId={`${resolvedLayoutId}-active`}
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                 className="absolute inset-0 z-0 rounded-full bg-primary"
               />
             )}
 
             {!active && (
-              <motion.div
-                layoutId={`${layoutId}-hover`}
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                className="absolute inset-0 z-0 rounded-full bg-transparent hover:bg-[var(--surface-subtle)]"
-              />
+              <div className="absolute inset-0 z-0 rounded-full bg-transparent hover:bg-[var(--surface-subtle)]" />
             )}
 
             <span className={`relative z-20 flex items-center gap-2 ${active ? 'text-primary-foreground' : 'text-[var(--ink-accent-strong)]'}`}>
